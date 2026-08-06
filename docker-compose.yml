@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nova_cinema}
+      POSTGRES_USER: ${POSTGRES_USER:-nova}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-nova}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-nova_cinema}
+      BOT_TOKEN: ${BOT_TOKEN:?set BOT_TOKEN in .env}
+      WEBAPP_URL: ${WEBAPP_URL:?set WEBAPP_URL in .env}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      ADMIN_TELEGRAM_IDS: ${ADMIN_TELEGRAM_IDS:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      AUTO_CREATE_SCHEMA: "false"
+      TELEGRAM_AUTH_MAX_AGE_SECONDS: ${TELEGRAM_AUTH_MAX_AGE_SECONDS:-86400}
+      UPLOAD_DIR: /app/uploads
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+      OMDB_API_KEY: ${OMDB_API_KEY:-}
+      TRANSLATION_API_URL: ${TRANSLATION_API_URL:-https://libretranslate.com/translate}
+    depends_on:
+      postgres: { condition: service_healthy }
+    ports: ["8000:8000"]
+    volumes: [uploads:/app/uploads]
+  frontend:
+    build: ./frontend
+    depends_on: [api]
+    ports: ["5173:80"]
+volumes:
+  postgres_data:
+  uploads:
