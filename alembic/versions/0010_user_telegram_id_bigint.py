@@ -1,3 +1,9 @@
+"""Widen users.telegram_id to BIGINT.
+
+SQLite has no ALTER COLUMN TYPE and stores integers dynamically (up to 8 bytes),
+so the column is already wide enough there.  Guarding on the dialect keeps the
+chain runnable on the local SQLite database used for development and tests.
+"""
 from alembic import op
 import sqlalchemy as sa
 
@@ -8,6 +14,8 @@ depends_on = None
 
 
 def upgrade() -> None:
+    if op.get_bind().dialect.name == "sqlite":
+        return
     op.alter_column(
         "users",
         "telegram_id",
@@ -19,6 +27,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    if op.get_bind().dialect.name == "sqlite":
+        return
     op.alter_column(
         "users",
         "telegram_id",

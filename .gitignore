@@ -30,3 +30,8 @@ frontend/node_modules/
 # Build
 dist/
 frontend/dist/
+
+# Local databases and test caches
+*.db
+.pytest_cache/
+nova-dev.db

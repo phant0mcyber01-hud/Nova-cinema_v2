@@ -9,6 +9,34 @@ Telegram Mini App for Nova Cinema: React frontend, FastAPI backend, Telegram ini
 - Database: PostgreSQL with SQLAlchemy 2.0 async and Alembic.
 - Runtime: Docker Compose. Frontend image serves static files with nginx and proxies `/api` and `/uploads` to the API service.
 
+## Project Structure
+
+```
+backend/            FastAPI application
+  core/             config, engine/session, Telegram auth + JWT
+  models/           SQLAlchemy tables
+  schemas/          Pydantic request models
+  services/         catalog, settings, i18n, pricing, hall, booking, telegram, tmdb, media, seed
+  api/routers/      auth, public, catalog, booking, profile, admin, admin_catalog, admin_content
+  main.py           app assembly
+app.py              compatibility shim so `uvicorn app:app` keeps working
+bot.py              aiogram bot (imports the backend package, not the web layer)
+tests/              pytest smoke suite over the critical booking path
+frontend/src/
+  api/              typed API client split by domain
+  i18n/             ru.ts / uz.ts dictionaries + language context
+  components/       Shell, LanguageSwitcher, Telegram controls, admin guard
+  pages/            Home, MoviePage, booking/*, profile/*, admin/*
+  lib/              haptics, hall labels, booking dates
+```
+
+## Admin-Managed Data
+
+Nothing about the cinema is hardcoded. The admin panel owns movies, new-release flags, the `shows` schedule,
+the ticket price and currency, bonuses, melodies (max 3), gallery images, the hall size and the booking rules,
+plus the contact block used by both the Mini App and the bot. Environment variables only carry secrets and
+infrastructure settings; `DEFAULT_*` constants seed the settings row once and are never read afterwards.
+
 ## Environment
 
 Copy the template and fill secrets:

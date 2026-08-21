@@ -20,7 +20,9 @@ from sqlalchemy.orm import selectinload
 ENV_PATH = Path(__file__).resolve().with_name(".env")
 load_dotenv(dotenv_path=ENV_PATH, override=True)
 
-from app import Movie, SessionLocal, serialize_movie
+from backend.core.db import SessionLocal
+from backend.models import Movie
+from backend.services.catalog import serialize_movie
 
 _bot_token = os.getenv("BOT_TOKEN")
 if _bot_token is None:

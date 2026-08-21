@@ -5,7 +5,9 @@ from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from app import Base, DATABASE_URL
+from backend.core.config import DATABASE_URL
+from backend.core.db import Base
+import backend.models  # noqa: F401  -- registers every table
 
 config = context.config
 target_metadata = Base.metadata

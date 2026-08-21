@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 from pathlib import Path
+from datetime import date, timedelta
 from typing import Any
 
 from dotenv import load_dotenv
@@ -10,7 +11,9 @@ from sqlalchemy import select
 
 load_dotenv(Path(__file__).resolve().with_name(".env"), override=False)
 
-from app import CinemaSettings, Movie, SessionLocal
+from backend.core.config import DEFAULT_BOOKING_DAYS_AHEAD
+from backend.core.db import SessionLocal
+from backend.models import CinemaSettings, Movie, Show
 
 
 def movie(
@@ -52,7 +55,7 @@ def movie(
         "ticket_price": None,
         "is_published": True,
         "sort_order": sort_order,
-        "sessions_json": json.dumps(sessions, ensure_ascii=False),
+        "times": list(sessions),
     }
 
 
@@ -547,17 +550,30 @@ DEMO_MOVIES: list[dict[str, Any]] = [
 async def seed_demo_movies() -> None:
     created = 0
     skipped = 0
+    window = [
+        (date.today() + timedelta(days=offset)).isoformat()
+        for offset in range(DEFAULT_BOOKING_DAYS_AHEAD)
+    ]
     async with SessionLocal() as session:
         if await session.get(CinemaSettings, 1) is None:
-            session.add(CinemaSettings(id=1, base_ticket_price=30000))
+            session.add(CinemaSettings(id=1))
         for payload in DEMO_MOVIES:
+            values = dict(payload)
+            times = values.pop("times", [])
             exists = await session.scalar(
-                select(Movie.id).where(Movie.title == payload["title"]).limit(1)
+                select(Movie.id).where(Movie.title == values["title"]).limit(1)
             )
             if exists is not None:
                 skipped += 1
                 continue
-            session.add(Movie(**payload))
+            item = Movie(**values)
+            session.add(item)
+            await session.flush()
+            session.add_all(
+                Show(movie_id=item.id, show_date=show_date, start_time=start_time)
+                for show_date in window
+                for start_time in times
+            )
             created += 1
         await session.commit()
     print(f"Demo movie seed complete: created={created}, skipped_existing={skipped}")
