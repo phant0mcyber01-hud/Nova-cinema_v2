@@ -405,6 +405,22 @@ export const ru = {
   reviewAlreadyLeft: 'Вы уже оставили отзыв на этот фильм',
   timezoneOffset: 'Часовой пояс, минут от UTC',
   timezoneOffsetHint: 'Узбекистан — 300 (UTC+5). Определяет, когда сеанс считается завершённым.',
+  navAbout: 'О нас',
+  aboutTitle: 'О кинотеатре',
+  howToFindUs: 'Как нас найти',
+  openMap: 'Открыть на карте',
+  writeTelegram: 'Написать в Telegram',
+  cinemaPhotos: 'Фотографии',
+  noPhotosYet: 'Фотографии скоро появятся',
+  adminGalleryTab: 'Галерея',
+  cinemaGallery: 'Галерея кинотеатра',
+  cinemaGalleryHint: 'Интерьер, зал, барная зона. Цены и заказы бара не добавляем.',
+  photoCaption: 'Подпись',
+  imageSaved: 'Фото сохранено',
+  imageDeleted: 'Фото удалено',
+  deleteImageConfirm: 'Удалить фото',
+  noImages: 'Фотографий пока нет',
+  imageRequired: 'Загрузите изображение или укажите ссылку',
 }
 
 export type TranslationKey = keyof typeof ru

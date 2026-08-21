@@ -277,3 +277,13 @@ export type AdminSessionPayload = {
   ticket_price: number | null
   status: string
 }
+
+export type AdminGalleryImage = {
+  id: number
+  image_url: string
+  caption: string
+  caption_uz: string
+  sort_order: number
+}
+
+export type AdminGalleryImagePayload = Omit<AdminGalleryImage, 'id'>

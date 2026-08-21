@@ -5,6 +5,7 @@ import {
   decideBooking,
   getAdminBonuses,
   getAdminBookings,
+  getAdminGallery,
   getAdminMelodies,
   getAdminMovies,
   getAdminReviews,
@@ -18,6 +19,7 @@ import {
   setBookingStatus,
   type AdminBonus,
   type AdminBooking,
+  type AdminGalleryImage,
   type AdminMelody,
   type AdminReview,
   type AdminSession,
@@ -27,6 +29,7 @@ import {
 import { formatDateTime, formatMoney, translate, useI18n, type TranslationKey } from '../../i18n'
 import BonusesView from './AdminBonuses'
 import CinemaSettingsView from './AdminCinemaSettings'
+import GalleryView from './AdminGallery'
 import MelodiesView from './AdminMelodies'
 import MoviesView from './AdminMovies'
 import NewReleasesView from './AdminNewReleases'
@@ -36,7 +39,7 @@ import SessionsView from './AdminSessions'
 
 type Tab =
   | 'dashboard' | 'bookings' | 'movies' | 'new' | 'sessions'
-  | 'price' | 'bonuses' | 'melodies' | 'cinema' | 'reviews' | 'notifications'
+  | 'price' | 'bonuses' | 'melodies' | 'gallery' | 'cinema' | 'reviews' | 'notifications'
 type DashboardData = Awaited<ReturnType<typeof getDashboard>>
 type SortDir = 'asc' | 'desc'
 type DecisionPayload = {
@@ -58,6 +61,7 @@ const tabs: { id: Tab; labelKey: TranslationKey }[] = [
   { id: 'price', labelKey: 'adminPriceTab' },
   { id: 'bonuses', labelKey: 'adminBonusesTab' },
   { id: 'melodies', labelKey: 'adminMelodiesTab' },
+  { id: 'gallery', labelKey: 'adminGalleryTab' },
   { id: 'cinema', labelKey: 'adminCinemaTab' },
   { id: 'reviews', labelKey: 'adminReviewsTab' },
   { id: 'notifications', labelKey: 'adminNotificationsTab' },
@@ -86,6 +90,7 @@ export default function Admin() {
   const [settings, setSettings] = useState<AdminSettings | null>(null)
   const [bonuses, setBonuses] = useState<AdminBonus[]>([])
   const [melodies, setMelodies] = useState<AdminMelody[]>([])
+  const [images, setImages] = useState<AdminGalleryImage[]>([])
   const [reviews, setReviews] = useState<AdminReview[]>([])
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState('')
@@ -95,7 +100,7 @@ export default function Admin() {
     try {
       const [
         dashboardData, bookingData, movieData, sessionData,
-        notificationData, settingsData, bonusData, melodyData, reviewData,
+        notificationData, settingsData, bonusData, melodyData, reviewData, galleryData,
       ] = await Promise.all([
         getDashboard(),
         getAdminBookings(),
@@ -106,6 +111,7 @@ export default function Admin() {
         getAdminBonuses(),
         getAdminMelodies(),
         getAdminReviews(),
+        getAdminGallery(),
       ])
       setDashboard(dashboardData)
       setBookings(bookingData)
@@ -116,6 +122,7 @@ export default function Admin() {
       setBonuses(bonusData)
       setMelodies(melodyData)
       setReviews(reviewData)
+      setImages(galleryData)
       setError('')
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : translate('adminLoadFailed'))
@@ -186,6 +193,7 @@ export default function Admin() {
       )}
       {!loading && tab === 'bonuses' && <BonusesView bonuses={bonuses} onSaved={refresh} />}
       {!loading && tab === 'melodies' && <MelodiesView melodies={melodies} onSaved={refresh} />}
+      {!loading && tab === 'gallery' && <GalleryView images={images} onSaved={refresh} />}
       {!loading && tab === 'cinema' && settings && <CinemaSettingsView settings={settings} onSaved={refresh} />}
       {!loading && tab === 'reviews' && <ReviewsView reviews={reviews} onSaved={refresh} />}
       {!loading && tab === 'notifications' && (

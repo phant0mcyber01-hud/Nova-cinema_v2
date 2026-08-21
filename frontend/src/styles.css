@@ -490,3 +490,22 @@ body{
 .legend i.awaiting { background: #d68f2c; }
 .legend i.booked { background: #98313b; }
 .hold-timer { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 12px; padding: 8px 13px; border: 1px solid #4a3a1c; border-radius: 999px; color: #f0c743; background: #241d10; font-size: 12px; font-weight: 700; }
+
+/* --- stage 16: the cinema's own page ------------------------------------ */
+.about-hero { margin: 0 -18px; padding: 46px 18px 18px; background: linear-gradient(0deg, #0b090a, transparent), radial-gradient(circle at 80% 0, #8f1f3555, transparent 40%); }
+.about-hero > p { margin: 0; color: #b27480; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.about-hero h1 { margin: 6px 0 0; font-size: clamp(28px, 8vw, 40px); letter-spacing: -.04em; }
+.about-text { margin: 12px 0 0; color: #b9a8ad; font-size: 14px; line-height: 1.6; }
+.about-block { margin-top: 26px; }
+.about-block h2 { margin: 0 0 12px; font-size: 17px; letter-spacing: -.02em; }
+.about-facts { display: grid; gap: 10px; margin-bottom: 14px; }
+.about-facts div { padding: 12px 15px; border: 1px solid #362126; border-radius: 15px; background: #1b1618; }
+.about-facts small { display: block; color: #a08d91; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.about-facts b { display: block; margin-top: 3px; font-size: 15px; }
+.about-actions { display: grid; gap: 8px; }
+.about-actions .book { display: grid; place-items: center; text-decoration: none; }
+.about-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.about-gallery figure { margin: 0; }
+.about-gallery img { width: 100%; aspect-ratio: 4/3; border: 1px solid #2f2023; border-radius: 16px; object-fit: cover; }
+.about-gallery figcaption { margin-top: 6px; color: #97898c; font-size: 12px; }
+.admin-image-preview { width: 100%; max-width: 320px; margin-top: 12px; border: 1px solid #2f2023; border-radius: 16px; object-fit: cover; }

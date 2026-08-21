@@ -4,6 +4,7 @@ import DeepLinkHandler from './components/DeepLinkHandler'
 import ProtectedAdminRoute from './components/ProtectedAdminRoute'
 import TelegramRouteControls from './components/TelegramRouteControls'
 import { LanguageProvider } from './i18n'
+import About from './pages/About'
 import Home from './pages/Home'
 import MoviePage from './pages/MoviePage'
 import DatePage from './pages/booking/DatePage'
@@ -21,6 +22,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/movies/:id" element={<MoviePage />} />
+          <Route path="/about" element={<About />} />
           <Route path="/admin" element={<ProtectedAdminRoute />} />
           <Route path="/profile/*" element={<ProfileRoutes />} />
           <Route path="/booking/:id/date" element={<DatePage />} />

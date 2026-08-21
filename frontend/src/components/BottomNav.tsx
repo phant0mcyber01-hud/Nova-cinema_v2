@@ -9,6 +9,7 @@ type NavItem = { to: string; icon: string; labelKey: TranslationKey; match: (pat
 const items: NavItem[] = [
   { to: '/', icon: '⌂', labelKey: 'navPoster', match: path => path === '/' || path.startsWith('/movies') || path.startsWith('/booking') },
   { to: '/profile/bookings', icon: '▣', labelKey: 'navTickets', match: path => path.startsWith('/profile/bookings') },
+  { to: '/about', icon: 'ⓘ', labelKey: 'navAbout', match: path => path.startsWith('/about') },
   { to: '/profile', icon: '☺', labelKey: 'profile', match: path => path === '/profile' || path.startsWith('/profile/favorites') || path.startsWith('/profile/notifications') },
 ]
 

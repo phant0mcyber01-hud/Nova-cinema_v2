@@ -2,6 +2,8 @@ import { call } from './client'
 import type {
   AdminBonus,
   AdminBonusPayload,
+  AdminGalleryImage,
+  AdminGalleryImagePayload,
   AdminBooking,
   AdminMelody,
   AdminNotification,
@@ -150,3 +152,16 @@ export const moderateReview = (id: number, approved: boolean) =>
 
 export const deleteAdminReview = (id: number) =>
   call<{ status: string }>(`/admin/reviews/${id}`, { method: 'DELETE' })
+
+// --- cinema gallery ----------------------------------------------------------
+
+export const getAdminGallery = () => call<AdminGalleryImage[]>('/admin/gallery')
+
+export const createAdminImage = (payload: AdminGalleryImagePayload) =>
+  call<{ id: number }>('/admin/gallery', { method: 'POST', body: JSON.stringify(payload) })
+
+export const updateAdminImage = (id: number, payload: AdminGalleryImagePayload) =>
+  call<{ status: string }>(`/admin/gallery/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
+
+export const deleteAdminImage = (id: number) =>
+  call<{ status: string }>(`/admin/gallery/${id}`, { method: 'DELETE' })
