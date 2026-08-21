@@ -5,6 +5,7 @@ import time and db.py builds the engine from it.
 """
 from __future__ import annotations
 
+import atexit
 import hashlib
 import hmac
 import json
@@ -19,8 +20,20 @@ import pytest
 
 TEST_ROOT = Path(tempfile.gettempdir()) / "nova_cinema_tests"
 TEST_ROOT.mkdir(parents=True, exist_ok=True)
-TEST_DB = TEST_ROOT / "nova_test.db"
+# One database per process. A shared file breaks as soon as two test runs
+# overlap: both call drop_all/create_all on it and one fails with
+# "table movies already exists".
+TEST_DB = TEST_ROOT / f"nova_test_{os.getpid()}.db"
 TEST_DB.unlink(missing_ok=True)
+
+
+@atexit.register
+def _remove_test_database() -> None:
+    """Windows may still hold the handle; leaving a stray temp file is harmless."""
+    try:
+        TEST_DB.unlink(missing_ok=True)
+    except OSError:
+        pass
 
 BOT_TOKEN = "123456:TEST-BOT-TOKEN"
 ADMIN_ID = 111
@@ -81,12 +94,21 @@ def movie_row(title: str = "Тестовый фильм") -> Movie:
 
 @pytest.fixture(autouse=True)
 async def database():
+    """Fresh schema per test.
+
+    The engine is disposed on teardown because each test runs in its own event
+    loop: a pooled aiosqlite connection created in a previous loop makes later
+    tests fail sporadically.
+    """
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.drop_all)
         await connection.run_sync(Base.metadata.create_all)
-    yield
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.drop_all)
+    try:
+        yield
+    finally:
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.drop_all)
+        await engine.dispose()
 
 
 @pytest.fixture
