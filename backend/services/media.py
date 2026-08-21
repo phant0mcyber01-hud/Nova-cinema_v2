@@ -42,15 +42,35 @@ def youtube_video_id(value: str) -> str:
     return source
 
 
+CHUNK_BYTES = 64 * 1024
+
+
+async def _read_capped(file: UploadFile, limit: int, message: str) -> bytes:
+    """Read the upload but stop as soon as it exceeds the limit.
+
+    Reading the whole thing first and measuring afterwards means a caller
+    decides how much the server buffers, which is the wrong way round.
+    """
+    chunks: list[bytes] = []
+    size = 0
+    while True:
+        chunk = await file.read(CHUNK_BYTES)
+        if not chunk:
+            break
+        size += len(chunk)
+        if size > limit:
+            raise HTTPException(413, message)
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
 async def save_image_upload(file: UploadFile) -> str:
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(422, "Only image uploads are allowed")
     suffix = Path(file.filename or "").suffix.lower()
     if suffix not in IMAGE_SIGNATURES:
         raise HTTPException(422, "Unsupported image format")
-    content = await file.read()
-    if len(content) > UPLOAD_MAX_BYTES:
-        raise HTTPException(413, "Image is too large")
+    content = await _read_capped(file, UPLOAD_MAX_BYTES, "Image is too large")
     if not any(content.startswith(signature) for signature in IMAGE_SIGNATURES[suffix]):
         raise HTTPException(422, "Invalid image content")
     if suffix == ".webp" and content[8:12] != b"WEBP":
@@ -81,9 +101,7 @@ async def save_audio_upload(file: UploadFile) -> str:
     suffix = Path(file.filename or "").suffix.lower()
     if suffix not in AUDIO_SUFFIXES:
         raise HTTPException(422, "Unsupported audio format")
-    content = await file.read()
-    if len(content) > AUDIO_MAX_BYTES:
-        raise HTTPException(413, "Audio file is too large")
+    content = await _read_capped(file, AUDIO_MAX_BYTES, "Audio file is too large")
     if not _looks_like_audio(suffix, content):
         raise HTTPException(422, "Invalid audio content")
     filename = f"{uuid.uuid4().hex}{suffix}"
