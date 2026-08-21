@@ -7,6 +7,7 @@ import Shell from '../../components/Shell'
 import { formatMoney, setCurrency, translate, useI18n } from '../../i18n'
 import { rowLabel, seatLabel } from '../../lib/hall'
 import { haptic } from '../../lib/haptic'
+import { setClosingConfirmation } from '../../lib/telegramTheme'
 
 const REFRESH_INTERVAL_MS = 15_000
 const HOLD_DEBOUNCE_MS = 600
@@ -87,6 +88,12 @@ export default function HallPage() {
     const tick = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(tick)
   }, [holdUntil])
+
+  // Seats are held: closing the Mini App now would quietly give them up.
+  useEffect(() => {
+    setClosingConfirmation(selected.length > 0)
+    return () => setClosingConfirmation(false)
+  }, [selected.length])
 
   const expired = holdUntil !== null && holdUntil <= now
   useEffect(() => {

@@ -509,3 +509,20 @@ body{
 .about-gallery img { width: 100%; aspect-ratio: 4/3; border: 1px solid #2f2023; border-radius: 16px; object-fit: cover; }
 .about-gallery figcaption { margin-top: 6px; color: #97898c; font-size: 12px; }
 .admin-image-preview { width: 100%; max-width: 320px; margin-top: 12px; border: 1px solid #2f2023; border-radius: 16px; object-fit: cover; }
+
+/* --- stage 17: Telegram theme integration ------------------------------- */
+/* The palette stays dark deliberately: a cinema app turning white because the
+   phone is in light mode fights the brand. What does follow Telegram is the
+   chrome — header and background are reported from lib/telegramTheme.ts — and
+   the link accent below. `data-color-scheme` is written to <html>, so a light
+   palette can be added here later without touching a single component. */
+:root {
+  --nova-bg: #0b090a;
+  --nova-surface: #171214;
+  --nova-stroke: #362126;
+  --nova-text: var(--tg-theme-text-color, #f7f3f3);
+  --nova-muted: #97898c;
+  --nova-link: var(--tg-theme-link-color, #d98a9a);
+}
+body { background-color: var(--nova-bg); color: var(--nova-text); }
+.about-text a, .description a { color: var(--nova-link); }
