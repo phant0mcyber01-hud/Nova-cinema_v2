@@ -380,7 +380,6 @@ export const uz: Record<TranslationKey, string> = {
   noMoviesOnDate: 'Bu sanada seanslar yoʻq',
   navPoster: 'Afisha',
   navTickets: 'Chiptalar',
-  sessionsToday: 'seans',
   availableSessions: 'Mavjud seanslar',
   availableSessionsHint: 'Vaqtni tanlang — soʻng joylarni',
   noSessionsYet: 'Seanslar hali belgilanmagan',
@@ -396,4 +395,7 @@ export const uz: Record<TranslationKey, string> = {
   movieUnavailable: 'Film mavjud emas',
   movieUnavailableHint: 'Balki u koʻrsatuvdan olingan yoki havola eskirgan.',
   toCatalog: 'Katalogga',
+  pricePerTicket: 'Chipta narxi',
+  maxSeatsHint: 'Bitta arizada {n} tagacha joy',
+  totalLabel: 'Jami',
 }

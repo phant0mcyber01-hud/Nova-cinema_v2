@@ -29,6 +29,11 @@ async def ensure_show(session: AsyncSession, movie_id: int, show_date: str, star
     movie = await session.get(Movie, movie_id)
     if movie is None or not movie.is_published:
         raise HTTPException(404, "Movie not found")
+    # A screening that has already been and gone must not be bookable, even
+    # though the admin may keep the row for reporting.  Dates are ISO strings,
+    # so a plain comparison is enough.
+    if show_date < date_type.today().isoformat():
+        raise HTTPException(404, "Session not found")
     show = await session.scalar(
         select(Show).where(
             Show.movie_id == movie_id,
@@ -43,6 +48,8 @@ async def ensure_show(session: AsyncSession, movie_id: int, show_date: str, star
 
 
 async def upcoming_show_times(session: AsyncSession, movie_id: int, show_date: str) -> list[str]:
+    if show_date < date_type.today().isoformat():
+        return []
     rows = await session.scalars(
         select(Show.start_time)
         .where(Show.movie_id == movie_id, Show.show_date == show_date, Show.status == "active")

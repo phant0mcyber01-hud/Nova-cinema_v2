@@ -473,3 +473,10 @@ body{
 .unavailable h1 { margin: 0; font-size: 22px; letter-spacing: -.02em; }
 .unavailable p { margin: 0; max-width: 320px; color: #8e8184; font-size: 14px; }
 .unavailable .book { margin-top: 8px; }
+
+/* --- stage 9: the price is visible before any seat is picked ------------ */
+.price-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 16px; padding: 12px 15px; border: 1px solid #362126; border-radius: 15px; background: #1b1618; }
+.price-banner small { display: block; color: #a08d91; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.price-banner b { font-size: 19px; letter-spacing: -.02em; }
+.price-banner span { color: #97898c; font-size: 12px; }
+.summary-total small { display: block; color: #a08d91; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }

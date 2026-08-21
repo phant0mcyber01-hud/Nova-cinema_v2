@@ -112,6 +112,17 @@ export const formatMoney = (value: number, language: Language) => (
 const uzWeekdays = ['Yak', 'Dush', 'Sesh', 'Chor', 'Pay', 'Jum', 'Shan']
 const uzMonths = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyn', 'Iyl', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek']
 
+const ruSessionForms = ['сеанс', 'сеанса', 'сеансов']
+const ruPlural = new Intl.PluralRules('ru-RU')
+
+/** Russian needs three forms: 1 сеанс, 4 сеанса, 5 сеансов. Uzbek needs one. */
+export const formatSessionCount = (count: number, language: Language) => {
+  if (language === 'uz') return `${count} seans`
+  const forms: Partial<Record<Intl.LDMLPluralRule, number>> = { one: 0, few: 1, many: 2 }
+  const index = forms[ruPlural.select(count)] ?? 2
+  return `${count} ${ruSessionForms[index]}`
+}
+
 export const formatDateShort = (date: string, language: Language) => {
   const value = new Date(`${date}T12:00:00`)
   if (language === 'uz') {

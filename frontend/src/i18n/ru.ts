@@ -378,7 +378,6 @@ export const ru = {
   noMoviesOnDate: 'На эту дату сеансов нет',
   navPoster: 'Афиша',
   navTickets: 'Билеты',
-  sessionsToday: 'сеансов',
   availableSessions: 'Доступные сеансы',
   availableSessionsHint: 'Выберите время — и сразу к выбору мест',
   noSessionsYet: 'Сеансы пока не назначены',
@@ -394,6 +393,9 @@ export const ru = {
   movieUnavailable: 'Фильм недоступен',
   movieUnavailableHint: 'Возможно, он снят с показа или ссылка устарела.',
   toCatalog: 'В каталог',
+  pricePerTicket: 'Цена билета',
+  maxSeatsHint: 'До {n} мест в одной заявке',
+  totalLabel: 'Итого',
 }
 
 export type TranslationKey = keyof typeof ru

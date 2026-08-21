@@ -101,6 +101,13 @@ export default function HallPage() {
           <p>NOVA HALL</p>
           <h1>{t('chooseSeats')}</h1>
         </div>
+        <div className="price-banner">
+          <div>
+            <small>{t('pricePerTicket')}</small>
+            <b>{hall ? formatMoney(hall.price, language) : '—'}</b>
+          </div>
+          {hall && <span>{t('maxSeatsHint').replace('{n}', String(hall.max_seats))}</span>}
+        </div>
         <div className="legend">
           <span><i /> {t('free')}</span>
           <span><i className="taken" /> {t('taken')}</span>
@@ -153,7 +160,10 @@ export default function HallPage() {
                 <small>{t('selectedSeats')}</small>
                 <b>{selected.length ? selected.map(seatLabel).join(', ') : t('noSeatsSelected')}</b>
               </div>
-              <strong>{formatMoney(selected.length * hall.price, language)}</strong>
+              <div className="summary-total">
+                <small>{t('totalLabel')}</small>
+                <strong>{formatMoney(selected.length * hall.price, language)}</strong>
+              </div>
               <button className="book" disabled={!selected.length || busy} onClick={() => void reserve()}>{busy ? t('sendingRequest') : t('continue')}</button>
             </div>
           </>
