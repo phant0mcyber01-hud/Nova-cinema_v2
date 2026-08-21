@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { confirmBooking, getHall, holdSeats, type Hall } from '../../api'
 import Shell from '../../components/Shell'
-import { formatMoney, translate, useI18n } from '../../i18n'
+import { formatMoney, setCurrency, translate, useI18n } from '../../i18n'
 import { rowLabel, seatLabel } from '../../lib/hall'
 import { haptic } from '../../lib/haptic'
 
@@ -30,6 +30,7 @@ export default function HallPage() {
     if (!id || !date || !time) return
     try {
       const nextHall = await getHall(Number(id), date, time)
+      setCurrency(nextHall.currency)
       setHall(nextHall)
       setSelected(current => current.filter(seat => !nextHall.taken.includes(seat)))
       setError('')

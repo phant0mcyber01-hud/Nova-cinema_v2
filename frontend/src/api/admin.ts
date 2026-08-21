@@ -1,5 +1,18 @@
 import { call } from './client'
-import type { AdminBooking, AdminNotification, AdminSession, MovieDetail, MoviePayload } from './types'
+import type {
+  AdminBonus,
+  AdminBonusPayload,
+  AdminBooking,
+  AdminMelody,
+  AdminNotification,
+  AdminReview,
+  AdminSession,
+  AdminSessionPayload,
+  AdminSettings,
+  AdminSettingsPayload,
+  MovieDetail,
+  MoviePayload,
+} from './types'
 
 export const getDashboard = () =>
   call<{
@@ -19,7 +32,7 @@ export const setBookingStatus = (id: number, status: string) =>
 
 export const decideBooking = (
   id: number,
-  payload: { action: 'confirm' | 'decline' | 'propose'; reason?: string; proposed_session?: string },
+  payload: { action: 'contact' | 'confirm' | 'decline' | 'propose'; reason?: string; proposed_session?: string },
 ) =>
   call<{ status: string; proposed_session: string; admin_note: string }>(`/admin/bookings/${id}/decision`, {
     method: 'PATCH',
@@ -61,10 +74,10 @@ export const deleteAdminMovie = (id: number) => call<{ status: string }>(`/admin
 
 export const getAdminSessions = () => call<AdminSession[]>('/admin/sessions')
 
-export const createAdminSession = (payload: Omit<AdminSession, 'id' | 'movie' | 'resolved_price'>) =>
+export const createAdminSession = (payload: AdminSessionPayload) =>
   call<{ id: number }>('/admin/sessions', { method: 'POST', body: JSON.stringify(payload) })
 
-export const updateAdminSession = (id: number, payload: Omit<AdminSession, 'id' | 'movie' | 'resolved_price'>) =>
+export const updateAdminSession = (id: number, payload: AdminSessionPayload) =>
   call<{ status: string }>(`/admin/sessions/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
 
 export const deleteAdminSession = (id: number) =>
@@ -75,3 +88,65 @@ export const uploadAdminImage = (file: File) => {
   form.append('file', file)
   return call<{ url: string }>('/admin/uploads', { method: 'POST', body: form })
 }
+
+// --- cinema settings ---------------------------------------------------------
+
+export const getAdminSettings = () => call<AdminSettings>('/admin/settings')
+
+export const updateAdminSettings = (payload: AdminSettingsPayload) =>
+  call<AdminSettings>('/admin/settings', { method: 'PUT', body: JSON.stringify(payload) })
+
+// --- schedule ----------------------------------------------------------------
+
+export const createAdminSessionsBulk = (payload: {
+  movie_id: number
+  date_from: string
+  date_to: string
+  times: string[]
+  ticket_price: number | null
+}) => call<{ created: number }>('/admin/sessions/bulk', { method: 'POST', body: JSON.stringify(payload) })
+
+// --- bonuses -----------------------------------------------------------------
+
+export const getAdminBonuses = () => call<AdminBonus[]>('/admin/bonuses')
+
+export const createAdminBonus = (payload: AdminBonusPayload) =>
+  call<{ id: number }>('/admin/bonuses', { method: 'POST', body: JSON.stringify(payload) })
+
+export const updateAdminBonus = (id: number, payload: AdminBonusPayload) =>
+  call<{ status: string }>(`/admin/bonuses/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
+
+export const deleteAdminBonus = (id: number) =>
+  call<{ status: string }>(`/admin/bonuses/${id}`, { method: 'DELETE' })
+
+// --- melodies ----------------------------------------------------------------
+
+export const getAdminMelodies = () => call<AdminMelody[]>('/admin/melodies')
+
+export const createAdminMelody = (payload: { title: string; file_url: string; sort_order: number }) =>
+  call<{ id: number }>('/admin/melodies', { method: 'POST', body: JSON.stringify(payload) })
+
+export const updateAdminMelody = (id: number, payload: { title?: string; file_url?: string; sort_order?: number }) =>
+  call<{ status: string }>(`/admin/melodies/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
+
+export const deleteAdminMelody = (id: number) =>
+  call<{ status: string }>(`/admin/melodies/${id}`, { method: 'DELETE' })
+
+export const uploadMelodyFile = (file: File) => {
+  const form = new FormData()
+  form.append('file', file)
+  return call<{ url: string }>('/admin/melodies/upload', { method: 'POST', body: form })
+}
+
+// --- review moderation -------------------------------------------------------
+
+export const getAdminReviews = () => call<AdminReview[]>('/admin/reviews')
+
+export const moderateReview = (id: number, approved: boolean) =>
+  call<{ id: number; approved: boolean }>(`/admin/reviews/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ approved }),
+  })
+
+export const deleteAdminReview = (id: number) =>
+  call<{ status: string }>(`/admin/reviews/${id}`, { method: 'DELETE' })

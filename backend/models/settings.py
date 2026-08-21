@@ -28,6 +28,8 @@ class CinemaSettings(Base):
     phone: Mapped[str] = mapped_column(String(32), default=config.DEFAULT_PHONE)
     telegram_url: Mapped[str] = mapped_column(String(255), default=config.DEFAULT_TELEGRAM_URL)
     instagram_url: Mapped[str] = mapped_column(String(255), default=config.DEFAULT_INSTAGRAM_URL)
+    #: Bot handle without @, used to build share deep links (t.me/<bot>?startapp=…).
+    bot_username: Mapped[str] = mapped_column(String(64), default="")
     map_url: Mapped[str] = mapped_column(String(512), default="")
     latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     longitude: Mapped[float | None] = mapped_column(Float, nullable=True)

@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
+import DeepLinkHandler from './components/DeepLinkHandler'
 import ProtectedAdminRoute from './components/ProtectedAdminRoute'
 import TelegramRouteControls from './components/TelegramRouteControls'
 import { LanguageProvider } from './i18n'
@@ -15,6 +16,7 @@ export default function App() {
   return (
     <LanguageProvider>
       <BrowserRouter>
+        <DeepLinkHandler />
         <TelegramRouteControls />
         <Routes>
           <Route path="/" element={<Home />} />

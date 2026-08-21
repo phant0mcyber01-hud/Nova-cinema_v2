@@ -365,3 +365,11 @@ async def test_legacy_session_field_is_still_accepted(client, movie):
     assert response.status_code == 200, response.text
     listed = (await client.get(f"/api/movies/{movie.id}/sessions?show_date={SHOW_DATE}")).json()
     assert "16:45" in listed["sessions"]
+
+
+async def test_sessions_endpoint_returns_empty_list_for_a_date_without_shows(client, movie):
+    """Contract behind the Mini App's "no screenings on this date" state."""
+    empty_day = (date.today() + timedelta(days=30)).isoformat()
+    response = await client.get(f"/api/movies/{movie.id}/sessions?show_date={empty_day}")
+    assert response.status_code == 200
+    assert response.json()["sessions"] == []

@@ -18,6 +18,7 @@ import {
   type ProfileBooking,
 } from '../../api'
 import { formatDateTime, formatMoney, translate, useI18n, type TranslationKey } from '../../i18n'
+import BottomNav from '../../components/BottomNav'
 import LanguageSwitcher from '../../components/LanguageSwitcher'
 
 const statuses = ['pending', 'confirmed', 'cancelled', 'completed']
@@ -54,6 +55,7 @@ function Box({ children }: { children: ReactNode }) {
         </div>
       </header>
       {children}
+      <BottomNav />
     </main>
   )
 }

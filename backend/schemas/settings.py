@@ -19,6 +19,7 @@ class SettingsIn(BaseModel):
     phone: str = Field(default="", max_length=32)
     telegram_url: str = Field(default="", max_length=255)
     instagram_url: str = Field(default="", max_length=255)
+    bot_username: str = Field(default="", max_length=64, pattern=r"^$|^@?[A-Za-z0-9_]{4,63}$")
     map_url: str = Field(default="", max_length=512)
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)

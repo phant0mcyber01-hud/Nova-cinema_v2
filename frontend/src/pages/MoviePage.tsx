@@ -1,9 +1,10 @@
+import WebApp from '@twa-dev/sdk'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
-import { addFavorite, createReview, getAuthState, getMovie, type MovieDetail } from '../api'
+import { ApiError, addFavorite, createReview, getAuthState, getMovie, type MovieDetail } from '../api'
 import Shell from '../components/Shell'
-import { translate, useI18n } from '../i18n'
+import { formatDateShort, translate, useI18n } from '../i18n'
 import { haptic } from '../lib/haptic'
 
 export default function MoviePage() {
@@ -15,18 +16,49 @@ export default function MoviePage() {
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewText, setReviewText] = useState('')
   const [reviewBusy, setReviewBusy] = useState(false)
+  const [missing, setMissing] = useState(false)
 
   const loadMovie = useCallback(async () => {
     if (!id) return
     try {
       setMovie(await getMovie(Number(id), language))
       setError('')
+      setMissing(false)
     } catch (reason) {
+      // A deleted or unpublished movie, or a stale share link, all arrive as 404.
+      if (reason instanceof ApiError && reason.status === 404) {
+        setMissing(true)
+        return
+      }
       setError(reason instanceof Error ? reason.message : translate('serverError'))
     }
   }, [id, language])
 
   useEffect(() => { void loadMovie() }, [loadMovie])
+
+  const share = async () => {
+    if (!movie) return
+    // Built server-side so the payload format lives in exactly one place.
+    const link = movie.share_link
+    if (!link) {
+      setNotice(t('shareUnavailable'))
+      return
+    }
+    const text = `${movie.title} — ${t('shareText')}`
+    haptic.tap()
+    if (WebApp.initData) {
+      WebApp.openTelegramLink(
+        `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`,
+      )
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(link)
+      setNotice(t('linkCopied'))
+    } catch {
+      setNotice(link)
+    }
+  }
 
   const saveFavorite = async () => {
     if (!movie) return
@@ -65,6 +97,18 @@ export default function MoviePage() {
     }
   }
 
+  if (missing) {
+    return (
+      <Shell>
+        <section className="unavailable">
+          <span aria-hidden="true">🎬</span>
+          <h1>{t('movieUnavailable')}</h1>
+          <p>{t('movieUnavailableHint')}</p>
+          <Link className="book fit" to="/">{t('toCatalog')}</Link>
+        </section>
+      </Shell>
+    )
+  }
   if (error) return <Shell><Link className="back" to="/">← {t('back')}</Link><p className="error">{error}</p></Shell>
   if (!movie) return <Shell><div className="hall-skeleton" /></Shell>
 
@@ -85,12 +129,36 @@ export default function MoviePage() {
           </div>
           <Link className="book" to={`/booking/${movie.id}/date`} onClick={haptic.tap}>{t('bookTicket')}</Link>
           <button className="admin-ghost detail-favorite" onClick={() => { void saveFavorite() }}>{t('addToFavorites')}</button>
+          <button className="admin-ghost detail-favorite" onClick={() => { void share() }}>📤 {t('share')}</button>
         </div>
       </section>
       <p className="description">{movie.description}</p>
       <section className="credits">
         <div><small>{t('director')}</small><b>{movie.director}</b></div>
         <div><small>{t('cast')}</small><b>{movie.cast.join(', ')}</b></div>
+      </section>
+      <section className="schedule-block">
+        <div className="strip-head">
+          <h2>{t('availableSessions')}</h2>
+          <p>{t('availableSessionsHint')}</p>
+        </div>
+        {movie.schedule.length ? movie.schedule.map(day => (
+          <div className="schedule-day" key={day.date}>
+            <b>{formatDateShort(day.date, language)}</b>
+            <div className="schedule-times">
+              {day.times.map(time => (
+                <Link
+                  key={time}
+                  className="schedule-time"
+                  to={`/booking/${movie.id}/date/${day.date}/time/${time}/hall`}
+                  onClick={haptic.select}
+                >
+                  {time}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )) : <p className="empty">{t('noSessionsYet')}</p>}
       </section>
       {movie.trailer_id ? (
         <div className="trailer">

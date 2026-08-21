@@ -206,6 +206,15 @@ export default function AdminMovieForm({ draft, editing, busy, error, onChange, 
               <button className={draft.is_published ? 'active' : ''} onClick={() => onChange({ ...draft, is_published: true })}><b>{t('publishMovie')}</b><small>{t('publishMovieHint')}</small></button>
               <button className={!draft.is_published ? 'active' : ''} onClick={() => onChange({ ...draft, is_published: false })}><b>{t('saveAsDraft')}</b><small>{t('saveAsDraftHint')}</small></button>
             </div>
+            <div className="publication-options">
+              <button className={draft.is_new ? 'active' : ''} onClick={() => onChange({ ...draft, is_new: true })}><b>{t('markAsNew')}</b><small>{t('newReleasesHint')}</small></button>
+              <button className={!draft.is_new ? 'active' : ''} onClick={() => onChange({ ...draft, is_new: false, new_until: '' })}><b>{t('unmarkNew')}</b><small>{t('newUntilHint')}</small></button>
+            </div>
+            {draft.is_new && (
+              <Field label={t('newUntil')} hint={t('newUntilHint')}>
+                <input type="date" value={draft.new_until} onChange={event => onChange({ ...draft, new_until: event.target.value })} />
+              </Field>
+            )}
             <Field label={t('catalogPosition')} hint={t('catalogPositionHint')}><input type="number" value={draft.sort_order} onChange={event => onChange({ ...draft, sort_order: Number(event.target.value) })} placeholder="0" /></Field>
           </section>
         </div>

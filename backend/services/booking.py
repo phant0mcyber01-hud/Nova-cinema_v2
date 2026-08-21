@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import date as date_type, timedelta
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -10,7 +11,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.core.config import BLOCKING_STATUSES
 from backend.models import Movie, Show
 
-__all__ = ["BLOCKING_STATUSES", "ensure_show", "upcoming_show_times", "show_times_by_movie"]
+__all__ = [
+    "BLOCKING_STATUSES",
+    "ensure_show",
+    "movie_schedule",
+    "show_times_by_movie",
+    "upcoming_show_times",
+]
 
 
 async def ensure_show(session: AsyncSession, movie_id: int, show_date: str, start_time: str) -> Show:
@@ -59,3 +66,27 @@ async def show_times_by_movie(
     for movie_id, start_time in await session.execute(query):
         grouped[movie_id].add(start_time)
     return {movie_id: sorted(times) for movie_id, times in grouped.items()}
+
+
+async def movie_schedule(session: AsyncSession, movie_id: int, days: int) -> list[dict[str, object]]:
+    """Upcoming screenings grouped by date, for the movie card.
+
+    Past dates are skipped and the window matches the admin-configured
+    `booking_days_ahead`, so the card never offers a slot that cannot be booked.
+    """
+    today = date_type.today()
+    last_day = (today + timedelta(days=max(days, 1) - 1)).isoformat()
+    rows = await session.execute(
+        select(Show.show_date, Show.start_time)
+        .where(
+            Show.movie_id == movie_id,
+            Show.status == "active",
+            Show.show_date >= today.isoformat(),
+            Show.show_date <= last_day,
+        )
+        .order_by(Show.show_date, Show.start_time)
+    )
+    grouped: dict[str, list[str]] = defaultdict(list)
+    for show_date, start_time in rows:
+        grouped[show_date].append(start_time)
+    return [{"date": day, "times": sorted(times)} for day, times in sorted(grouped.items())]

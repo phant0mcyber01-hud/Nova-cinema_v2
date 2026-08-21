@@ -11,7 +11,7 @@ from aiogram import Bot, Dispatcher, F, types
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, MenuButtonWebApp, WebAppInfo
 from dotenv import load_dotenv
 from sqlalchemy import select
@@ -23,6 +23,8 @@ load_dotenv(dotenv_path=ENV_PATH, override=True)
 from backend.core.db import SessionLocal
 from backend.models import Movie
 from backend.services.catalog import serialize_movie
+from backend.services.deep_link import movie_id_from_payload
+from backend.services.settings import get_settings
 
 _bot_token = os.getenv("BOT_TOKEN")
 if _bot_token is None:
@@ -107,6 +109,20 @@ async def fetch_published_movie(movie_id: int) -> dict[str, object] | None:
         return serialize_movie(movie) if movie else None
 
 
+async def fetch_settings() -> dict[str, object]:
+    async with SessionLocal() as session:
+        settings = await get_settings(session)
+        return {
+            "name": settings.name,
+            "address": settings.address,
+            "phone": settings.phone,
+            "telegram_url": settings.telegram_url,
+            "instagram_url": settings.instagram_url,
+            "work_hours": settings.work_hours,
+            "about": settings.about,
+        }
+
+
 def main_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -164,6 +180,43 @@ async def replace_callback_message(call: CallbackQuery, text: str, keyboard: Inl
         await call.message.answer(text, reply_markup=keyboard, parse_mode=ParseMode.HTML)
 
 
+async def send_movie_card(message: types.Message, movie: dict[str, object]) -> None:
+    """Poster with caption, falling back to plain text if Telegram rejects the image."""
+    poster = public_asset_url(str(movie.get("poster") or ""))
+    try:
+        await message.answer_photo(
+            photo=poster,
+            caption=movie_caption(movie),
+            reply_markup=movie_keyboard(movie),
+            parse_mode=ParseMode.HTML,
+        )
+    except TelegramBadRequest:
+        await message.answer(movie_caption(movie), reply_markup=movie_keyboard(movie), parse_mode=ParseMode.HTML)
+
+
+# Registered before the plain /start so a shared link is not swallowed by it.
+@dp.message(CommandStart(deep_link=True))
+async def cmd_start_shared_movie(message: types.Message, command: CommandObject) -> None:
+    """Handles t.me/<bot>?start=movie_<id> — the `startapp` form opens the Mini App directly."""
+    movie_id = movie_id_from_payload(command.args)
+    if movie_id is None:
+        await show_text(
+            message,
+            "<b>Ссылка не распознана</b>\n\nОткройте каталог и выберите фильм.",
+            main_keyboard(),
+        )
+        return
+    movie = await fetch_published_movie(movie_id)
+    if movie is None:
+        await show_text(
+            message,
+            "<b>Фильм недоступен</b>\n\nВозможно, он снят с показа или ссылка устарела.",
+            main_keyboard(),
+        )
+        return
+    await send_movie_card(message, movie)
+
+
 @dp.message(CommandStart())
 async def cmd_start(message: types.Message) -> None:
     text = (
@@ -217,32 +270,29 @@ async def cb_movie_detail(call: CallbackQuery) -> None:
         await call.message.delete()
     except TelegramBadRequest:
         pass
-    poster = public_asset_url(str(movie.get("poster") or ""))
-    try:
-        await call.message.answer_photo(
-            photo=poster,
-            caption=movie_caption(movie),
-            reply_markup=movie_keyboard(movie),
-            parse_mode=ParseMode.HTML,
-        )
-    except TelegramBadRequest:
-        await call.message.answer(movie_caption(movie), reply_markup=movie_keyboard(movie), parse_mode=ParseMode.HTML)
+    await send_movie_card(call.message, movie)
     await call.answer()
 
 
 @dp.callback_query(F.data == "about")
 async def cb_about(call: CallbackQuery) -> None:
-    text = (
-        "<b>ℹ️ О кинотеатре Nova Cinema</b>\n\n"
-        "📍 <b>Адрес:</b> Юксалиш 97\n"
-        "☎️ <b>Телефон:</b> +998 91 326 20 65\n"
-        "💬 <b>Telegram:</b> https://t.me/novasinema\n"
-        "📸 <b>Instagram:</b> https://www.instagram.com/nova_cinema__\n\n"
-        "Кино, которое остаётся с вами."
-    )
+    settings = await fetch_settings()
+    lines = [f"<b>ℹ️ О кинотеатре {html.escape(str(settings['name']))}</b>", ""]
+    if settings["address"]:
+        lines.append(f"📍 <b>Адрес:</b> {html.escape(str(settings['address']))}")
+    if settings["phone"]:
+        lines.append(f"☎️ <b>Телефон:</b> {html.escape(str(settings['phone']))}")
+    if settings["work_hours"]:
+        lines.append(f"🕒 <b>Время работы:</b> {html.escape(str(settings['work_hours']))}")
+    if settings["telegram_url"]:
+        lines.append(f"💬 <b>Telegram:</b> {html.escape(str(settings['telegram_url']))}")
+    if settings["instagram_url"]:
+        lines.append(f"📸 <b>Instagram:</b> {html.escape(str(settings['instagram_url']))}")
+    if settings["about"]:
+        lines.extend(["", html.escape(str(settings["about"]))])
     await replace_callback_message(
         call,
-        text,
+        "\n".join(lines),
         InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="◀ Главное меню", callback_data="main")]]),
     )
     await call.answer()

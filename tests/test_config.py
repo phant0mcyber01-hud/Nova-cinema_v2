@@ -40,3 +40,18 @@ def test_booking_lifecycle_matches_the_spec():
     assert "cancelled" not in config.BLOCKING_STATUSES
     assert set(config.BLOCKING_STATUSES) | {"cancelled"} == set(config.BOOKING_STATUSES)
     assert config.QR_VALID_STATUSES == ("confirmed", "watched")
+
+
+def test_bot_has_no_hardcoded_cinema_contacts():
+    """The bot must read the contact block from settings, like the Mini App.
+
+    Regression guard: the About section kept literal contacts long after the
+    settings row existed, so the admin could not change what the bot showed.
+    """
+    import pathlib
+
+    source = pathlib.Path(__file__).resolve().parents[1] / "bot.py"
+    text = source.read_text(encoding="utf-8")
+    for literal in ("Юксалиш", "+998 91 326", "t.me/novasinema", "instagram.com/nova_cinema__"):
+        assert literal not in text, f"bot.py still hardcodes {literal!r}"
+    assert "fetch_settings" in text, "bot.py should read the admin-managed settings row"

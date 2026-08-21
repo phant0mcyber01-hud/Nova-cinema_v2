@@ -17,6 +17,11 @@ from backend.models import CinemaSettings, Movie, Show
 SEED_MOVIES: list[dict[str, object]] = [
     {
         "title": "Дюна: Часть 2",
+        "title_uz": "Dyuna: Ikkinchi qism",
+        "genre_uz": "Fantastika",
+        "country_uz": "AQSH, Kanada",
+        "director_uz": "Deni Vilnyov",
+        "description_uz": "Pol Atreydes Chani va fremenlar bilan birlashib, Arrakisni himoya qiladi.",
         "genre": "Фантастика",
         "duration": 166,
         "age": 12,
@@ -39,6 +44,11 @@ SEED_MOVIES: list[dict[str, object]] = [
     },
     {
         "title": "Кунг-фу Панда 4",
+        "title_uz": "Kung-fu Panda 4",
+        "genre_uz": "Multfilm",
+        "country_uz": "AQSH, Xitoy",
+        "director_uz": "Mayk Mitchell",
+        "description_uz": "Po oʻziga voris izlaydi va epchil tulki Chjenni uchratadi.",
         "genre": "Мультфильм",
         "duration": 94,
         "age": 6,
@@ -56,6 +66,11 @@ SEED_MOVIES: list[dict[str, object]] = [
     },
     {
         "title": "Оппенгеймер",
+        "title_uz": "Oppengeymer",
+        "genre_uz": "Drama",
+        "country_uz": "AQSH, Buyuk Britaniya",
+        "director_uz": "Kristofer Nolan",
+        "description_uz": "Fizik Robert Oppengeymer va atom bombasi yaratilishi tarixi.",
         "genre": "Драма",
         "duration": 180,
         "age": 18,

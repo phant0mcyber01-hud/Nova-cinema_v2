@@ -430,3 +430,46 @@ body{
     grid-template-columns:1fr;
   }
 }
+
+/* --- stage 5: mobile-first home + tab bar ------------------------------- */
+.bottom-nav { position: fixed; left: 50%; bottom: 0; z-index: 20; display: flex; gap: 4px; width: min(100%, 760px); padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); background: #120e0fee; border-top: 1px solid #2f2023; transform: translateX(-50%); backdrop-filter: blur(12px); }
+.bottom-nav a { flex: 1; display: grid; gap: 3px; justify-items: center; padding: 7px 0; border-radius: 13px; color: #8e8184; text-decoration: none; transition: background .15s, color .15s; }
+.bottom-nav a.active { color: #fff; background: #241519; }
+.bottom-nav a:active { transform: scale(.96); }
+.bottom-nav b { font-size: 19px; font-weight: 400; line-height: 1; }
+.bottom-nav small { font-size: 10px; font-weight: 700; letter-spacing: .02em; }
+.strip-title { margin: 22px 0 0; color: #b27480; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.date-strip .dates { margin-top: 10px; }
+.new-strip { margin-top: 26px; }
+.strip-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.strip-head h2 { margin: 0; font-size: 17px; letter-spacing: -.02em; }
+.strip-head p { margin: 0; color: #8e8184; font-size: 12px; }
+.new-rail { display: flex; gap: 12px; margin-top: 12px; padding-bottom: 4px; overflow-x: auto; scrollbar-width: none; }
+.new-rail::-webkit-scrollbar { display: none; }
+.new-card { flex: 0 0 126px; display: grid; gap: 4px; color: inherit; text-decoration: none; }
+.new-card img { width: 100%; aspect-ratio: 2/3; border: 1px solid #2f2023; border-radius: 14px; object-fit: cover; }
+.new-card b { overflow: hidden; font-size: 13px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.new-card span { color: #8e8184; font-size: 11px; }
+.movie { position: relative; }
+.new-badge { position: absolute; top: 10px; left: 10px; z-index: 2; padding: 4px 9px; border-radius: 999px; color: #fff; background: #7d1e31; font-size: 10px; font-weight: 800; letter-spacing: .04em; }
+
+/* --- stage 6: schedule inside the movie card ---------------------------- */
+.schedule-block { margin-top: 26px; }
+.schedule-day { display: grid; gap: 8px; padding: 13px 0; border-bottom: 1px solid #241a1d; }
+.schedule-day:last-child { border-bottom: 0; }
+.schedule-day > b { color: #b27480; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.schedule-times { display: flex; flex-wrap: wrap; gap: 8px; }
+.schedule-time { padding: 9px 15px; border: 1px solid #3b252a; border-radius: 12px; color: #f0e7e9; background: #171214; font-size: 14px; font-weight: 700; text-decoration: none; }
+.schedule-time:active { transform: scale(.96); border-color: #8f2339; background: #241519; }
+
+/* --- stage 7: search + filter reset ------------------------------------- */
+.search-clear { display: grid; place-items: center; width: 26px; height: 26px; border: 0; border-radius: 50%; color: #d3c6c9; background: #2c2024; font-size: 17px; line-height: 1; }
+.search-clear:active { transform: scale(.92); }
+.reset-filters { display: inline-block; margin-top: 14px; }
+
+/* --- stage 8: unreachable movie from a shared link ---------------------- */
+.unavailable { display: grid; gap: 10px; justify-items: center; padding: 64px 20px; text-align: center; }
+.unavailable span { font-size: 46px; }
+.unavailable h1 { margin: 0; font-size: 22px; letter-spacing: -.02em; }
+.unavailable p { margin: 0; max-width: 320px; color: #8e8184; font-size: 14px; }
+.unavailable .book { margin-top: 8px; }

@@ -9,8 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from backend.api.deps import admin_required, get_db
-from backend.models import Booking, Movie, Show
-from backend.schemas.movie import MovieIn, MovieLookupIn
+from backend.models import Booking, Movie, Review, Show, User
+from backend.schemas.movie import MovieIn, MovieLookupIn, ReviewModerationIn
 from backend.schemas.show import ShowBulkIn, ShowIn
 from backend.services.booking import show_times_by_movie
 from backend.services.catalog import serialize_movie
@@ -199,6 +199,53 @@ async def delete_session(show_id: int, session: AsyncSession = Depends(get_db)) 
     )
     if booked is not None:
         raise HTTPException(409, "Session has bookings")
+    await session.delete(item)
+    await session.commit()
+    return {"status": "deleted"}
+
+
+@router.get("/reviews")
+async def admin_reviews(session: AsyncSession = Depends(get_db)) -> list[dict[str, object]]:
+    rows = await session.execute(
+        select(Review, Movie, User)
+        .join(Movie, Review.movie_id == Movie.id)
+        .join(User, Review.user_id == User.id)
+        .order_by(Review.id.desc())
+    )
+    return [
+        {
+            "id": review.id,
+            "movie_id": movie.id,
+            "movie": movie.title,
+            "poster": movie.poster,
+            "user_name": f"{user.first_name} {user.last_name}".strip() or user.name,
+            "telegram_username": user.username,
+            "rating": review.rating,
+            "text": review.text,
+            "approved": review.approved,
+            "created_at": review.created_at,
+        }
+        for review, movie, user in rows
+    ]
+
+
+@router.patch("/reviews/{review_id}")
+async def moderate_review(
+    review_id: int, payload: ReviewModerationIn, session: AsyncSession = Depends(get_db)
+) -> dict[str, object]:
+    item = await session.get(Review, review_id)
+    if item is None:
+        raise HTTPException(404, "Review not found")
+    item.approved = payload.approved
+    await session.commit()
+    return {"id": item.id, "approved": item.approved}
+
+
+@router.delete("/reviews/{review_id}")
+async def delete_review(review_id: int, session: AsyncSession = Depends(get_db)) -> dict[str, str]:
+    item = await session.get(Review, review_id)
+    if item is None:
+        raise HTTPException(404, "Review not found")
     await session.delete(item)
     await session.commit()
     return {"status": "deleted"}

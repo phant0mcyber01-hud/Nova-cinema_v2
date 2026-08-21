@@ -95,14 +95,31 @@ export function useI18n() {
   return context
 }
 
+/** Currency is an admin setting; the dictionary value is only a fallback
+ * for screens rendered before GET /api/settings answers. */
+let activeCurrency = ''
+
+export const setCurrency = (value: string) => {
+  activeCurrency = value.trim()
+}
+
 export const formatMoney = (value: number, language: Language) => (
-  `${value.toLocaleString(localeByLanguage[language])} ${copy[language].currency}`
+  `${value.toLocaleString(localeByLanguage[language])} ${activeCurrency || copy[language].currency}`
 )
 
-export const formatDateShort = (date: string, language: Language) => (
-  new Intl.DateTimeFormat(localeByLanguage[language], { weekday: 'short', day: 'numeric', month: 'short' })
-    .format(new Date(`${date}T12:00:00`))
-)
+// Chrome has no short month or weekday names for Latin Uzbek -- Intl renders
+// "M08 22, Sat" -- so they are spelled out instead of formatted.
+const uzWeekdays = ['Yak', 'Dush', 'Sesh', 'Chor', 'Pay', 'Jum', 'Shan']
+const uzMonths = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyn', 'Iyl', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek']
+
+export const formatDateShort = (date: string, language: Language) => {
+  const value = new Date(`${date}T12:00:00`)
+  if (language === 'uz') {
+    return `${uzWeekdays[value.getDay()]}, ${value.getDate()} ${uzMonths[value.getMonth()]}`
+  }
+  return new Intl.DateTimeFormat(localeByLanguage[language], { weekday: 'short', day: 'numeric', month: 'short' })
+    .format(value)
+}
 
 export const formatDateTime = (value: string, language: Language) => (
   new Date(value).toLocaleString(localeByLanguage[language])
