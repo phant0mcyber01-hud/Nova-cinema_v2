@@ -9,12 +9,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config import BLOCKING_STATUSES
-from backend.models import Movie, Show
+from backend.models import Booking, Movie, Show
 
 __all__ = [
     "BLOCKING_STATUSES",
     "ensure_show",
     "movie_schedule",
+    "seats_taken_by_others",
     "show_times_by_movie",
     "upcoming_show_times",
 ]
@@ -97,3 +98,28 @@ async def movie_schedule(session: AsyncSession, movie_id: int, days: int) -> lis
     for show_date, start_time in rows:
         grouped[show_date].append(start_time)
     return [{"date": day, "times": sorted(times)} for day, times in sorted(grouped.items())]
+
+
+async def seats_taken_by_others(
+    session: AsyncSession, booking: Booking, session_time: str | None = None
+) -> set[str]:
+    """Seats of this booking that another live booking already occupies.
+
+    Two situations need this. Cancelling frees the seats, so reviving a
+    cancelled request is not a pure status flip. And moving a booking to the
+    time the admin proposed lands it among a different set of neighbours.
+    """
+    seats = {seat for seat in booking.seats.split(",") if seat}
+    if not seats:
+        return set()
+    rows = await session.scalars(
+        select(Booking).where(
+            Booking.movie_id == booking.movie_id,
+            Booking.show_date == booking.show_date,
+            Booking.session == (session_time or booking.session),
+            Booking.status.in_(BLOCKING_STATUSES),
+            Booking.id != booking.id,
+        )
+    )
+    occupied = {seat for other in rows for seat in other.seats.split(",") if seat}
+    return seats & occupied
