@@ -3,7 +3,15 @@ from __future__ import annotations
 
 from backend.core.db import SessionLocal
 from backend.models import Review
-from tests.conftest import ADMIN_ID, SESSION, SHOW_DATE, USER_ID, auth_header, login
+from tests.conftest import (
+    ADMIN_ID,
+    SESSION,
+    SHOW_DATE,
+    USER_ID,
+    auth_header,
+    login,
+    watched_booking_in_the_past,
+)
 
 CONTACT = {
     "first_name": "Иван",
@@ -25,16 +33,10 @@ async def _book(client, movie_id: int, seats: list[str], token: str) -> dict:
 
 
 async def _watched_booking(client, movie_id: int, seats: list[str]) -> tuple[str, str]:
-    """Book, then let the admin mark it watched so reviews unlock."""
+    """A finished, watched screening — the state that unlocks a review."""
     user = await login(client, USER_ID)
-    await _book(client, movie_id, seats, user)
     admin = await login(client, ADMIN_ID, "admin")
-    booking_id = (await client.get("/api/admin/bookings", headers=auth_header(admin))).json()[0]["id"]
-    await client.patch(
-        f"/api/admin/bookings/{booking_id}/status",
-        json={"status": "watched"},
-        headers=auth_header(admin),
-    )
+    await watched_booking_in_the_past(movie_id, 1, ",".join(seats))
     return user, admin
 
 

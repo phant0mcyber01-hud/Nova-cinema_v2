@@ -72,6 +72,9 @@ DEFAULT_TICKET_PRICE = 30000
 DEFAULT_MAX_SEATS_PER_BOOKING = 4
 DEFAULT_HOLD_MINUTES = 10
 DEFAULT_BOOKING_DAYS_AHEAD = 7
+#: The cinema's clock. The server runs in UTC; Uzbekistan is UTC+5 with no
+#: daylight saving, so a fixed offset is exact. Minutes, to allow half-hour zones.
+DEFAULT_TIMEZONE_OFFSET_MINUTES = 300
 
 # Hard ceilings the admin cannot exceed, so a typo cannot break the hall grid.
 MAX_HALL_ROWS = 26

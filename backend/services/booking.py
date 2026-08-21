@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import date as date_type, timedelta
+from datetime import date as date_type, datetime, timedelta
 
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config import BLOCKING_STATUSES
+from backend.core.db import utcnow
 from backend.models import Booking, Movie, Show
 
 __all__ = [
@@ -16,6 +17,7 @@ __all__ = [
     "ensure_show",
     "movie_schedule",
     "seats_taken_by_others",
+    "session_has_ended",
     "show_times_by_movie",
     "upcoming_show_times",
 ]
@@ -123,3 +125,26 @@ async def seats_taken_by_others(
     )
     occupied = {seat for other in rows for seat in other.seats.split(",") if seat}
     return seats & occupied
+
+
+def session_has_ended(
+    show_date: str,
+    start_time: str,
+    duration_minutes: int,
+    offset_minutes: int,
+    now: datetime | None = None,
+) -> bool:
+    """True once the screening has finished in the cinema's own time.
+
+    The server runs in UTC while the cinema does not, so the offset from the
+    settings row is what makes this answer meaningful. The end is the start
+    plus the film's running time — a viewer should not be able to review a
+    film that is still playing.
+    """
+    try:
+        start = datetime.fromisoformat(f"{show_date}T{start_time}")
+    except ValueError:
+        return False
+    end = start + timedelta(minutes=max(duration_minutes, 0))
+    local_now = (now or utcnow()).replace(tzinfo=None) + timedelta(minutes=offset_minutes)
+    return local_now >= end

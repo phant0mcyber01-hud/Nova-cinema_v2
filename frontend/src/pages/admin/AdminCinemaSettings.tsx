@@ -32,6 +32,7 @@ const toPayload = (settings: AdminSettings): AdminSettingsPayload => ({
   max_seats_per_booking: settings.max_seats_per_booking,
   hold_minutes: settings.hold_minutes,
   booking_days_ahead: settings.booking_days_ahead,
+  timezone_offset_minutes: settings.timezone_offset_minutes,
 })
 
 const numberOrNull = (value: string) => (value.trim() === '' ? null : Number(value))
@@ -228,6 +229,16 @@ export default function CinemaSettingsView({ settings, onSaved }: CinemaSettings
                 max="60"
                 value={draft.booking_days_ahead}
                 onChange={event => set('booking_days_ahead', Number(event.target.value))}
+              />
+            </label>
+            <label>
+              <b>{t('timezoneOffset')}</b><small>{t('timezoneOffsetHint')}</small>
+              <input
+                type="number"
+                min="-720"
+                max="840"
+                value={draft.timezone_offset_minutes}
+                onChange={event => set('timezone_offset_minutes', Number(event.target.value))}
               />
             </label>
             <label>

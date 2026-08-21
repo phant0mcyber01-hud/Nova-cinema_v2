@@ -88,5 +88,6 @@ def serialize_settings_admin(settings: CinemaSettings) -> dict[str, object]:
         "max_seats_per_booking": settings.max_seats_per_booking,
         "hold_minutes": settings.hold_minutes,
         "booking_days_ahead": settings.booking_days_ahead,
+        "timezone_offset_minutes": settings.timezone_offset_minutes,
         "updated_at": settings.updated_at,
     }

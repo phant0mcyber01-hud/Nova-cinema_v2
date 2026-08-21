@@ -4,7 +4,16 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from backend.core.db import SessionLocal
-from tests.conftest import ADMIN_ID, SESSION, SHOW_DATE, USER_ID, auth_header, login, movie_row
+from tests.conftest import (
+    ADMIN_ID,
+    SESSION,
+    SHOW_DATE,
+    USER_ID,
+    auth_header,
+    login,
+    movie_row,
+    watched_booking_in_the_past,
+)
 
 CONTACT = {
     "first_name": "Иван",
@@ -231,10 +240,9 @@ async def test_contacting_status_keeps_the_seat(client, movie):
 
 
 async def test_watched_status_unlocks_the_review(client, movie):
+    """Since stage 14 the screening must also be over, not just marked watched."""
     user = await login(client, USER_ID)
     await _book(client, movie.id, ["3-1"], user)
-    admin = await login(client, ADMIN_ID, "admin")
-    booking_id = (await client.get("/api/admin/bookings", headers=auth_header(admin))).json()[0]["id"]
 
     blocked = await client.post(
         f"/api/movies/{movie.id}/reviews",
@@ -243,11 +251,7 @@ async def test_watched_status_unlocks_the_review(client, movie):
     )
     assert blocked.status_code == 403
 
-    await client.patch(
-        f"/api/admin/bookings/{booking_id}/status",
-        json={"status": "watched"},
-        headers=auth_header(admin),
-    )
+    await watched_booking_in_the_past(movie.id, 1, "3-2")
     allowed = await client.post(
         f"/api/movies/{movie.id}/reviews",
         json={"rating": 5, "text": "Отличный фильм"},

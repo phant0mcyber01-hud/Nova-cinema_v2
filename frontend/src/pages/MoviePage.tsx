@@ -170,11 +170,15 @@ export default function MoviePage() {
         <h2>{t('reviews')}</h2>
         {movie.reviews.map(review => <article className="review" key={`${review.user_name}-${review.created_at}`}><div><b>{review.user_name}</b><span>★ {review.rating}/5</span></div><p>{review.text}</p><small>{new Date(review.created_at).toLocaleDateString()}</small></article>)}
         {!movie.reviews.length && <p className="empty">{t('noReviews')}</p>}
-        <div className="review-form">
-          <label>{t('reviewRating')}<select value={reviewRating} onChange={event => setReviewRating(Number(event.target.value))}>{[5, 4, 3, 2, 1].map(value => <option value={value} key={value}>{value}/5</option>)}</select></label>
-          <textarea value={reviewText} onChange={event => setReviewText(event.target.value)} placeholder={t('reviewPlaceholder')} maxLength={1000} />
-          <button className="book fit" onClick={() => { void submitReview() }} disabled={reviewBusy || reviewText.trim().length < 3}>{t('sendReview')}</button>
-        </div>
+        {movie.has_reviewed && <p className="empty">{t('reviewAlreadyLeft')}</p>}
+        {!movie.has_reviewed && !movie.can_review && <p className="empty">{t('reviewAfterViewing')}</p>}
+        {movie.can_review && !movie.has_reviewed && (
+          <div className="review-form">
+            <label>{t('reviewRating')}<select value={reviewRating} onChange={event => setReviewRating(Number(event.target.value))}>{[5, 4, 3, 2, 1].map(value => <option value={value} key={value}>{value}/5</option>)}</select></label>
+            <textarea value={reviewText} onChange={event => setReviewText(event.target.value)} placeholder={t('reviewPlaceholder')} maxLength={1000} />
+            <button className="book fit" onClick={() => { void submitReview() }} disabled={reviewBusy || reviewText.trim().length < 3}>⭐ {t('sendReview')}</button>
+          </div>
+        )}
       </section>
       {movie.similar_movies.length > 0 && <section className="similar"><h2>{t('similarMovies')}</h2><div>{movie.similar_movies.map(item => <Link to={`/movies/${item.id}`} key={item.id}><img src={item.poster} alt={item.title} loading="lazy" /><span>{item.title}</span></Link>)}</div></section>}
       {notice && <p className="toast">{notice}</p>}

@@ -401,6 +401,10 @@ export const ru = {
   holdExpiresIn: 'Места удержаны ещё',
   holdExpired: 'Время удержания истекло — выберите места заново',
   seatTakenMeanwhile: 'Место успели занять, выберите другое',
+  reviewAfterViewing: 'Отзыв можно оставить после того, как сеанс завершится',
+  reviewAlreadyLeft: 'Вы уже оставили отзыв на этот фильм',
+  timezoneOffset: 'Часовой пояс, минут от UTC',
+  timezoneOffsetHint: 'Узбекистан — 300 (UTC+5). Определяет, когда сеанс считается завершённым.',
 }
 
 export type TranslationKey = keyof typeof ru

@@ -48,6 +48,10 @@ class CinemaSettings(Base):
     max_seats_per_booking: Mapped[int] = mapped_column(Integer, default=config.DEFAULT_MAX_SEATS_PER_BOOKING)
     hold_minutes: Mapped[int] = mapped_column(Integer, default=config.DEFAULT_HOLD_MINUTES)
     booking_days_ahead: Mapped[int] = mapped_column(Integer, default=config.DEFAULT_BOOKING_DAYS_AHEAD)
+    #: Offset from UTC in minutes; decides when a screening counts as finished.
+    timezone_offset_minutes: Mapped[int] = mapped_column(
+        Integer, default=config.DEFAULT_TIMEZONE_OFFSET_MINUTES
+    )
 
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 

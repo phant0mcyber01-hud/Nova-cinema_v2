@@ -403,4 +403,8 @@ export const uz: Record<TranslationKey, string> = {
   holdExpiresIn: 'Joylar yana ushlab turiladi',
   holdExpired: 'Ushlab turish vaqti tugadi — joylarni qayta tanlang',
   seatTakenMeanwhile: 'Joy band boʻlib ulgurdi, boshqasini tanlang',
+  reviewAfterViewing: 'Sharhni seans tugagach qoldirish mumkin',
+  reviewAlreadyLeft: 'Siz bu filmga sharh qoldirgansiz',
+  timezoneOffset: 'Vaqt mintaqasi, UTC dan daqiqa',
+  timezoneOffsetHint: 'Oʻzbekiston — 300 (UTC+5). Seans tugaganini shu belgilaydi.',
 }

@@ -141,3 +141,47 @@ async def login(client: httpx.AsyncClient, telegram_id: int, username: str = "te
 
 def auth_header(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
+
+
+PAST_DATE = (date.today() - timedelta(days=1)).isoformat()
+PAST_SESSION = "10:00"
+
+
+async def watched_booking_in_the_past(movie_id: int, user_id: int, seats: str = "1-1") -> int:
+    """A finished screening the viewer attended, already marked watched.
+
+    Since stage 14 a review needs the screening to be over, and since stage 9
+    a past date cannot be booked through the API — so this is written straight
+    to the database.
+    """
+    from sqlalchemy import select
+
+    from backend.models import Booking, Show
+
+    async with SessionLocal() as session:
+        existing = await session.scalar(
+            select(Show).where(
+                Show.movie_id == movie_id,
+                Show.show_date == PAST_DATE,
+                Show.start_time == PAST_SESSION,
+            )
+        )
+        if existing is None:
+            session.add(
+                Show(movie_id=movie_id, show_date=PAST_DATE, start_time=PAST_SESSION, status="active")
+            )
+        booking = Booking(
+            user_id=user_id,
+            movie_id=movie_id,
+            show_date=PAST_DATE,
+            session=PAST_SESSION,
+            seats=seats,
+            status="watched",
+            ticket_price=30000,
+            total=30000,
+            code=str(user_id),
+        )
+        session.add(booking)
+        await session.commit()
+        await session.refresh(booking)
+        return booking.id

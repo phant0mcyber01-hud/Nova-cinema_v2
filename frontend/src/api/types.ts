@@ -34,6 +34,9 @@ export type MovieDetail = Movie & {
   schedule: ScheduleDay[]
   /** t.me deep link, empty until the bot handle is set in the admin panel. */
   share_link: string
+  /** Whether this viewer may leave a review right now (spec 14). */
+  can_review: boolean
+  has_reviewed: boolean
 }
 
 export type MoviePayload = {
@@ -232,6 +235,7 @@ export type AdminSettings = {
   max_seats_per_booking: number
   hold_minutes: number
   booking_days_ahead: number
+  timezone_offset_minutes: number
   updated_at: string
 }
 

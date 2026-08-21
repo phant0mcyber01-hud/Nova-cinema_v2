@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.core.db import Base, utcnow
@@ -52,6 +52,8 @@ class Movie(Base):
 
 class Review(Base):
     __tablename__ = "reviews"
+    #: One opinion per viewer per movie, otherwise the rating is trivial to skew.
+    __table_args__ = (UniqueConstraint("user_id", "movie_id", name="uq_review_per_movie"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id"), index=True)

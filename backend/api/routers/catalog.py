@@ -9,14 +9,44 @@ from sqlalchemy.orm import selectinload
 
 from backend.api.deps import current_user, get_db
 from backend.core.config import DATE_PATTERN
+from backend.core.security import optional_user
 from backend.models import Booking, Movie, Review, Show, User
 from backend.schemas.movie import ReviewIn
-from backend.services.booking import movie_schedule, show_times_by_movie, upcoming_show_times
+from backend.services.booking import (
+    movie_schedule,
+    session_has_ended,
+    show_times_by_movie,
+    upcoming_show_times,
+)
 from backend.services.catalog import matches_query, serialize_movie
 from backend.services.deep_link import share_link
 from backend.services.settings import get_settings
 
 router = APIRouter(prefix="/api/movies", tags=["catalog"])
+
+
+async def may_review(session: AsyncSession, user_id: int, movie_id: int) -> bool:
+    """Spec 14: a watched booking whose screening has actually finished.
+
+    The status alone is not enough — an administrator sets it by hand and could
+    mark a booking watched before the film has even started.
+    """
+    rows = await session.execute(
+        select(Booking, Movie)
+        .join(Movie, Booking.movie_id == Movie.id)
+        .where(
+            Booking.user_id == user_id,
+            Booking.movie_id == movie_id,
+            Booking.status == "watched",
+        )
+    )
+    settings = await get_settings(session)
+    return any(
+        session_has_ended(
+            booking.show_date, booking.session, movie.duration, settings.timezone_offset_minutes
+        )
+        for booking, movie in rows
+    )
 
 
 @router.get("")
@@ -60,7 +90,12 @@ async def movies(
 
 
 @router.get("/{movie_id}")
-async def movie_detail(movie_id: int, lang: str = "ru", session: AsyncSession = Depends(get_db)) -> dict[str, object]:
+async def movie_detail(
+    movie_id: int,
+    lang: str = "ru",
+    user: User | None = Depends(optional_user),
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, object]:
     movie = await session.scalar(select(Movie).options(selectinload(Movie.reviews)).where(Movie.id == movie_id))
     if movie is None or not movie.is_published:
         raise HTTPException(404, "Movie not found")
@@ -69,6 +104,12 @@ async def movie_detail(movie_id: int, lang: str = "ru", session: AsyncSession = 
     settings = await get_settings(session)
     data["schedule"] = await movie_schedule(session, movie_id, settings.booking_days_ahead)
     data["share_link"] = share_link(settings.bot_username, movie_id)
+    data["can_review"] = user is not None and await may_review(session, user.id, movie_id)
+    data["has_reviewed"] = user is not None and (
+        await session.scalar(
+            select(Review.id).where(Review.user_id == user.id, Review.movie_id == movie_id)
+        )
+    ) is not None
     data["reviews"] = [
         {"rating": review.rating, "text": review.text, "created_at": review.created_at, "user_name": "Зритель"}
         for review in movie.reviews
@@ -107,15 +148,13 @@ async def create_review(
     user: User = Depends(current_user),
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, str]:
-    seen = await session.scalar(
-        select(Booking.id).where(
-            Booking.user_id == user.id,
-            Booking.movie_id == movie_id,
-            Booking.status == "watched",
-        )
-    )
-    if seen is None:
+    if not await may_review(session, user.id, movie_id):
         raise HTTPException(403, "Review is available after viewing")
+    already = await session.scalar(
+        select(Review.id).where(Review.user_id == user.id, Review.movie_id == movie_id)
+    )
+    if already is not None:
+        raise HTTPException(409, "You have already reviewed this movie")
     session.add(Review(movie_id=movie_id, user_id=user.id, rating=payload.rating, text=payload.text.strip()))
     await session.commit()
     return {"status": "published"}
