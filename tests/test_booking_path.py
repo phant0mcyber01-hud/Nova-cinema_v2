@@ -31,7 +31,10 @@ async def _seats(client, movie_id: int, show_date: str = SHOW_DATE, session_time
 async def test_hall_payload_has_no_seat_classes(client, movie):
     """One hall, no VIP/Standard/Premium anywhere in the contract."""
     hall = (await _seats(client, movie.id)).json()
-    assert set(hall) == {"rows", "cols", "seats_count", "max_seats", "price", "currency", "taken"}
+    assert set(hall) == {
+        "rows", "cols", "seats_count", "max_seats", "price", "currency",
+        "hold_minutes", "booked", "awaiting", "mine", "taken",
+    }
     assert hall["seats_count"] == hall["rows"] * hall["cols"]
 
 

@@ -81,3 +81,22 @@ async def admin_required(user: User = Depends(current_user)) -> User:
     if user.telegram_id not in config.ADMIN_TELEGRAM_IDS or user.role != "admin":
         raise HTTPException(403, "Admin role required")
     return user
+
+
+async def optional_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+    session: AsyncSession = Depends(get_db),
+) -> User | None:
+    """Like `current_user`, but returns None instead of raising.
+
+    The hall layout is public, yet a signed-in viewer must see their own held
+    seats as selectable rather than blocked.
+    """
+    if credentials is None or not config.JWT_SECRET:
+        return None
+    try:
+        payload = jwt.decode(credentials.credentials, config.JWT_SECRET, algorithms=[config.JWT_ALGORITHM])
+        user_id = int(payload["sub"])
+    except (jwt.PyJWTError, KeyError, ValueError):
+        return None
+    return await session.get(User, user_id)

@@ -396,6 +396,11 @@ export const ru = {
   pricePerTicket: 'Цена билета',
   maxSeatsHint: 'До {n} мест в одной заявке',
   totalLabel: 'Итого',
+  seatAwaiting: 'Ожидает подтверждения',
+  seatBooked: 'Забронировано',
+  holdExpiresIn: 'Места удержаны ещё',
+  holdExpired: 'Время удержания истекло — выберите места заново',
+  seatTakenMeanwhile: 'Место успели занять, выберите другое',
 }
 
 export type TranslationKey = keyof typeof ru

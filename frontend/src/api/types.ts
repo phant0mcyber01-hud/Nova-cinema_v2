@@ -68,6 +68,14 @@ export type Hall = {
   max_seats: number
   price: number
   currency: string
+  hold_minutes: number
+  /** Confirmed or already watched — final. */
+  booked: string[]
+  /** A request the admin has not decided yet, or somebody else's live hold. */
+  awaiting: string[]
+  /** Seats this viewer is currently holding. */
+  mine: string[]
+  /** Union of booked and awaiting: everything that cannot be picked. */
   taken: string[]
 }
 

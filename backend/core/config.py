@@ -83,8 +83,12 @@ AUDIO_MAX_BYTES = 10_000_000
 
 # Booking lifecycle (stage 12 of the spec).
 BOOKING_STATUSES = ("pending", "contacting", "confirmed", "cancelled", "watched")
+#: The seat is taken but the admin has not confirmed it yet.
+AWAITING_STATUSES = ("pending", "contacting")
+#: The seat is finally the viewer's.
+CONFIRMED_STATUSES = ("confirmed", "watched")
 #: Statuses that keep a seat occupied.  "cancelled" releases it.
-BLOCKING_STATUSES = ("pending", "contacting", "confirmed", "watched")
+BLOCKING_STATUSES = AWAITING_STATUSES + CONFIRMED_STATUSES
 #: Statuses whose ticket QR is valid at the door.
 QR_VALID_STATUSES = ("confirmed", "watched")
 BOOKING_STATUS_PATTERN = "^(" + "|".join(BOOKING_STATUSES) + ")$"

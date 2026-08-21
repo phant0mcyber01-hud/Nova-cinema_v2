@@ -398,4 +398,9 @@ export const uz: Record<TranslationKey, string> = {
   pricePerTicket: 'Chipta narxi',
   maxSeatsHint: 'Bitta arizada {n} tagacha joy',
   totalLabel: 'Jami',
+  seatAwaiting: 'Tasdiqlanishi kutilmoqda',
+  seatBooked: 'Bron qilingan',
+  holdExpiresIn: 'Joylar yana ushlab turiladi',
+  holdExpired: 'Ushlab turish vaqti tugadi — joylarni qayta tanlang',
+  seatTakenMeanwhile: 'Joy band boʻlib ulgurdi, boshqasini tanlang',
 }
