@@ -1,9 +1,19 @@
 import WebApp from '@twa-dev/sdk'
 import { useEffect, useState } from 'react'
 
-import { getGallery, getPublicSettings, type GalleryImage, type PublicSettings } from '../api'
+import {
+  getBonuses,
+  getGallery,
+  getMelodies,
+  getPublicSettings,
+  type Bonus,
+  type GalleryImage,
+  type Melody,
+  type PublicSettings,
+} from '../api'
 import Shell from '../components/Shell'
-import { translate, useI18n } from '../i18n'
+import { useI18n } from '../i18n'
+import { apiMessage } from '../lib/apiMessage'
 import { haptic } from '../lib/haptic'
 
 /** Where to send someone who taps "open on the map". */
@@ -32,19 +42,28 @@ export default function About() {
   const { language, t } = useI18n()
   const [settings, setSettings] = useState<PublicSettings | null>(null)
   const [photos, setPhotos] = useState<GalleryImage[]>([])
+  const [bonuses, setBonuses] = useState<Bonus[]>([])
+  const [melodies, setMelodies] = useState<Melody[]>([])
   const [error, setError] = useState('')
 
   useEffect(() => {
     let active = true
-    void Promise.all([getPublicSettings(language), getGallery(language)])
-      .then(([profile, images]) => {
+    void Promise.all([
+      getPublicSettings(language),
+      getGallery(language),
+      getBonuses(language),
+      getMelodies(),
+    ])
+      .then(([profile, images, promotions, audio]) => {
         if (!active) return
         setSettings(profile)
         setPhotos(images)
+        setBonuses(promotions)
+        setMelodies(audio)
         setError('')
       })
       .catch(reason => {
-        if (active) setError(reason instanceof Error ? reason.message : translate('serverError'))
+        if (active) setError(apiMessage(reason, 'serverError'))
       })
     return () => { active = false }
   }, [language])
@@ -57,7 +76,7 @@ export default function About() {
   return (
     <Shell>
       <section className="about-hero">
-        <p>{t('aboutTitle')}</p>
+        <p className="about-kicker">{t('aboutTitle')}</p>
         <h1>{settings.name}</h1>
         {settings.about && <p className="about-text">{settings.about}</p>}
       </section>
@@ -93,6 +112,35 @@ export default function About() {
           )}
         </div>
       </section>
+
+      {!!bonuses.length && (
+        <section className="about-block">
+          <h2>{t('aboutBonuses')}</h2>
+          <div className="about-bonuses">
+            {bonuses.map(bonus => (
+              <article key={bonus.id}>
+                <b>{bonus.title}</b>
+                {bonus.text && <p>{bonus.text}</p>}
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {!!melodies.length && (
+        <section className="about-block">
+          <h2>{t('aboutMelodies')}</h2>
+          <div className="about-melodies">
+            {melodies.map(melody => (
+              <figure key={melody.id}>
+                <figcaption>{melody.title}</figcaption>
+                {/* Nothing is preloaded: the viewer is on mobile data until they tap. */}
+                <audio controls preload="none" src={melody.file_url} onPlay={haptic.tap} />
+              </figure>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="about-block">
         <h2>{t('cinemaPhotos')}</h2>

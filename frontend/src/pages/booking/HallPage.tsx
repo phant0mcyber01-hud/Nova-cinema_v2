@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { confirmBooking, getHall, getProfile, holdSeats, releaseSeats, type Hall } from '../../api'
 import Shell from '../../components/Shell'
 import { formatMoney, setCurrency, translate, useI18n } from '../../i18n'
+import { apiMessage } from '../../lib/apiMessage'
 import { rowLabel, seatLabel } from '../../lib/hall'
 import { haptic } from '../../lib/haptic'
 import { setClosingConfirmation } from '../../lib/telegramTheme'
@@ -67,7 +68,7 @@ export default function HallPage() {
       }
       setSelected(current => current.filter(seat => !nextHall.taken.includes(seat)))
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : translate('failedRefreshHall'))
+      setError(apiMessage(reason, 'failedRefreshHall'))
     }
   }, [date, id, time])
 
@@ -93,7 +94,7 @@ export default function HallPage() {
           setError('')
         })
         .catch(reason => {
-          setError(reason instanceof Error ? reason.message : translate('seatTakenMeanwhile'))
+          setError(apiMessage(reason, 'seatTakenMeanwhile'))
           void loadHall()
         })
     }, HOLD_DEBOUNCE_MS)
@@ -158,7 +159,7 @@ export default function HallPage() {
       navigate(`/booking/success/${result.ticket_code}`)
     } catch (reason) {
       haptic.error()
-      setError(reason instanceof Error ? reason.message : t('failedBooking'))
+      setError(apiMessage(reason, 'failedBooking'))
       void loadHall()
     } finally {
       setBusy(false)

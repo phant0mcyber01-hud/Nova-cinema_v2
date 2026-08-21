@@ -83,8 +83,13 @@ def serialize_movie(
     reviews: list[Review] | None = None,
     language: str = "ru",
     sessions: list[str] | None = None,
+    today: str | None = None,
 ) -> dict[str, object]:
-    """`sessions` comes from the `shows` table; callers pass it in to avoid N+1."""
+    """`sessions` comes from the `shows` table; callers pass it in to avoid N+1.
+
+    `today` is the cinema's date: whether a release is still new is decided in
+    the cinema's own time, not in the time zone the server happens to sit in.
+    """
     items = [review for review in (reviews if reviews is not None else movie.reviews) if review.approved]
     user_rating = round(sum(item.rating for item in items) / len(items), 1) if items else movie.internal_rating
     text = localized_movie_text(movie, language)
@@ -110,7 +115,7 @@ def serialize_movie(
         "internal_rating": movie.internal_rating,
         "ticket_price": movie.ticket_price,
         "is_published": movie.is_published,
-        "is_new": is_new_release(movie),
+        "is_new": is_new_release(movie, today),
         "new_until": movie.new_until,
         "sort_order": movie.sort_order,
     }

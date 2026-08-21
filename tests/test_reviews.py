@@ -5,16 +5,22 @@ has finished, and whose booking is `watched`.
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
-
 from sqlalchemy import select
 
 from backend.core.db import SessionLocal, utcnow
 from backend.models import Booking, Show
 from backend.services.booking import session_has_ended
-from tests.conftest import ADMIN_ID, OTHER_ID, SESSION, SHOW_DATE, USER_ID, auth_header, login, movie_row
-
-YESTERDAY = (date.today() - timedelta(days=1)).isoformat()
+from tests.conftest import (
+    ADMIN_ID,
+    OTHER_ID,
+    SESSION,
+    SHOW_DATE,
+    USER_ID,
+    YESTERDAY,
+    auth_header,
+    login,
+    movie_row,
+)
 
 CONTACT = {
     "first_name": "Иван",
@@ -23,6 +29,7 @@ CONTACT = {
     "telegram_username": "ivanp",
     "comment": "",
 }
+
 REVIEW = {"rating": 5, "text": "Отличный фильм"}
 
 

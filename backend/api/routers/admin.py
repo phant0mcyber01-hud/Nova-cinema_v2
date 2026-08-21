@@ -164,12 +164,6 @@ async def update_settings(payload: SettingsIn, session: AsyncSession = Depends(g
     return serialize_settings_admin(settings)
 
 
-@router.get("/settings/base-price")
-async def base_price(session: AsyncSession = Depends(get_db)) -> dict[str, int]:
-    settings = await get_settings(session)
-    return {"base_ticket_price": settings.base_ticket_price, "currency": settings.currency}
-
-
 @router.patch("/settings/base-price")
 async def update_base_price(payload: BasePriceIn, session: AsyncSession = Depends(get_db)) -> dict[str, int]:
     """Kept as the quick price control; the full form is PUT /api/admin/settings."""

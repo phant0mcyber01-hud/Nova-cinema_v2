@@ -5,27 +5,53 @@ from datetime import date, timedelta
 
 from backend.core.db import SessionLocal
 from backend.models import Show
-from tests.conftest import ADMIN_ID, SESSION, SHOW_DATE, auth_header, login
+from tests.conftest import ADMIN_ID, SESSION, SHOW_DATE, TODAY, YESTERDAY, auth_header, cinema_today, login
 
-YESTERDAY = (date.today() - timedelta(days=1)).isoformat()
-TODAY = date.today().isoformat()
-FAR_AHEAD = (date.today() + timedelta(days=40)).isoformat()
+FAR_AHEAD = (cinema_today() + timedelta(days=40)).isoformat()
 
 
-async def test_card_groups_screenings_by_date(client, movie):
+async def test_card_groups_screenings_by_date(client, movie, cinema_clock):
     async with SessionLocal() as session:
         session.add_all([
             Show(movie_id=movie.id, show_date=TODAY, start_time="21:00"),
-            Show(movie_id=movie.id, show_date=TODAY, start_time="10:30"),
+            Show(movie_id=movie.id, show_date=TODAY, start_time="14:30"),
             Show(movie_id=movie.id, show_date=SHOW_DATE, start_time="12:00"),
         ])
         await session.commit()
 
     schedule = (await client.get(f"/api/movies/{movie.id}")).json()["schedule"]
     assert schedule == [
-        {"date": TODAY, "times": ["10:30", "21:00"]},
+        {"date": TODAY, "times": ["14:30", "21:00"]},
         {"date": SHOW_DATE, "times": ["12:00", SESSION]},
     ]
+
+
+async def test_card_hides_a_screening_that_has_already_started(client, movie, cinema_clock):
+    """It is noon at the cinema: the morning show is gone, the evening one stays."""
+    async with SessionLocal() as session:
+        session.add_all([
+            Show(movie_id=movie.id, show_date=TODAY, start_time="10:30"),
+            Show(movie_id=movie.id, show_date=TODAY, start_time="19:00"),
+        ])
+        await session.commit()
+
+    schedule = (await client.get(f"/api/movies/{movie.id}")).json()["schedule"]
+    today = next(day for day in schedule if day["date"] == TODAY)
+    assert today["times"] == ["19:00"]
+
+    sessions = (await client.get(f"/api/movies/{movie.id}/sessions?show_date={TODAY}")).json()
+    assert sessions["sessions"] == ["19:00"]
+
+
+async def test_a_day_whose_screenings_have_all_started_drops_out(client, movie, cinema_clock):
+    async with SessionLocal() as session:
+        session.add(Show(movie_id=movie.id, show_date=TODAY, start_time="09:00"))
+        await session.commit()
+
+    schedule = (await client.get(f"/api/movies/{movie.id}")).json()["schedule"]
+    assert TODAY not in [day["date"] for day in schedule], (
+        "an empty day is a dead end for the viewer"
+    )
 
 
 async def test_card_hides_past_and_out_of_window_screenings(client, movie):

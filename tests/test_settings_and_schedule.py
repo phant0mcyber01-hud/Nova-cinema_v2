@@ -1,15 +1,18 @@
 """Stage 3: everything is admin-managed — settings, price, schedule, content."""
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import timedelta
 
 from backend.core.db import SessionLocal
 from tests.conftest import (
     ADMIN_ID,
     SESSION,
     SHOW_DATE,
+    TODAY,
     USER_ID,
+    YESTERDAY,
     auth_header,
+    cinema_today,
     login,
     movie_row,
     watched_booking_in_the_past,
@@ -170,20 +173,20 @@ async def test_admin_creates_a_screening_that_becomes_bookable(client, movie):
     assert response.status_code == 200
 
 
-async def test_bulk_schedule_fills_a_date_range(client, movie):
+async def test_bulk_schedule_fills_a_date_range(client, movie, cinema_clock):
     admin = await login(client, ADMIN_ID, "admin")
-    start = date.today().isoformat()
-    end = (date.today() + timedelta(days=2)).isoformat()
+    start = TODAY
+    end = (cinema_today() + timedelta(days=2)).isoformat()
     response = await client.post(
         "/api/admin/sessions/bulk",
-        json={"movie_id": movie.id, "date_from": start, "date_to": end, "times": ["10:00", "14:00"]},
+        json={"movie_id": movie.id, "date_from": start, "date_to": end, "times": ["14:00", "20:00"]},
         headers=auth_header(admin),
     )
     assert response.status_code == 200
     assert response.json()["created"] == 6
 
     listed = (await client.get(f"/api/movies/{movie.id}/sessions?show_date={start}")).json()
-    assert listed["sessions"] == ["10:00", "14:00"]
+    assert listed["sessions"] == ["14:00", "20:00"]
 
 
 async def test_screening_with_bookings_cannot_be_deleted(client, movie):
@@ -278,8 +281,8 @@ async def test_admin_booking_row_carries_everything_the_spec_asks_for(client, mo
 
 
 async def test_new_release_flag_expires(client):
-    yesterday = (date.today() - timedelta(days=1)).isoformat()
-    tomorrow = (date.today() + timedelta(days=1)).isoformat()
+    yesterday = YESTERDAY
+    tomorrow = SHOW_DATE
     async with SessionLocal() as session:
         active = movie_row("Новинка активная")
         active.is_new, active.new_until = True, tomorrow
@@ -373,7 +376,7 @@ async def test_legacy_session_field_is_still_accepted(client, movie):
 
 async def test_sessions_endpoint_returns_empty_list_for_a_date_without_shows(client, movie):
     """Contract behind the Mini App's "no screenings on this date" state."""
-    empty_day = (date.today() + timedelta(days=30)).isoformat()
+    empty_day = (cinema_today() + timedelta(days=30)).isoformat()
     response = await client.get(f"/api/movies/{movie.id}/sessions?show_date={empty_day}")
     assert response.status_code == 200
     assert response.json()["sessions"] == []

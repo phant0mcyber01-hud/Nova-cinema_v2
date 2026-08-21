@@ -4,7 +4,8 @@ import { Link, useParams } from 'react-router-dom'
 
 import { ApiError, addFavorite, createReview, getAuthState, getMovie, type MovieDetail } from '../api'
 import Shell from '../components/Shell'
-import { formatDateShort, translate, useI18n } from '../i18n'
+import { formatDateShort, useI18n } from '../i18n'
+import { apiMessage } from '../lib/apiMessage'
 import { haptic } from '../lib/haptic'
 
 export default function MoviePage() {
@@ -30,7 +31,7 @@ export default function MoviePage() {
         setMissing(true)
         return
       }
-      setError(reason instanceof Error ? reason.message : translate('serverError'))
+      setError(apiMessage(reason, 'serverError'))
     }
   }, [id, language])
 
@@ -71,7 +72,7 @@ export default function MoviePage() {
       setNotice(t('favoriteAdded'))
       haptic.success()
     } catch (reason) {
-      setNotice(reason instanceof Error ? reason.message : t('serverError'))
+      setNotice(apiMessage(reason, 'serverError'))
       haptic.error()
     }
   }
@@ -90,7 +91,7 @@ export default function MoviePage() {
       await loadMovie()
       haptic.success()
     } catch (reason) {
-      setNotice(reason instanceof Error ? reason.message : t('serverError'))
+      setNotice(apiMessage(reason, 'serverError'))
       haptic.error()
     } finally {
       setReviewBusy(false)
@@ -121,9 +122,12 @@ export default function MoviePage() {
           <p>{movie.genre} · {movie.year} · {movie.country}</p>
           <h1>{movie.title}</h1>
           <div className="detail-stats">
-            <span>IMDb ★ {movie.imdb}</span>
-            <span>{t('kinopoiskShort')} ★ {movie.kinopoisk}</span>
-            <span>Nova ★ {movie.user_rating ?? movie.rating}</span>
+            {!!movie.imdb && <span>IMDb ★ {movie.imdb}</span>}
+            {!!movie.kinopoisk && <span>{t('kinopoiskShort')} ★ {movie.kinopoisk}</span>}
+            {/* Nobody has rated it yet: "Nova ★ 0" reads as a bad score, not as silence. */}
+            {!!(movie.user_rating ?? movie.rating) && (
+              <span>Nova ★ {movie.user_rating ?? movie.rating}</span>
+            )}
             <span>{movie.age}+</span>
             <span>{movie.duration} {t('minutes')}</span>
           </div>
@@ -134,8 +138,8 @@ export default function MoviePage() {
       </section>
       <p className="description">{movie.description}</p>
       <section className="credits">
-        <div><small>{t('director')}</small><b>{movie.director}</b></div>
-        <div><small>{t('cast')}</small><b>{movie.cast.join(', ')}</b></div>
+        {!!movie.director && <div><small>{t('director')}</small><b>{movie.director}</b></div>}
+        {!!movie.cast.length && <div><small>{t('cast')}</small><b>{movie.cast.join(', ')}</b></div>}
       </section>
       <section className="schedule-block">
         <div className="strip-head">

@@ -46,8 +46,6 @@ export const getNotifications = () => call<AdminNotification[]>('/admin/notifica
 export const readNotification = (id: number) =>
   call<{ is_read: boolean }>(`/admin/notifications/${id}/read`, { method: 'PATCH' })
 
-export const getBasePrice = () => call<{ base_ticket_price: number }>('/admin/settings/base-price')
-
 export const setBasePrice = (base_ticket_price: number) =>
   call<{ base_ticket_price: number }>('/admin/settings/base-price', {
     method: 'PATCH',

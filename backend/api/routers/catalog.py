@@ -13,6 +13,7 @@ from backend.core.security import optional_user
 from backend.models import Booking, Movie, Review, Show, User
 from backend.schemas.movie import ReviewIn
 from backend.services.booking import (
+    cinema_now,
     movie_schedule,
     session_has_ended,
     show_times_by_movie,
@@ -79,8 +80,12 @@ async def movies(
             )
         )
     items = list(await session.scalars(query))
-    times = await show_times_by_movie(session, [movie.id for movie in items], date)
-    result = [serialize_movie(movie, language=lang, sessions=times.get(movie.id, [])) for movie in items]
+    times = await show_times_by_movie(session, [movie.id for movie in items], date, upcoming_only=True)
+    today = cinema_now((await get_settings(session)).timezone_offset_minutes).date().isoformat()
+    result = [
+        serialize_movie(movie, language=lang, sessions=times.get(movie.id, []), today=today)
+        for movie in items
+    ]
     if only_new:
         # is_new in the payload already accounts for new_until expiry.
         result = [item for item in result if item["is_new"]]
@@ -99,9 +104,10 @@ async def movie_detail(
     movie = await session.scalar(select(Movie).options(selectinload(Movie.reviews)).where(Movie.id == movie_id))
     if movie is None or not movie.is_published:
         raise HTTPException(404, "Movie not found")
-    times = await show_times_by_movie(session, [movie.id])
-    data = serialize_movie(movie, language=lang, sessions=times.get(movie.id, []))
+    times = await show_times_by_movie(session, [movie.id], upcoming_only=True)
     settings = await get_settings(session)
+    today = cinema_now(settings.timezone_offset_minutes).date().isoformat()
+    data = serialize_movie(movie, language=lang, sessions=times.get(movie.id, []), today=today)
     data["schedule"] = await movie_schedule(session, movie_id, settings.booking_days_ahead)
     data["share_link"] = share_link(settings.bot_username, movie_id)
     data["can_review"] = user is not None and await may_review(session, user.id, movie_id)
@@ -122,9 +128,9 @@ async def movie_detail(
         .limit(2)
     )
     similar_items = list(similar)
-    similar_times = await show_times_by_movie(session, [item.id for item in similar_items])
+    similar_times = await show_times_by_movie(session, [item.id for item in similar_items], upcoming_only=True)
     data["similar_movies"] = [
-        serialize_movie(item, [], lang, similar_times.get(item.id, [])) for item in similar_items
+        serialize_movie(item, [], lang, similar_times.get(item.id, []), today) for item in similar_items
     ]
     return data
 

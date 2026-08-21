@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
 import DeepLinkHandler from './components/DeepLinkHandler'
+import NotFound from './components/NotFound'
 import ProtectedAdminRoute from './components/ProtectedAdminRoute'
 import TelegramRouteControls from './components/TelegramRouteControls'
 import { getPublicSettings } from './api'
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/booking/:id/date/:date/time" element={<TimePage />} />
           <Route path="/booking/:id/date/:date/time/:time/hall" element={<HallPage />} />
           <Route path="/booking/success/:code" element={<Success />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </LanguageProvider>

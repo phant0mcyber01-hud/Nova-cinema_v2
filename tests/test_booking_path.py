@@ -5,13 +5,18 @@ current price -> request; total = seats x the price the admin set right now.
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
-
 from backend.core.db import SessionLocal
 from backend.models import Show
-from tests.conftest import ADMIN_ID, SESSION, SHOW_DATE, USER_ID, auth_header, login
-
-YESTERDAY = (date.today() - timedelta(days=1)).isoformat()
+from tests.conftest import (
+    ADMIN_ID,
+    SESSION,
+    SHOW_DATE,
+    TODAY,
+    USER_ID,
+    YESTERDAY,
+    auth_header,
+    login,
+)
 
 CONTACT = {
     "first_name": "Иван",
@@ -118,6 +123,31 @@ async def test_screening_on_a_past_date_cannot_be_booked(client, movie):
         headers=auth_header(token),
     )
     assert hold.status_code == 404
+
+
+async def test_screening_that_already_started_cannot_be_booked(client, movie, cinema_clock):
+    """It is noon at the cinema; the 09:00 show is gone whatever the server clock says."""
+    async with SessionLocal() as session:
+        session.add(Show(movie_id=movie.id, show_date=TODAY, start_time="09:00"))
+        await session.commit()
+
+    assert (await _seats(client, movie.id, TODAY, "09:00")).status_code == 404
+
+    token = await login(client, USER_ID)
+    hold = await client.post(
+        "/api/holds",
+        json={"movie_id": movie.id, "show_date": TODAY, "session": "09:00", "seats": ["1-1"]},
+        headers=auth_header(token),
+    )
+    assert hold.status_code == 404, "a request for a screening already running is worth nothing"
+
+
+async def test_a_screening_later_today_is_still_bookable(client, movie, cinema_clock):
+    async with SessionLocal() as session:
+        session.add(Show(movie_id=movie.id, show_date=TODAY, start_time="21:00"))
+        await session.commit()
+
+    assert (await _seats(client, movie.id, TODAY, "21:00")).status_code == 200
 
 
 async def test_seat_count_is_capped_by_the_admin_setting(client, movie):

@@ -3,7 +3,8 @@ import { Link, useParams } from 'react-router-dom'
 
 import { getSessions } from '../../api'
 import Shell from '../../components/Shell'
-import { translate, useI18n } from '../../i18n'
+import { useI18n } from '../../i18n'
+import { apiMessage } from '../../lib/apiMessage'
 import { haptic } from '../../lib/haptic'
 
 /** Screenings come from the admin-managed schedule; there is no free-text time. */
@@ -23,7 +24,7 @@ export default function TimePage() {
         if (active) setSessions(data.sessions)
       })
       .catch(reason => {
-        if (active) setError(reason instanceof Error ? reason.message : translate('serverError'))
+        if (active) setError(apiMessage(reason, 'serverError'))
       })
     return () => { active = false }
   }, [date, id])

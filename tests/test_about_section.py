@@ -88,3 +88,54 @@ async def test_gallery_captions_follow_the_language(client):
 async def test_gallery_is_public_but_editing_is_not(client):
     assert (await client.get("/api/gallery")).status_code == 200
     assert (await client.post("/api/admin/gallery", json={"image_url": "/x.jpg"})).status_code == 401
+
+
+# --- stage 20: the content the About screen now renders ----------------------
+
+
+async def test_bonuses_the_admin_switched_on_reach_the_about_screen(client):
+    """A promotion nobody can read is the same as no promotion at all."""
+    admin = await login(client, ADMIN_ID, "admin")
+    for payload in (
+        {"title": "Второй билет со скидкой", "title_uz": "Ikkinchi chipta chegirmali",
+         "text": "Скидка 20% на второй билет", "text_uz": "Ikkinchi chiptaga 20% chegirma",
+         "is_active": True, "sort_order": 2},
+        {"title": "День рождения", "title_uz": "Tugʻilgan kun",
+         "text": "Именинникам бесплатный попкорн", "text_uz": "Tugʻilgan kun egasiga bepul popkorn",
+         "is_active": True, "sort_order": 1},
+        {"title": "Закрытая акция", "title_uz": "", "text": "", "text_uz": "",
+         "is_active": False, "sort_order": 3},
+    ):
+        assert (
+            await client.post("/api/admin/bonuses", json=payload, headers=auth_header(admin))
+        ).status_code == 200
+
+    public = (await client.get("/api/bonuses")).json()
+    assert [item["title"] for item in public] == ["День рождения", "Второй билет со скидкой"], (
+        "the admin order decides, and a switched-off promotion stays hidden"
+    )
+    assert public[0]["text"] == "Именинникам бесплатный попкорн"
+
+    uz = (await client.get("/api/bonuses", params={"lang": "uz"})).json()
+    assert uz[0]["title"] == "Tugʻilgan kun"
+
+
+async def test_melodies_the_admin_uploaded_reach_the_about_screen(client):
+    admin = await login(client, ADMIN_ID, "admin")
+    for title, url, order in (("Заставка", "/uploads/intro.mp3", 2), ("Антракт", "/uploads/break.mp3", 1)):
+        response = await client.post(
+            "/api/admin/melodies",
+            json={"title": title, "file_url": url, "sort_order": order},
+            headers=auth_header(admin),
+        )
+        assert response.status_code == 200
+
+    public = (await client.get("/api/melodies")).json()
+    assert [item["title"] for item in public] == ["Антракт", "Заставка"]
+    assert public[0]["file_url"] == "/uploads/break.mp3", "the player needs a real source"
+
+
+async def test_about_content_is_readable_without_signing_in(client):
+    """The About screen is the first thing a stranger opens."""
+    for path in ("/api/settings", "/api/gallery", "/api/bonuses", "/api/melodies"):
+        assert (await client.get(path)).status_code == 200, path

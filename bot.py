@@ -3,8 +3,6 @@ from __future__ import annotations
 import asyncio
 import html
 import logging
-import os
-from pathlib import Path
 from urllib.parse import urlparse
 
 from aiogram import Bot, Dispatcher, F, types
@@ -13,31 +11,25 @@ from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, MenuButtonWebApp, WebAppInfo
-from dotenv import load_dotenv
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-ENV_PATH = Path(__file__).resolve().with_name(".env")
-load_dotenv(dotenv_path=ENV_PATH, override=True)
-
+from backend.core import config
 from backend.core.db import SessionLocal
 from backend.models import Movie
 from backend.services.catalog import serialize_movie
 from backend.services.deep_link import movie_id_from_payload
 from backend.services.settings import get_settings
 
-_bot_token = os.getenv("BOT_TOKEN")
-if _bot_token is None:
-    raise RuntimeError("BOT_TOKEN is not set")
-BOT_TOKEN: str = _bot_token.strip('"')
-WEBAPP_URL = os.getenv("WEBAPP_URL", "")
+# The environment is read and normalised in one place for the whole project;
+# the bot parsing it a second time is how the two drift apart.
+BOT_TOKEN: str = config.bot_token()
+if not BOT_TOKEN:
+    raise RuntimeError("BOT_TOKEN is empty: put the BotFather token in .env")
+WEBAPP_URL = config.WEBAPP_URL
 WEBAPP_BUTTON_TEXT = "🚀 Открыть Nova Cinema"
 WEBAPP_MENU_TEXT = "Nova Cinema"
-ADMIN_TELEGRAM_IDS = {
-    int(value.strip())
-    for value in os.getenv("ADMIN_TELEGRAM_IDS", "").split(",")
-    if value.strip().isdigit()
-}
+ADMIN_TELEGRAM_IDS = config.ADMIN_TELEGRAM_IDS
 
 dp = Dispatcher()
 logging.basicConfig(level=logging.INFO)
@@ -313,7 +305,7 @@ async def cmd_admin(message: types.Message) -> None:
 
 async def main() -> None:
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-    logger.info("Loaded .env from %s", ENV_PATH)
+    logger.info("Loaded .env from %s", config.PROJECT_ROOT / ".env")
     logger.info("Runtime WEBAPP_URL=%s", WEBAPP_URL)
     await configure_menu_button(bot)
     logger.info("Nova Cinema bot started")

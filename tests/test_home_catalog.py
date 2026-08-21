@@ -5,9 +5,9 @@ from datetime import date, timedelta
 
 from backend.core.db import SessionLocal
 from backend.models import Show
-from tests.conftest import SESSION, SHOW_DATE, movie_row
+from tests.conftest import SESSION, SHOW_DATE, TODAY, cinema_today, movie_row
 
-OTHER_DATE = (date.today() + timedelta(days=2)).isoformat()
+OTHER_DATE = (cinema_today() + timedelta(days=2)).isoformat()
 
 
 async def test_catalog_without_a_date_lists_everything_published(client, movie):
@@ -65,7 +65,7 @@ async def test_inactive_screening_hides_the_movie_from_that_date(client, movie):
 
 
 async def test_empty_date_returns_an_empty_catalog(client, movie):
-    far_future = (date.today() + timedelta(days=45)).isoformat()
+    far_future = (cinema_today() + timedelta(days=45)).isoformat()
     assert (await client.get("/api/movies", params={"date": far_future})).json() == []
 
 
@@ -93,4 +93,4 @@ async def test_home_needs_one_settings_call_for_the_date_strip(client):
     """The date strip is driven by booking_dates, not by a constant in the client."""
     settings = (await client.get("/api/settings")).json()
     assert settings["booking_days_ahead"] == len(settings["booking_dates"]) == 7
-    assert settings["booking_dates"][0] == date.today().isoformat()
+    assert settings["booking_dates"][0] == TODAY

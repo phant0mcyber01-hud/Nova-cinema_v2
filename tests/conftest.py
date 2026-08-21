@@ -12,7 +12,7 @@ import json
 import os
 import tempfile
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, time as time_of_day, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -71,7 +71,18 @@ def telegram_init_data(telegram_id: int, username: str = "tester", first_name: s
     return urlencode({**values, "hash": signature})
 
 
-SHOW_DATE = (date.today() + timedelta(days=1)).isoformat()
+def cinema_today() -> date:
+    """The cinema's own date. The machine running the tests is elsewhere."""
+    from backend.core.config import DEFAULT_TIMEZONE_OFFSET_MINUTES
+
+    return (
+        datetime.now(timezone.utc) + timedelta(minutes=DEFAULT_TIMEZONE_OFFSET_MINUTES)
+    ).date()
+
+
+TODAY = cinema_today().isoformat()
+YESTERDAY = (cinema_today() - timedelta(days=1)).isoformat()
+SHOW_DATE = (cinema_today() + timedelta(days=1)).isoformat()
 SESSION = "19:00"
 
 
@@ -143,7 +154,7 @@ def auth_header(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-PAST_DATE = (date.today() - timedelta(days=1)).isoformat()
+PAST_DATE = YESTERDAY
 PAST_SESSION = "10:00"
 
 
@@ -185,3 +196,24 @@ async def watched_booking_in_the_past(movie_id: int, user_id: int, seats: str = 
         await session.commit()
         await session.refresh(booking)
         return booking.id
+
+
+@pytest.fixture()
+def cinema_clock(monkeypatch):
+    """Pin the cinema wall clock to noon today.
+
+    Screenings that have already started are not offered any more, so a test
+    that schedules a fixed time today would pass in the morning and fail in
+    the afternoon. Freezing the clock keeps such tests about the rule instead
+    of about the hour the suite happens to run at.
+    """
+    from backend.core.config import DEFAULT_TIMEZONE_OFFSET_MINUTES
+    from backend.services import booking
+
+    noon_at_the_cinema = datetime.combine(cinema_today(), time_of_day(12, 0))
+    monkeypatch.setattr(
+        booking,
+        "utcnow",
+        lambda: noon_at_the_cinema - timedelta(minutes=DEFAULT_TIMEZONE_OFFSET_MINUTES),
+    )
+    return noon_at_the_cinema

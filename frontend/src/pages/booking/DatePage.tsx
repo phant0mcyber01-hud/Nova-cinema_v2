@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
-import { getMovie, type ScheduleDay } from '../../api'
+import { getMovie, getPublicSettings, type ScheduleDay } from '../../api'
 import Shell from '../../components/Shell'
-import { formatDateShort, formatSessionCount, translate, useI18n } from '../../i18n'
+import { formatDateShort, formatSessionCount, useI18n } from '../../i18n'
+import { apiMessage } from '../../lib/apiMessage'
 import { haptic } from '../../lib/haptic'
-
-const today = () => new Date().toISOString().slice(0, 10)
-const tomorrow = () => new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
 
 /**
  * Only dates this movie actually plays on.
@@ -20,25 +18,30 @@ export default function DatePage() {
   const { language, t } = useI18n()
   const { id } = useParams()
   const [schedule, setSchedule] = useState<ScheduleDay[] | null>(null)
+  // The cinema's own dates. Naming a day from the phone's clock is wrong for
+  // anyone whose device is in another time zone — the server knows better.
+  const [cinemaDates, setCinemaDates] = useState<string[]>([])
   const [error, setError] = useState('')
 
   useEffect(() => {
     if (!id) return
     let active = true
     setSchedule(null)
-    void getMovie(Number(id), language)
-      .then(movie => {
-        if (active) setSchedule(movie.schedule)
+    void Promise.all([getMovie(Number(id), language), getPublicSettings(language)])
+      .then(([movie, settings]) => {
+        if (!active) return
+        setSchedule(movie.schedule)
+        setCinemaDates(settings.booking_dates)
       })
       .catch(reason => {
-        if (active) setError(reason instanceof Error ? reason.message : translate('serverError'))
+        if (active) setError(apiMessage(reason, 'serverError'))
       })
     return () => { active = false }
   }, [id, language])
 
   const label = (date: string) => {
-    if (date === today()) return t('today')
-    if (date === tomorrow()) return t('tomorrow')
+    if (date === cinemaDates[0]) return t('today')
+    if (date === cinemaDates[1]) return t('tomorrow')
     return formatDateShort(date, language)
   }
 

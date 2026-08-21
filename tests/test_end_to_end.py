@@ -16,11 +16,24 @@ from sqlalchemy import select
 from backend.core import config
 from backend.core.db import SessionLocal
 from backend.models import Booking, Movie, Show
-from tests.conftest import ADMIN_ID, OTHER_ID, USER_ID, auth_header, login
+from tests.conftest import (
+    ADMIN_ID,
+    OTHER_ID,
+    SHOW_DATE,
+    USER_ID,
+    YESTERDAY,
+    auth_header,
+    cinema_today,
+    login,
+)
 
-TODAY = date.today().isoformat()
-TOMORROW = (date.today() + timedelta(days=1)).isoformat()
-YESTERDAY = (date.today() - timedelta(days=1)).isoformat()
+TOMORROW = SHOW_DATE
+DAY_AFTER = (cinema_today() + timedelta(days=2)).isoformat()
+
+
+# The journey is scheduled from tomorrow on purpose: screenings that have
+# already begun are no longer offered, so a walk that used today's times would
+# pass in the morning and fail in the evening.
 
 CONTACT = {
     "first_name": "Иван",
@@ -93,8 +106,8 @@ async def test_the_whole_journey_from_catalog_to_review(client):
         "/api/admin/sessions/bulk",
         json={
             "movie_id": movie_id,
-            "date_from": TODAY,
-            "date_to": TOMORROW,
+            "date_from": TOMORROW,
+            "date_to": DAY_AFTER,
             "times": ["12:00", "19:00"],
             "ticket_price": None,
         },
@@ -124,14 +137,14 @@ async def test_the_whole_journey_from_catalog_to_review(client):
         "Дюна: Часть 2"
     ], "search reaches the director"
     assert len((await client.get("/api/movies", params={"only_new": "true"})).json()) == 1
-    assert (await client.get("/api/movies", params={"date": TODAY})).json()[0]["id"] == movie_id
+    assert (await client.get("/api/movies", params={"date": TOMORROW})).json()[0]["id"] == movie_id
 
     # --- the movie card -----------------------------------------------------
     card = (await client.get(f"/api/movies/{movie_id}")).json()
     assert card["director"] == "Дени Вильнёв"
     assert card["cast"] == ["Тимоти Шаламе", "Зендея"]
     assert card["share_link"] == f"https://t.me/novacinema_bot?startapp=movie_{movie_id}"
-    assert [day["date"] for day in card["schedule"]] == [TODAY, TOMORROW]
+    assert [day["date"] for day in card["schedule"]] == [TOMORROW, DAY_AFTER]
     assert card["schedule"][0]["times"] == ["12:00", "19:00"]
     assert card["can_review"] is False, "nothing has been watched yet"
 

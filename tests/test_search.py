@@ -2,15 +2,13 @@
 from __future__ import annotations
 
 import json
-from datetime import date, timedelta
+from datetime import timedelta
 
 import pytest
 
 from backend.core.db import SessionLocal
 from backend.models import Show
-from tests.conftest import SHOW_DATE, movie_row
-
-
+from tests.conftest import SHOW_DATE, YESTERDAY, cinema_today, movie_row
 async def _catalog(client, **params) -> list[str]:
     response = await client.get("/api/movies", params=params)
     assert response.status_code == 200, response.text
@@ -104,7 +102,7 @@ async def test_search_combines_with_the_date_filter(client, library):
     ]
     assert await _catalog(client, date=SHOW_DATE, q="Панда") == ["Кунг-фу Панда 4"]
 
-    empty_day = (date.today() + timedelta(days=30)).isoformat()
+    empty_day = (cinema_today() + timedelta(days=30)).isoformat()
     assert await _catalog(client, date=empty_day, q="Панда") == []
 
 
@@ -125,8 +123,8 @@ async def test_only_new_filter(client, library):
 
 
 async def test_only_new_respects_the_expiry_date(client):
-    yesterday = (date.today() - timedelta(days=1)).isoformat()
-    tomorrow = (date.today() + timedelta(days=1)).isoformat()
+    yesterday = YESTERDAY
+    tomorrow = SHOW_DATE
     async with SessionLocal() as session:
         still_new = movie_row("Ещё новинка")
         still_new.is_new, still_new.new_until = True, tomorrow

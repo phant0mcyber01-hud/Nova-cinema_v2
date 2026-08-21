@@ -160,6 +160,7 @@ input,textarea,select,button{max-width:100%}
 .booking-card{grid-template-columns:82px minmax(0,1fr);align-items:center}
 .booking-card div{display:grid;gap:4px;min-width:0}
 .booking-card b,.booking-card span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tickets-list{gap:14px}.ticket-section{display:grid;gap:10px}.ticket-section h2{margin:6px 0 2px;font-size:18px;letter-spacing:-.02em}.ticket-card{align-items:start}.ticket-card b,.ticket-card span{overflow:visible;text-overflow:clip;white-space:normal}.ticket-card span{line-height:1.35}.ticket-card img{align-self:start}.ticket-card div{gap:5px}
 .profile-filters{display:grid;grid-template-columns:1fr 150px 150px;gap:8px;margin-bottom:12px}
 .profile-filters .admin-input{margin:0}
 .qr code{display:block;overflow-wrap:anywhere}
@@ -493,7 +494,7 @@ body{
 
 /* --- stage 16: the cinema's own page ------------------------------------ */
 .about-hero { margin: 0 -18px; padding: 46px 18px 18px; background: linear-gradient(0deg, #0b090a, transparent), radial-gradient(circle at 80% 0, #8f1f3555, transparent 40%); }
-.about-hero > p { margin: 0; color: #b27480; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.about-kicker { margin: 0; color: #b27480; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .about-hero h1 { margin: 6px 0 0; font-size: clamp(28px, 8vw, 40px); letter-spacing: -.04em; }
 .about-text { margin: 12px 0 0; color: #b9a8ad; font-size: 14px; line-height: 1.6; }
 .about-block { margin-top: 26px; }
@@ -504,6 +505,14 @@ body{
 .about-facts b { display: block; margin-top: 3px; font-size: 15px; }
 .about-actions { display: grid; gap: 8px; }
 .about-actions .book { display: grid; place-items: center; text-decoration: none; }
+.about-bonuses { display: grid; gap: 10px; }
+.about-bonuses article { padding: 14px 15px; border: 1px solid #362126; border-radius: 15px; background: linear-gradient(135deg, #241a1d, #1b1618); }
+.about-bonuses b { font-size: 15px; letter-spacing: -.01em; }
+.about-bonuses p { margin: 6px 0 0; color: #bcaaad; font-size: 13px; line-height: 1.5; }
+.about-melodies { display: grid; gap: 12px; }
+.about-melodies figure { margin: 0; padding: 12px 14px; border: 1px solid #362126; border-radius: 15px; background: #1b1618; }
+.about-melodies figcaption { margin-bottom: 8px; font-size: 14px; font-weight: 700; }
+.about-melodies audio { width: 100%; }
 .about-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .about-gallery figure { margin: 0; }
 .about-gallery img { width: 100%; aspect-ratio: 4/3; border: 1px solid #2f2023; border-radius: 16px; object-fit: cover; }

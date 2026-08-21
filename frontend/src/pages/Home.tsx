@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom'
 import { getMovies, getPublicSettings, type Movie } from '../api'
 import MovieCard from '../components/MovieCard'
 import Shell from '../components/Shell'
-import { formatDateShort, setCurrency, translate, useI18n } from '../i18n'
+import { formatDateShort, setCurrency, useI18n } from '../i18n'
+import { apiMessage } from '../lib/apiMessage'
 import { fallbackBookingDates } from '../lib/dates'
 import { haptic } from '../lib/haptic'
 
@@ -51,7 +52,7 @@ export default function Home() {
         setError('')
       })
       .catch(reason => {
-        if (active) setError(reason instanceof Error ? reason.message : translate('serverError'))
+        if (active) setError(apiMessage(reason, 'serverError'))
       })
       .finally(() => {
         if (active) setLoading(false)

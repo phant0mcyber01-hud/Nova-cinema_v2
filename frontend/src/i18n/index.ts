@@ -64,7 +64,7 @@ const saveLanguage = (language: Language) => {
   }
 }
 
-export const getCurrentLanguage = () => readStoredLanguage() ?? normalizeLanguage(detectTelegramLanguage())
+const getCurrentLanguage = () => readStoredLanguage() ?? normalizeLanguage(detectTelegramLanguage())
 
 export const translate = (key: TranslationKey) => copy[getCurrentLanguage()][key]
 
