@@ -231,6 +231,17 @@ async def confirm_booking(
         telegram_username=username,
         comment=payload.comment.strip(),
     )
+    # The viewer typed their details into the booking form; keep them on the
+    # profile so the next booking is one tap. Existing values are never
+    # overwritten — someone may be booking on a friend's behalf.
+    if not user.first_name:
+        user.first_name = booking.first_name
+        user.name = booking.first_name or user.name
+    if not user.last_name:
+        user.last_name = booking.last_name
+    if not user.phone:
+        user.phone = phone
+
     session.add(booking)
     await session.flush()
     session.add(

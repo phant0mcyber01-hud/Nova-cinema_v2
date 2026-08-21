@@ -2,7 +2,7 @@ import WebApp from '@twa-dev/sdk'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
-import { confirmBooking, getHall, holdSeats, releaseSeats, type Hall } from '../../api'
+import { confirmBooking, getHall, getProfile, holdSeats, releaseSeats, type Hall } from '../../api'
 import Shell from '../../components/Shell'
 import { formatMoney, setCurrency, translate, useI18n } from '../../i18n'
 import { rowLabel, seatLabel } from '../../lib/hall'
@@ -36,6 +36,23 @@ export default function HallPage() {
   })
   /** Seats restored from an existing hold must not trigger a fresh hold call. */
   const restored = useRef(false)
+
+  // Nobody should retype their name and phone on every booking.
+  useEffect(() => {
+    let active = true
+    void getProfile()
+      .then(profile => {
+        if (!active) return
+        setContact(current => ({
+          ...current,
+          first_name: current.first_name || profile.first_name,
+          last_name: current.last_name || profile.last_name,
+          phone: current.phone || profile.phone,
+        }))
+      })
+      .catch(() => undefined)
+    return () => { active = false }
+  }, [])
 
   const loadHall = useCallback(async () => {
     if (!id || !date || !time) return
