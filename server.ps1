@@ -156,6 +156,52 @@ function Wait-Api {
     return $false
 }
 
+function Find-Process($pattern) {
+    $found = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+        Where-Object { $_.CommandLine -like $pattern } |
+        Select-Object -First 1
+    if ($found) { return $found.ProcessId }
+    return $null
+}
+
+function Read-EnvUrl {
+    $line = Get-Content (Join-Path $root ".env") -Encoding UTF8 |
+        Where-Object { $_ -like "WEBAPP_URL=*" } | Select-Object -First 1
+    if ($line) { return $line.Substring(11).Trim() }
+    return $null
+}
+
+# Если стенд уже работает и публичный адрес отвечает, трогать его незачем.
+# Убить живой туннель ради нового со случайным именем значит сломать показ на
+# ровном месте: адрес сменится, кнопка бота устареет, а новый туннель ещё не
+# факт что встанет.
+$adopted = $false
+$existingUrl = Read-EnvUrl
+if ($existingUrl -and $existingUrl -like "https://*") {
+    try {
+        Invoke-WebRequest -Uri "$existingUrl/api/settings" -TimeoutSec 12 -UseBasicParsing | Out-Null
+        $api = Find-Process "*uvicorn*"
+        $tunnelProcess = Get-Process cloudflared -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($api -and $tunnelProcess) {
+            $url = $existingUrl
+            $tunnel = @{ id = $tunnelProcess.Id; url = $url; ready = $true }
+            $bot = Find-Process "*bot.py*"
+            if (-not $bot) {
+                $bot = Start-Hidden $python @("bot.py") $root "bot"
+                Write-Line "бот не работал, запустил" "Yellow"
+            }
+            Save-State $api $bot $tunnel.id $url
+            Write-Line "подхватываю уже работающее: $url" "Green"
+            Write-Line "работает: API $api, бот $bot, туннель $($tunnel.id)" "Green"
+            $adopted = $true
+        }
+    } catch {
+        $adopted = $false
+    }
+}
+
+if (-not $adopted) {
+
 Stop-All
 
 Write-Line "собираю фронтенд"
@@ -177,6 +223,9 @@ if (-not (Wait-Api)) { Write-Line "API не ответил" "Red"; exit 1 }
 $bot = Start-Hidden $python @("bot.py") $root "bot"
 Save-State $api $bot $tunnel.id $url
 Write-Line "работает: API $api, бот $bot, туннель $($tunnel.id)" "Green"
+
+}
+
 Write-Line "закрывать это окно можно, процессы останутся"
 
 # --- присмотр ---------------------------------------------------------------
