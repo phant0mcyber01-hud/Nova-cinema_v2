@@ -107,7 +107,7 @@ function Start-Tunnel {
     # аргументы в кавычки сам — поэтому не --logfile, а перенаправление потока.
     # Адрес быстрого туннеля Cloudflare печатает именно в stderr.
     $processId = (Start-Process -FilePath $cloudflared `
-        -ArgumentList @("tunnel", "--url", "http://localhost:8000", "--no-autoupdate") `
+        -ArgumentList @("tunnel", "--url", "http://localhost:8000", "--no-autoupdate", "--protocol", "http2") `
         -WorkingDirectory $root -WindowStyle Hidden -PassThru `
         -RedirectStandardError $tunnelLog).Id
     foreach ($attempt in 1..80) {
@@ -115,10 +115,22 @@ function Start-Tunnel {
         if (Test-Path $tunnelLog) {
             $found = Select-String -Path $tunnelLog -Pattern "https://[a-z0-9-]+\.trycloudflare\.com" `
                 -ErrorAction SilentlyContinue | Select-Object -First 1
-            if ($found) { return @{ id = $processId; url = $found.Matches[0].Value } }
+            if ($found) {
+                $candidate = $found.Matches[0].Value
+                # Адрес печатается раньше, чем поднимается соединение с краем
+                # сети. Ждём, пока он начнёт отвечать, иначе присмотр решит,
+                # что туннель мёртв, и убьёт его на середине подключения.
+                foreach ($probe in 1..40) {
+                    try {
+                        Invoke-WebRequest -Uri "$candidate/api/settings" -TimeoutSec 5 -UseBasicParsing | Out-Null
+                        return @{ id = $processId; url = $candidate; ready = $true }
+                    } catch { Start-Sleep -Milliseconds 1500 }
+                }
+                return @{ id = $processId; url = $candidate; ready = $false }
+            }
         }
     }
-    return @{ id = $processId; url = $null }
+    return @{ id = $processId; url = $null; ready = $false }
 }
 
 function Set-PublicUrl($url) {
@@ -168,11 +180,30 @@ Write-Line "работает: API $api, бот $bot, туннель $($tunnel.id
 Write-Line "закрывать это окно можно, процессы останутся"
 
 # --- присмотр ---------------------------------------------------------------
+$misses = 0
+$botFailures = 0
 while ($true) {
     Start-Sleep -Seconds 15
 
-    if (-not (Test-Alive $tunnel.id)) {
-        Write-Line "туннель упал, поднимаю заново" "Yellow"
+    # Живого процесса мало: cloudflared остаётся запущенным и после того, как
+    # соединение с краем сети развалилось, и молча крутит переподключения — а
+    # публичный адрес в это время не отвечает. Спрашиваем сам адрес.
+    $reachable = $false
+    if ($url) {
+        try {
+            Invoke-WebRequest -Uri "$url/api/settings" -TimeoutSec 12 -UseBasicParsing | Out-Null
+            $reachable = $true
+        } catch { $reachable = $false }
+    }
+    # Одна неудачная проверка — это может быть просто моргнувшая сеть. Туннель
+    # пересоздаётся с новым адресом, а значит и с перезапуском бота, поэтому
+    # цена ошибки высокая: ждём двух подряд.
+    if ($reachable) { $misses = 0 } else { $misses = $misses + 1 }
+
+    if ((-not (Test-Alive $tunnel.id)) -or ($misses -ge 2)) {
+        $misses = 0
+        Write-Line "адрес не отвечает, поднимаю туннель заново" "Yellow"
+        if (Test-Alive $tunnel.id) { Stop-Process -Id $tunnel.id -Force -ErrorAction SilentlyContinue }
         $tunnel = Start-Tunnel
         if ($tunnel.url -and $tunnel.url -ne $url) {
             # Новый адрес: Telegram должен узнать о нём, иначе кнопка ведёт в никуда.
@@ -195,8 +226,17 @@ while ($true) {
     }
 
     if (-not (Test-Alive $bot)) {
-        Write-Line "бот упал, поднимаю заново" "Yellow"
-        $bot = Start-Hidden $python @("bot.py") $root "bot"
+        # Если бот падает раз за разом — обычно потому, что связи нет вообще, —
+        # поднимать его каждые пятнадцать секунд бессмысленно: каждый запуск
+        # ещё и дёргает Telegram настройкой кнопки меню. Отступаем всё дальше,
+        # максимум до пяти минут.
+        $botFailures = $botFailures + 1
+        if ($botFailures -le 3 -or ($botFailures % [Math]::Min(20, $botFailures * 2)) -eq 0) {
+            Write-Line "бот не работает (попытка $botFailures), поднимаю заново" "Yellow"
+            $bot = Start-Hidden $python @("bot.py") $root "bot"
+        }
+    } else {
+        $botFailures = 0
     }
 
     Save-State $api $bot $tunnel.id $url

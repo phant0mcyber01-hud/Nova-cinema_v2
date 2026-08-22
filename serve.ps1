@@ -40,7 +40,7 @@ Write-Host "Поднимаю туннель..."
 $log = Join-Path $env:TEMP "nova-cloudflared.log"
 if (Test-Path $log) { Remove-Item $log -Force }
 Start-Process -FilePath $cloudflared `
-    -ArgumentList "tunnel", "--url", "http://localhost:8000", "--no-autoupdate", "--logfile", $log `
+    -ArgumentList "tunnel", "--url", "http://localhost:8000", "--no-autoupdate", "--protocol", "http2", "--logfile", $log `
     -WindowStyle Minimized
 
 $public = $null
