@@ -1,4 +1,4 @@
-# Запуск демо-стенда Nova Cinema на этой машине.
+﻿# Запуск демо-стенда Nova Cinema на этой машине.
 #
 #   powershell -ExecutionPolicy Bypass -File demo.ps1
 #
