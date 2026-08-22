@@ -1,0 +1,203 @@
+﻿# Nova Cinema как постоянный сервер на этом компьютере.
+#
+#   powershell -ExecutionPolicy Bypass -File server.ps1           запустить
+#   powershell -ExecutionPolicy Bypass -File server.ps1 -Stop     остановить
+#   powershell -ExecutionPolicy Bypass -File server.ps1 -Status   что сейчас живо
+#
+# Отличие от serve.ps1: тот запускает три окна для показа, а этот работает без
+# окон и присматривает за процессами. Если API, бот или туннель падают — поднимает
+# заново. Если Cloudflare выдал новый адрес — вписывает его в .env и перезапускает
+# API и бота, чтобы Telegram открывал рабочую ссылку.
+#
+# Чего скрипт не может: разбудить уснувший компьютер. Спящий ноутбук — это
+# выключенный сервер. Настройка крышки и сна — в параметрах питания Windows.
+
+param(
+    [switch]$Stop,
+    [switch]$Status
+)
+
+$ErrorActionPreference = "Stop"
+$root = $PSScriptRoot
+$python = Join-Path $root ".venv\Scripts\python.exe"
+$cloudflared = "C:\Program Files (x86)\cloudflared\cloudflared.exe"
+$logs = Join-Path $root "logs"
+$state = Join-Path $logs "server-state.json"
+$tunnelLog = Join-Path $logs "cloudflared.log"
+
+New-Item -ItemType Directory -Force -Path $logs | Out-Null
+
+function Write-Line($text, $color = "Gray") {
+    $stamp = Get-Date -Format "HH:mm:ss"
+    Write-Host "[$stamp] $text" -ForegroundColor $color
+    Add-Content -Path (Join-Path $logs "server.log") -Value "[$stamp] $text" -Encoding UTF8
+}
+
+function Get-State {
+    if (Test-Path $state) { return Get-Content $state -Raw -Encoding UTF8 | ConvertFrom-Json }
+    return $null
+}
+
+function Save-State($api, $bot, $tunnel, $url) {
+    @{ api = $api; bot = $bot; tunnel = $tunnel; url = $url } |
+        ConvertTo-Json | Set-Content -Path $state -Encoding UTF8
+}
+
+function Test-Alive($processId) {
+    if (-not $processId) { return $false }
+    $null -ne (Get-Process -Id $processId -ErrorAction SilentlyContinue)
+}
+
+function Stop-All {
+    $saved = Get-State
+    if ($saved) {
+        foreach ($processId in @($saved.api, $saved.bot, $saved.tunnel)) {
+            if (Test-Alive $processId) {
+                Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+    # Всё, что могло остаться от предыдущих запусков. Забытый bot.py — это не
+    # мусор, а второй опрашивающий: Telegram отдаёт обновления одному из них, и
+    # кнопку меню перетирает тот, кто стартовал последним.
+    Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue |
+        ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
+    Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+        Where-Object { $_.CommandLine -like "*bot.py*" -or $_.CommandLine -like "*uvicorn*" } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+    Get-Process cloudflared -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    Remove-Item $state -ErrorAction SilentlyContinue
+
+    # И сам присмотр — иначе он через пятнадцать секунд поднимет всё обратно,
+    # а второй запуск скрипта начнёт спорить с первым за один и тот же порт.
+    Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" |
+        Where-Object { $_.CommandLine -like "*server.ps1*" -and $_.ProcessId -ne $PID } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+
+    Write-Line "остановлено" "Yellow"
+}
+
+if ($Stop) { Stop-All; exit 0 }
+
+if ($Status) {
+    $saved = Get-State
+    if (-not $saved) { Write-Host "не запущен"; exit 0 }
+    Write-Host "адрес   : $($saved.url)"
+    Write-Host "API     : $(if (Test-Alive $saved.api) { 'работает' } else { 'упал' })"
+    Write-Host "бот     : $(if (Test-Alive $saved.bot) { 'работает' } else { 'упал' })"
+    Write-Host "туннель : $(if (Test-Alive $saved.tunnel) { 'работает' } else { 'упал' })"
+    exit 0
+}
+
+if (-not (Test-Path $python)) { Write-Line "нет $python" "Red"; exit 1 }
+if (-not (Test-Path $cloudflared)) { Write-Line "нет cloudflared" "Red"; exit 1 }
+
+function Start-Hidden($file, $arguments, $workingDirectory, $name) {
+    # Без перенаправления вывод скрытого процесса пропадает: бот падал молча, и
+    # понять почему было нельзя.
+    $out = Join-Path $logs "$name.out.log"
+    $err = Join-Path $logs "$name.err.log"
+    (Start-Process -FilePath $file -ArgumentList $arguments -WorkingDirectory $workingDirectory `
+        -WindowStyle Hidden -PassThru -RedirectStandardOutput $out -RedirectStandardError $err).Id
+}
+
+function Start-Tunnel {
+    Remove-Item $tunnelLog -ErrorAction SilentlyContinue
+    # Путь к проекту содержит пробелы и тире, а Start-Process не заключает
+    # аргументы в кавычки сам — поэтому не --logfile, а перенаправление потока.
+    # Адрес быстрого туннеля Cloudflare печатает именно в stderr.
+    $processId = (Start-Process -FilePath $cloudflared `
+        -ArgumentList @("tunnel", "--url", "http://localhost:8000", "--no-autoupdate") `
+        -WorkingDirectory $root -WindowStyle Hidden -PassThru `
+        -RedirectStandardError $tunnelLog).Id
+    foreach ($attempt in 1..80) {
+        Start-Sleep -Milliseconds 500
+        if (Test-Path $tunnelLog) {
+            $found = Select-String -Path $tunnelLog -Pattern "https://[a-z0-9-]+\.trycloudflare\.com" `
+                -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($found) { return @{ id = $processId; url = $found.Matches[0].Value } }
+        }
+    }
+    return @{ id = $processId; url = $null }
+}
+
+function Set-PublicUrl($url) {
+    $envPath = Join-Path $root ".env"
+    $lines = Get-Content $envPath -Encoding UTF8 | ForEach-Object {
+        if ($_ -like "WEBAPP_URL=*") { "WEBAPP_URL=$url" }
+        elseif ($_ -like "CORS_ORIGINS=*") { "CORS_ORIGINS=$url" }
+        else { $_ }
+    }
+    # Set-Content -Encoding UTF8 в Windows PowerShell 5.1 ставит BOM, а он
+    # прилипает к первому ключу: BOT_TOKEN превращается в ﻿BOT_TOKEN,
+    # и бот падает с «Token is invalid». Пишем без BOM.
+    [System.IO.File]::WriteAllLines($envPath, $lines, (New-Object System.Text.UTF8Encoding($false)))
+}
+
+function Wait-Api {
+    foreach ($attempt in 1..60) {
+        try {
+            Invoke-WebRequest -Uri "http://127.0.0.1:8000/api/settings" -TimeoutSec 2 -UseBasicParsing | Out-Null
+            return $true
+        } catch { Start-Sleep -Milliseconds 500 }
+    }
+    return $false
+}
+
+Stop-All
+
+Write-Line "собираю фронтенд"
+Push-Location (Join-Path $root "frontend")
+cmd /c "npm run build" | Out-Null
+Pop-Location
+if (-not (Test-Path (Join-Path $root "frontend\dist\index.html"))) {
+    Write-Line "сборка не получилась" "Red"; exit 1
+}
+
+$tunnel = Start-Tunnel
+if (-not $tunnel.url) { Write-Line "туннель не поднялся, смотрите $tunnelLog" "Red"; exit 1 }
+$url = $tunnel.url
+Set-PublicUrl $url
+Write-Line "адрес: $url" "Green"
+
+$api = Start-Hidden $python @("-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000") $root "api"
+if (-not (Wait-Api)) { Write-Line "API не ответил" "Red"; exit 1 }
+$bot = Start-Hidden $python @("bot.py") $root "bot"
+Save-State $api $bot $tunnel.id $url
+Write-Line "работает: API $api, бот $bot, туннель $($tunnel.id)" "Green"
+Write-Line "закрывать это окно можно, процессы останутся"
+
+# --- присмотр ---------------------------------------------------------------
+while ($true) {
+    Start-Sleep -Seconds 15
+
+    if (-not (Test-Alive $tunnel.id)) {
+        Write-Line "туннель упал, поднимаю заново" "Yellow"
+        $tunnel = Start-Tunnel
+        if ($tunnel.url -and $tunnel.url -ne $url) {
+            # Новый адрес: Telegram должен узнать о нём, иначе кнопка ведёт в никуда.
+            $url = $tunnel.url
+            Set-PublicUrl $url
+            Write-Line "новый адрес: $url — перезапускаю API и бота" "Yellow"
+            foreach ($processId in @($api, $bot)) {
+                if (Test-Alive $processId) { Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue }
+            }
+            $api = Start-Hidden $python @("-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000") $root "api"
+            Wait-Api | Out-Null
+            $bot = Start-Hidden $python @("bot.py") $root "bot"
+        }
+    }
+
+    if (-not (Test-Alive $api)) {
+        Write-Line "API упал, поднимаю заново" "Yellow"
+        $api = Start-Hidden $python @("-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000") $root "api"
+        Wait-Api | Out-Null
+    }
+
+    if (-not (Test-Alive $bot)) {
+        Write-Line "бот упал, поднимаю заново" "Yellow"
+        $bot = Start-Hidden $python @("bot.py") $root "bot"
+    }
+
+    Save-State $api $bot $tunnel.id $url
+}

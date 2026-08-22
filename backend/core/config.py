@@ -11,7 +11,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 # Docker supplies its own environment.  For a direct local `uvicorn app:app`
 # launch, load this project's .env before reading any configuration values.
 # `override=False` deliberately keeps Docker/Windows environment variables authoritative.
-load_dotenv(PROJECT_ROOT / ".env", override=False)
+# `utf-8-sig` снимает BOM: Блокнот и PowerShell сохраняют файл с ним, а он
+# прилипает к первому ключу — BOT_TOKEN читается как "﻿BOT_TOKEN" и
+# выглядит как незаполненный.
+load_dotenv(PROJECT_ROOT / ".env", override=False, encoding="utf-8-sig")
 
 
 def _clean(value: str | None, fallback: str = "") -> str:

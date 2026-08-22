@@ -69,7 +69,7 @@ $lines = $lines | ForEach-Object {
     elseif ($_ -like "CORS_ORIGINS=*") { "CORS_ORIGINS=$public" }
     else { $_ }
 }
-Set-Content -Path $envPath -Value $lines -Encoding UTF8
+[System.IO.File]::WriteAllLines($envPath, $lines, (New-Object System.Text.UTF8Encoding($false)))
 
 if (Test-Port 8000) {
     Write-Host "Порт 8000 занят: остановите старый API, чтобы он перечитал адрес." -ForegroundColor Yellow
