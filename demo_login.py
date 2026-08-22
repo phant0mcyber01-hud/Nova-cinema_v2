@@ -22,13 +22,17 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import os
 import sys
 import time
 from urllib.parse import quote, urlencode
 
 from backend.core import config
 
-FRONTEND = "http://localhost:5173"
+#: Where the Mini App is being served right now. With the API serving the
+#: build (laptop-as-a-server), that is WEBAPP_URL; with `npm run dev` it is
+#: Vite. Override with NOVA_DEMO_BASE when neither guess fits.
+FRONTEND = os.getenv("NOVA_DEMO_BASE") or config.WEBAPP_URL or "http://localhost:5173"
 DEMO_VIEWER_ID = 111111111
 
 
@@ -53,7 +57,7 @@ def link(telegram_id: int, username: str, first_name: str, last_name: str = "") 
     signed = init_data(telegram_id, username, first_name, last_name)
     # The web SDK looks for these three in the fragment, exactly as Telegram sends them.
     fragment = f"tgWebAppData={quote(signed, safe='')}&tgWebAppVersion=7.0&tgWebAppPlatform=web"
-    return f"{FRONTEND}/#{fragment}"
+    return f"{FRONTEND.rstrip(chr(47))}/#{fragment}"
 
 
 def main() -> None:
