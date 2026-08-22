@@ -250,6 +250,7 @@ export const ru = {
   statusCancelled: 'Отменено',
   statusConfirmed: 'Подтверждено',
   statusPending: 'Ожидает',
+  statusLabel: 'Статус',
   statuses: 'Статусы',
   timeShow: 'Время показа',
   timeManyHint: 'Можно добавить сразу несколько сеансов на выбранную дату.',

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import re
 import subprocess
 import sys
 
@@ -62,3 +63,19 @@ def test_an_empty_database_can_be_upgraded_and_rolled_all_the_way_back(database_
 
     current = _alembic("current", database_url=database_url)
     assert "(head)" in current.stdout
+
+
+def test_revision_ids_fit_the_version_table():
+    """Alembic's own table caps the identifier; PostgreSQL enforces the cap.
+
+    SQLite ignores VARCHAR lengths, so an over-long revision id passes every
+    local check and then breaks the production upgrade halfway through. The
+    project widens the column in env.py; this keeps both halves honest.
+    """
+    env = (PROJECT_ROOT / "alembic" / "env.py").read_text(encoding="utf-8")
+    assert "VARCHAR(64)" in env, "env.py must prepare a version table wide enough"
+
+    for path in sorted(VERSIONS.glob("[0-9]*.py")):
+        match = re.search(r'^revision\s*=\s*"([^"]+)"', path.read_text(encoding="utf-8"), re.M)
+        assert match, f"{path.name} declares no revision id"
+        assert len(match.group(1)) <= 64, f"{match.group(1)} does not fit the widened column"

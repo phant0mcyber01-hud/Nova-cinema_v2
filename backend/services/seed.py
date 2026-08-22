@@ -9,10 +9,11 @@ import json
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from datetime import date, timedelta
+from datetime import timedelta
 
-from backend.core.config import DEFAULT_BOOKING_DAYS_AHEAD
+from backend.core.config import DEFAULT_BOOKING_DAYS_AHEAD, DEFAULT_TIMEZONE_OFFSET_MINUTES
 from backend.models import CinemaSettings, Movie, Show
+from backend.services.booking import cinema_now
 
 SEED_MOVIES: list[dict[str, object]] = [
     {
@@ -96,8 +97,11 @@ async def seed(session: AsyncSession) -> None:
         await session.commit()
     if (await session.scalar(select(Movie.id).limit(1))) is not None:
         return
+    # The cinema's calendar, not the server's: a window starting on the
+    # server's yesterday would open with a day that is already over.
+    first_day = cinema_now(DEFAULT_TIMEZONE_OFFSET_MINUTES).date()
     window = [
-        (date.today() + timedelta(days=offset)).isoformat()
+        (first_day + timedelta(days=offset)).isoformat()
         for offset in range(DEFAULT_BOOKING_DAYS_AHEAD)
     ]
     for item in SEED_MOVIES:

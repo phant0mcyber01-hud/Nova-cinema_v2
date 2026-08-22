@@ -222,6 +222,7 @@ export const uz: Record<TranslationKey, string> = {
   statusCancelled: 'Bekor qilingan',
   statusConfirmed: 'Tasdiqlangan',
   statusPending: 'Kutilmoqda',
+  statusLabel: 'Holat',
   statuses: 'Statuslar',
   unavailable: 'Mavjud emas',
   telegram: 'Telegram',

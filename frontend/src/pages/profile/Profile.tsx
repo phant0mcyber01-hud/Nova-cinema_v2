@@ -245,7 +245,7 @@ function TicketCard({ booking }: { booking: ProfileBooking }) {
         <span>{t('seats')}: {booking.seats}</span>
         <span>{t('seatsCountLabel')}: {seatsCount} · {t('pricePerTicket')}: {formatMoney(ticketPrice, language)}</span>
         <span>{t('amount')}: {formatMoney(booking.total, language)}</span>
-        <span>{t('statuses')}: {statusLabel(booking.status, t)}</span>
+        <span>{t('statusLabel')}: {statusLabel(booking.status, t)}</span>
         {booking.comment && <span>{t('comment')}: {booking.comment}</span>}
       </div>
     </Link>
