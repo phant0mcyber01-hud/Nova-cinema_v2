@@ -27,7 +27,7 @@ BOT_TOKEN: str = config.bot_token()
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN is empty: put the BotFather token in .env")
 WEBAPP_URL = config.WEBAPP_URL
-WEBAPP_BUTTON_TEXT = "🚀 Открыть Nova Cinema"
+WEBAPP_BUTTON_TEXT = "Открыть Nova Cinema"
 WEBAPP_MENU_TEXT = "Nova Cinema"
 ADMIN_TELEGRAM_IDS = config.ADMIN_TELEGRAM_IDS
 
@@ -135,9 +135,9 @@ def main_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text=WEBAPP_BUTTON_TEXT, web_app=create_webapp_info())],
-            [InlineKeyboardButton(text="🎬 Каталог фильмов", callback_data="movies")],
-            [InlineKeyboardButton(text="🎫 Мои бронирования", web_app=create_webapp_info("/profile/bookings"))],
-            [InlineKeyboardButton(text="ℹ️ О кинотеатре", callback_data="about")],
+            [InlineKeyboardButton(text="Каталог фильмов", callback_data="movies")],
+            [InlineKeyboardButton(text="Мои бронирования", web_app=create_webapp_info("/profile/bookings"))],
+            [InlineKeyboardButton(text="О кинотеатре", callback_data="about")],
         ]
     )
 
@@ -147,9 +147,9 @@ def movie_keyboard(movie: dict[str, object]) -> InlineKeyboardMarkup:
     trailer_id = str(movie.get("trailer_id") or "")
     rows: list[list[InlineKeyboardButton]] = []
     if trailer_id:
-        rows.append([InlineKeyboardButton(text="▶ Смотреть трейлер", url=f"https://youtu.be/{trailer_id}")])
-    rows.append([InlineKeyboardButton(text="🎟 Забронировать", web_app=create_webapp_info(f"/booking/{movie_id}/date"))])
-    rows.append([InlineKeyboardButton(text="◀ Назад", callback_data="movies")])
+        rows.append([InlineKeyboardButton(text="Смотреть трейлер", url=f"https://youtu.be/{trailer_id}")])
+    rows.append([InlineKeyboardButton(text="Забронировать", web_app=create_webapp_info(f"/booking/{movie_id}/date"))])
+    rows.append([InlineKeyboardButton(text="Назад", callback_data="movies")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -162,11 +162,11 @@ def shorten(value: object, limit: int = 620) -> str:
 
 def movie_caption(movie: dict[str, object]) -> str:
     return (
-        f"🎬 <b>{html.escape(str(movie['title']))}</b>\n\n"
-        f"🏷 <b>Жанр:</b> {html.escape(str(movie['genre']))}\n"
-        f"🔞 <b>Возраст:</b> {movie['age']}+\n"
-        f"⏱ <b>Длительность:</b> {movie['duration']} мин\n"
-        f"⭐ <b>IMDb:</b> {movie['imdb']} · <b>КиноПоиск:</b> {movie['kinopoisk']}\n\n"
+        f"<b>{html.escape(str(movie['title']))}</b>\n\n"
+        f"<b>Жанр:</b> {html.escape(str(movie['genre']))}\n"
+        f"<b>Возраст:</b> {movie['age']}+\n"
+        f"<b>Длительность:</b> {movie['duration']} мин\n"
+        f"<b>IMDb:</b> {movie['imdb']} · <b>КиноПоиск:</b> {movie['kinopoisk']}\n\n"
         f"{html.escape(shorten(movie.get('description')))}"
     )
 
@@ -228,7 +228,7 @@ async def cmd_start_shared_movie(message: types.Message, command: CommandObject)
 @dp.message(CommandStart())
 async def cmd_start(message: types.Message) -> None:
     text = (
-        "<b>🎬 Добро пожаловать в Nova Cinema!</b>\n\n"
+        "<b>Добро пожаловать в Nova Cinema!</b>\n\n"
         "Откройте Mini App или выберите фильм прямо в каталоге бота. "
         "Каталог берётся из той же PostgreSQL-базы, что и приложение."
     )
@@ -237,7 +237,7 @@ async def cmd_start(message: types.Message) -> None:
 
 @dp.callback_query(F.data == "main")
 async def cb_main(call: CallbackQuery) -> None:
-    await replace_callback_message(call, "<b>🎬 Главное меню Nova Cinema</b>", main_keyboard())
+    await replace_callback_message(call, "<b>Главное меню Nova Cinema</b>", main_keyboard())
     await call.answer()
 
 
@@ -247,19 +247,19 @@ async def cb_movies(call: CallbackQuery) -> None:
     if not movies:
         await replace_callback_message(
             call,
-            "<b>🎬 Каталог фильмов</b>\n\nПока нет опубликованных фильмов.",
-            InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="◀ Главное меню", callback_data="main")]]),
+            "<b>Каталог фильмов</b>\n\nПока нет опубликованных фильмов.",
+            InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Главное меню", callback_data="main")]]),
         )
         await call.answer()
         return
     rows = [
-        [InlineKeyboardButton(text=f"🎬 {movie['title']} · {movie['age']}+", callback_data=f"movie_{movie['id']}")]
+        [InlineKeyboardButton(text=f"{movie['title']} · {movie['age']}+", callback_data=f"movie_{movie['id']}")]
         for movie in movies
     ]
-    rows.append([InlineKeyboardButton(text="◀ Главное меню", callback_data="main")])
+    rows.append([InlineKeyboardButton(text="Главное меню", callback_data="main")])
     await replace_callback_message(
         call,
-        f"<b>🎬 Каталог фильмов</b>\n\nВыберите фильм из библиотеки Nova Cinema. Сейчас доступно: <b>{len(movies)}</b>.",
+        f"<b>Каталог фильмов</b>\n\nВыберите фильм из библиотеки Nova Cinema. Сейчас доступно: <b>{len(movies)}</b>.",
         InlineKeyboardMarkup(inline_keyboard=rows),
     )
     await call.answer()
@@ -285,23 +285,23 @@ async def cb_movie_detail(call: CallbackQuery) -> None:
 @dp.callback_query(F.data == "about")
 async def cb_about(call: CallbackQuery) -> None:
     settings = await fetch_settings()
-    lines = [f"<b>ℹ️ О кинотеатре {html.escape(str(settings['name']))}</b>", ""]
+    lines = [f"<b>О кинотеатре {html.escape(str(settings['name']))}</b>", ""]
     if settings["address"]:
-        lines.append(f"📍 <b>Адрес:</b> {html.escape(str(settings['address']))}")
+        lines.append(f"<b>Адрес:</b> {html.escape(str(settings['address']))}")
     if settings["phone"]:
-        lines.append(f"☎️ <b>Телефон:</b> {html.escape(str(settings['phone']))}")
+        lines.append(f"<b>Телефон:</b> {html.escape(str(settings['phone']))}")
     if settings["work_hours"]:
-        lines.append(f"🕒 <b>Время работы:</b> {html.escape(str(settings['work_hours']))}")
+        lines.append(f"<b>Время работы:</b> {html.escape(str(settings['work_hours']))}")
     if settings["telegram_url"]:
-        lines.append(f"💬 <b>Telegram:</b> {html.escape(str(settings['telegram_url']))}")
+        lines.append(f"<b>Telegram:</b> {html.escape(str(settings['telegram_url']))}")
     if settings["instagram_url"]:
-        lines.append(f"📸 <b>Instagram:</b> {html.escape(str(settings['instagram_url']))}")
+        lines.append(f"<b>Instagram:</b> {html.escape(str(settings['instagram_url']))}")
     if settings["about"]:
         lines.extend(["", html.escape(str(settings["about"]))])
     await replace_callback_message(
         call,
         "\n".join(lines),
-        InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="◀ Главное меню", callback_data="main")]]),
+        InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Главное меню", callback_data="main")]]),
     )
     await call.answer()
 
@@ -312,8 +312,8 @@ async def cmd_admin(message: types.Message) -> None:
         return
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="📲 Открыть админку", web_app=create_webapp_info("/admin"))],
-            [InlineKeyboardButton(text="🎬 Каталог фильмов", callback_data="movies")],
+            [InlineKeyboardButton(text="Открыть админку", web_app=create_webapp_info("/admin"))],
+            [InlineKeyboardButton(text="Каталог фильмов", callback_data="movies")],
         ]
     )
     await message.answer("<b>Админ-раздел Nova Cinema</b>\n\nУправление контентом доступно внутри Mini App.", reply_markup=keyboard)
