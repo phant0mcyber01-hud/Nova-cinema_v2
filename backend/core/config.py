@@ -65,6 +65,7 @@ DEFAULT_ADDRESS_UZ = "Yuksalish 97A"
 DEFAULT_PHONE = "+998 91 326 20 65"
 DEFAULT_TELEGRAM_URL = "https://t.me/novasinema"
 DEFAULT_INSTAGRAM_URL = "https://www.instagram.com/nova_cinema__"
+DEFAULT_MAP_URL = "https://yandex.go.link/discovery?action=card&oid=97603506332&adj_campaign=Share-from-the-app"
 DEFAULT_WORK_HOURS = "10:00 - 23:00"
 DEFAULT_CURRENCY = "UZS"
 

@@ -30,7 +30,7 @@ class CinemaSettings(Base):
     instagram_url: Mapped[str] = mapped_column(String(255), default=config.DEFAULT_INSTAGRAM_URL)
     #: Bot handle without @, used to build share deep links (t.me/<bot>?startapp=…).
     bot_username: Mapped[str] = mapped_column(String(64), default="")
-    map_url: Mapped[str] = mapped_column(String(512), default="")
+    map_url: Mapped[str] = mapped_column(String(512), default=config.DEFAULT_MAP_URL)
     latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     work_hours: Mapped[str] = mapped_column(String(120), default=config.DEFAULT_WORK_HOURS)
