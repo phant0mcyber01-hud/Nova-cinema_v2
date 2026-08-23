@@ -101,6 +101,32 @@ function Start-Hidden($file, $arguments, $workingDirectory, $name) {
         -WindowStyle Hidden -PassThru -RedirectStandardOutput $out -RedirectStandardError $err).Id
 }
 
+function Test-PublicUrl($address) {
+    <#
+        Проверка публичного адреса в обход локального DNS.
+
+        Провайдер этого компьютера не отдаёт A-записи для *.trycloudflare.com —
+        только IPv6, до которого нет связи. То есть ноутбук не может открыть
+        собственный публичный адрес, хотя для телефона и для Telegram тот
+        работает. Проверка «не отвечает — значит мёртв» на такой машине убивает
+        исправные туннели один за другим, и адрес меняется каждую минуту.
+
+        Поэтому адрес резолвится через публичный DNS, а запрос идёт по
+        полученному IP с правильным именем хоста.
+    #>
+    if (-not $address) { return $false }
+    $hostName = ([Uri]$address).Host
+    $ip = $null
+    try {
+        $ip = (Resolve-DnsName -Name $hostName -Type A -Server 8.8.8.8 -ErrorAction Stop |
+            Where-Object { $_.IPAddress } | Select-Object -First 1).IPAddress
+    } catch { $ip = $null }
+    if (-not $ip) { return $false }
+    $code = & curl.exe -s -o NUL -w "%{http_code}" --max-time 20 `
+        --resolve "$($hostName):443:$ip" "$address/api/settings" 2>$null
+    return ($code -eq "200")
+}
+
 function Start-Tunnel {
     Remove-Item $tunnelLog -ErrorAction SilentlyContinue
     # Путь к проекту содержит пробелы и тире, а Start-Process не заключает
@@ -120,11 +146,11 @@ function Start-Tunnel {
                 # Адрес печатается раньше, чем поднимается соединение с краем
                 # сети. Ждём, пока он начнёт отвечать, иначе присмотр решит,
                 # что туннель мёртв, и убьёт его на середине подключения.
-                foreach ($probe in 1..40) {
-                    try {
-                        Invoke-WebRequest -Uri "$candidate/api/settings" -TimeoutSec 5 -UseBasicParsing | Out-Null
+                foreach ($probe in 1..20) {
+                    if (Test-PublicUrl $candidate) {
                         return @{ id = $processId; url = $candidate; ready = $true }
-                    } catch { Start-Sleep -Milliseconds 1500 }
+                    }
+                    Start-Sleep -Milliseconds 1500
                 }
                 return @{ id = $processId; url = $candidate; ready = $false }
             }
@@ -178,8 +204,7 @@ function Read-EnvUrl {
 $adopted = $false
 $existingUrl = Read-EnvUrl
 if ($existingUrl -and $existingUrl -like "https://*") {
-    try {
-        Invoke-WebRequest -Uri "$existingUrl/api/settings" -TimeoutSec 12 -UseBasicParsing | Out-Null
+    if (Test-PublicUrl $existingUrl) {
         $api = Find-Process "*uvicorn*"
         $tunnelProcess = Get-Process cloudflared -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($api -and $tunnelProcess) {
@@ -195,8 +220,6 @@ if ($existingUrl -and $existingUrl -like "https://*") {
             Write-Line "работает: API $api, бот $bot, туннель $($tunnel.id)" "Green"
             $adopted = $true
         }
-    } catch {
-        $adopted = $false
     }
 }
 
@@ -251,13 +274,7 @@ while ($true) {
     # адресом каждую минуту.
     if ((Get-Date) -lt $graceUntil) { continue }
 
-    $reachable = $false
-    if ($url) {
-        try {
-            Invoke-WebRequest -Uri "$url/api/settings" -TimeoutSec 12 -UseBasicParsing | Out-Null
-            $reachable = $true
-        } catch { $reachable = $false }
-    }
+    $reachable = Test-PublicUrl $url
     # Одна неудачная проверка — это может быть просто моргнувшая сеть. Туннель
     # пересоздаётся с новым адресом, а значит и с перезапуском бота, поэтому
     # цена ошибки высокая: ждём двух подряд.
