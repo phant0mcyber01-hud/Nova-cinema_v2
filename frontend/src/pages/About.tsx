@@ -94,20 +94,20 @@ export default function About() {
         <div className="about-actions">
           {settings.phone && (
             <a className="book fit" href={`tel:${settings.phone.replace(/[^\d+]/g, '')}`} onClick={haptic.tap}>
-              ☎ {settings.phone}
+              ☏ {settings.phone}
             </a>
           )}
           {map && (
-            <button className="admin-ghost" onClick={() => openExternal(map)}>📍 {t('openMap')}</button>
+            <button className="admin-ghost" onClick={() => openExternal(map)}>⚲ {t('openMap')}</button>
           )}
           {settings.telegram_url && (
             <button className="admin-ghost" onClick={() => openExternal(settings.telegram_url)}>
-              💬 {t('writeTelegram')}
+              ➤ {t('writeTelegram')}
             </button>
           )}
           {settings.instagram_url && (
             <button className="admin-ghost" onClick={() => openExternal(settings.instagram_url)}>
-              📸 {t('instagram')}
+              ▢ {t('instagram')}
             </button>
           )}
         </div>
