@@ -285,7 +285,13 @@ async def test_accepting_a_new_time_checks_that_the_seats_are_free_there(client,
         assert booking.proposed_session == "21:30", "the offer stays open"
 
 
-async def test_accepting_a_new_time_requires_a_real_screening(client, movie):
+async def test_accepting_a_time_the_admin_named_freely_moves_the_booking(client, movie):
+    """The admin proposes any hour, the same way the viewer may pick any hour.
+
+    Before freeform time the offer only stuck if it matched a `shows` row, so
+    an admin who typed a time the schedule did not contain sent the viewer an
+    offer that answered 404 when accepted.
+    """
     user = await login(client, USER_ID)
     await _book(client, movie.id, ["1-1"], user)
     admin = await login(client, ADMIN_ID, "admin")
@@ -297,7 +303,12 @@ async def test_accepting_a_new_time_requires_a_real_screening(client, movie):
         json={"action": "accept"},
         headers=auth_header(user),
     )
-    assert accepted.status_code == 404, "there is no screening at 04:15"
+    assert accepted.status_code == 200, accepted.text
+
+    async with SessionLocal() as session:
+        booking = await session.get(Booking, booking_id)
+        assert booking.session == "04:15"
+        assert booking.proposed_session == "", "the offer is settled"
 
 
 async def test_accepting_a_free_new_time_moves_the_booking(client, movie):
