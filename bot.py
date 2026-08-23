@@ -126,6 +126,7 @@ async def fetch_settings() -> dict[str, object]:
             "phone": settings.phone,
             "telegram_url": settings.telegram_url,
             "instagram_url": settings.instagram_url,
+            "map_url": settings.map_url,
             "work_hours": settings.work_hours,
             "about": settings.about,
         }
@@ -296,6 +297,8 @@ async def cb_about(call: CallbackQuery) -> None:
         lines.append(f"<b>Telegram:</b> {html.escape(str(settings['telegram_url']))}")
     if settings["instagram_url"]:
         lines.append(f"<b>Instagram:</b> {html.escape(str(settings['instagram_url']))}")
+    if settings["map_url"]:
+        lines.append(f"<b>Карта:</b> {html.escape(str(settings['map_url']))}")
     if settings["about"]:
         lines.extend(["", html.escape(str(settings["about"]))])
     await replace_callback_message(
