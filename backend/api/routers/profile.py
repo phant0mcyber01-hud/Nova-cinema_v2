@@ -11,6 +11,7 @@ from backend.schemas.booking import BookingProposalIn
 from backend.schemas.profile import ProfileIn
 from backend.services.booking import ensure_show, seats_taken_by_others
 from backend.services.catalog import serialize_booking, serialize_movie
+from backend.services.telegram import notify_admins
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
 
@@ -107,6 +108,9 @@ async def answer_booking_proposal(
         message = f"Клиент отказался от нового времени заявки #{booking.id}"
     session.add(AdminNotification(booking_id=booking.id, message=message))
     await session.commit()
+    # Same rule as on a new booking: the panel keeps the row, Telegram gets a
+    # live copy, and a failure to deliver it never touches the answer above.
+    await notify_admins(message)
     return {"status": booking.status, "session": booking.session}
 
 
