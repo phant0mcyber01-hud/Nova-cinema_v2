@@ -70,14 +70,30 @@ def create_webapp_info(path: str = "") -> WebAppInfo:
     return WebAppInfo(url=url)
 
 
-async def configure_menu_button(bot: Bot) -> None:
-    logger.info("Registering Telegram MenuButtonWebApp with URL=%s", WEBAPP_URL)
-    await bot.set_chat_menu_button(menu_button=MenuButtonWebApp(text=WEBAPP_MENU_TEXT, web_app=create_webapp_info()))
-    current_button = await bot.get_chat_menu_button()
-    current_url = getattr(getattr(current_button, "web_app", None), "url", None)
-    logger.info("Telegram Bot API menu button URL=%s", current_url)
-    if normalize_webapp_url(current_url) != normalize_webapp_url(WEBAPP_URL):
-        raise RuntimeError(f"Telegram menu button URL mismatch: {current_url!r}")
+async def configure_menu_button(bot: Bot, attempts: int = 3) -> None:
+    """Point the menu button at this instance and prove Telegram accepted it.
+
+    The read-back is retried: when the address changes, the previous instance
+    may still be alive for a moment and set the button back to its own URL.
+    Reading that straggler's value once and refusing to start turns a race into
+    a crash loop, and the bot never comes up at all.
+    """
+    for attempt in range(1, attempts + 1):
+        logger.info("Registering Telegram MenuButtonWebApp with URL=%s", WEBAPP_URL)
+        await bot.set_chat_menu_button(
+            menu_button=MenuButtonWebApp(text=WEBAPP_MENU_TEXT, web_app=create_webapp_info())
+        )
+        current_button = await bot.get_chat_menu_button()
+        current_url = getattr(getattr(current_button, "web_app", None), "url", None)
+        logger.info("Telegram Bot API menu button URL=%s", current_url)
+        if normalize_webapp_url(current_url) == normalize_webapp_url(WEBAPP_URL):
+            return
+        logger.warning(
+            "Menu button says %r, expected %r — attempt %d of %d",
+            current_url, WEBAPP_URL, attempt, attempts,
+        )
+        await asyncio.sleep(2)
+    raise RuntimeError(f"Telegram menu button URL mismatch: {current_url!r}")
 
 
 async def fetch_published_movies() -> list[dict[str, object]]:

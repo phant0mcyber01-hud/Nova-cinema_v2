@@ -212,14 +212,21 @@ if (-not (Test-Path (Join-Path $root "frontend\dist\index.html"))) {
     Write-Line "сборка не получилась" "Red"; exit 1
 }
 
+# API поднимается первым. Готовность туннеля проверяется запросом к
+# /api/settings через него же — пока приложение не отвечает, проверять нечего,
+# и туннель, который на самом деле работает, был бы признан мёртвым.
+$api = Start-Hidden $python @("-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000") $root "api"
+if (-not (Wait-Api)) { Write-Line "API не ответил" "Red"; exit 1 }
+
 $tunnel = Start-Tunnel
 if (-not $tunnel.url) { Write-Line "туннель не поднялся, смотрите $tunnelLog" "Red"; exit 1 }
 $url = $tunnel.url
 Set-PublicUrl $url
-Write-Line "адрес: $url" "Green"
+if ($tunnel.ready) { Write-Line "адрес: $url" "Green" }
+else { Write-Line "адрес: $url (пока не отвечает, присмотр подождёт)" "Yellow" }
 
-$api = Start-Hidden $python @("-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000") $root "api"
-if (-not (Wait-Api)) { Write-Line "API не ответил" "Red"; exit 1 }
+# Бот читает WEBAPP_URL при старте, поэтому запускается после того, как адрес
+# записан в .env.
 $bot = Start-Hidden $python @("bot.py") $root "bot"
 Save-State $api $bot $tunnel.id $url
 Write-Line "работает: API $api, бот $bot, туннель $($tunnel.id)" "Green"
@@ -231,12 +238,19 @@ Write-Line "закрывать это окно можно, процессы ос
 # --- присмотр ---------------------------------------------------------------
 $misses = 0
 $botFailures = 0
+$graceUntil = (Get-Date).AddSeconds(60)
 while ($true) {
     Start-Sleep -Seconds 15
 
     # Живого процесса мало: cloudflared остаётся запущенным и после того, как
     # соединение с краем сети развалилось, и молча крутит переподключения — а
     # публичный адрес в это время не отвечает. Спрашиваем сам адрес.
+    # Свежий адрес trycloudflare доступен не сразу: имени нужно разойтись по
+    # сети. Пока идёт прогрев — не проверяем, иначе присмотр убьёт туннель,
+    # который вот-вот заработает, поднимет следующий, и так по кругу с новым
+    # адресом каждую минуту.
+    if ((Get-Date) -lt $graceUntil) { continue }
+
     $reachable = $false
     if ($url) {
         try {
@@ -249,7 +263,9 @@ while ($true) {
     # цена ошибки высокая: ждём двух подряд.
     if ($reachable) { $misses = 0 } else { $misses = $misses + 1 }
 
-    if ((-not (Test-Alive $tunnel.id)) -or ($misses -ge 2)) {
+    # Пересоздание меняет адрес и требует перезапуска бота — цена ошибки высокая:
+    # терпим минуту молчания, прежде чем решить, что туннель мёртв.
+    if ((-not (Test-Alive $tunnel.id)) -or ($misses -ge 4)) {
         $misses = 0
         Write-Line "адрес не отвечает, поднимаю туннель заново" "Yellow"
         if (Test-Alive $tunnel.id) { Stop-Process -Id $tunnel.id -Force -ErrorAction SilentlyContinue }
@@ -266,6 +282,7 @@ while ($true) {
             Wait-Api | Out-Null
             $bot = Start-Hidden $python @("bot.py") $root "bot"
         }
+        $graceUntil = (Get-Date).AddSeconds(120)
     }
 
     if (-not (Test-Alive $api)) {
