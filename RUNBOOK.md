@@ -32,8 +32,14 @@ docker compose up --build
   address, phone, Telegram/Instagram links, geo, work hours, currency, ticket price, hall size and booking rules.
   `GET /api/settings` serves it to the Mini App; `PUT /api/admin/settings` updates it.
 - Price priority is show price, movie price, global base price. The unit price is frozen on the booking row at
-  request time, so changing the price never rewrites existing bookings.
-- The schedule lives in `shows`. Only an active screening can be booked - an arbitrary HH:MM is rejected with 404.
+  request time, so changing the price never rewrites existing bookings. A freeform time matches no `shows` row,
+  so it is priced from the movie or the base price - never a failure.
+- The schedule lives in `shows` and gates the dates, not the hours: a movie is bookable only on a day that has
+  an active screening, and on such a day the viewer may request any well-formed HH:MM. Rejected with 404 are a
+  malformed time, a past date, a time already started in the cinema's own clock, and a day with no screening.
+- Double booking is prevented by `uq_seat_hold` on (movie_id, show_date, session, seat) plus the rule that
+  `/api/bookings/confirm` needs a live hold. `session` stores the requested time verbatim, so two viewers
+  wanting one seat at the same hour collide with 409 while different hours never conflict.
 - Booking lifecycle: `pending` -> `contacting` -> `confirmed` -> `watched`, with `cancelled` at any point.
   Cancelling frees the seats; every other status keeps them. QR is valid for `confirmed` and `watched`.
 - One hall only. Its size comes from `hall_rows` x `hall_cols` in settings (seeded to the real 3x5 = 15 seats).

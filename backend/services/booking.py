@@ -1,6 +1,7 @@
 """Screening lookup and booking-side rules shared by the public endpoints."""
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from datetime import datetime, timedelta
 
@@ -8,7 +9,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.core.config import BLOCKING_STATUSES
+from backend.core.config import BLOCKING_STATUSES, TIME_PATTERN
 from backend.core.db import utcnow
 from backend.models import Booking, Movie, Show
 from backend.services.settings import get_settings
@@ -16,7 +17,7 @@ from backend.services.settings import get_settings
 __all__ = [
     "BLOCKING_STATUSES",
     "cinema_now",
-    "ensure_show",
+    "ensure_bookable_slot",
     "movie_schedule",
     "seats_taken_by_others",
     "session_has_ended",
@@ -52,15 +53,29 @@ def session_has_started(
     return cinema_now(offset_minutes, now) >= start
 
 
-async def ensure_show(session: AsyncSession, movie_id: int, show_date: str, start_time: str) -> Show:
-    """Reject anything that is not a published movie on an active screening.
+async def ensure_bookable_slot(
+    session: AsyncSession, movie_id: int, show_date: str, start_time: str
+) -> Show | None:
+    """Gate for the booking flow: the cinema owns the date, the viewer owns the time.
 
-    Replaces the old check that accepted any well-formed HH:MM, so the schedule
-    is now genuinely controlled from the admin panel.
+    The date is still governed by the admin panel -- a movie can only be booked
+    on a day it actually plays, so `shows` stays the schedule. The time is no
+    longer forced onto one of that day's configured slots: the viewer names the
+    hour they want, and any well-formed HH:MM that has not already passed is
+    accepted.
+
+    Returns the configured screening when the viewer happened to name one of the
+    admin's own times, so its price override still applies, and None for a
+    freeform time -- the caller then falls back to the movie or base price.
     """
     movie = await session.get(Movie, movie_id)
     if movie is None or not movie.is_published:
         raise HTTPException(404, "Movie not found")
+    # Not a time at all -- 24:30, an empty string, a seat label. The hold and
+    # confirm payloads are pattern-checked by pydantic already, but the seats
+    # endpoint takes the time straight off the query string.
+    if not re.fullmatch(TIME_PATTERN, start_time):
+        raise HTTPException(404, "Session not found")
     # A screening that has already been and gone must not be bookable, even
     # though the admin may keep the row for reporting.  The comparison is made
     # in the cinema's own time: a server in UTC still thinks it is yesterday
@@ -71,7 +86,16 @@ async def ensure_show(session: AsyncSession, movie_id: int, show_date: str, star
         raise HTTPException(404, "Session not found")
     if session_has_started(show_date, start_time, offset):
         raise HTTPException(404, "Session already started")
-    show = await session.scalar(
+    # The date-level gate. With no active screening that day the movie is simply
+    # not playing, and a freeform time must not conjure a showing out of nothing.
+    scheduled_day = await session.scalar(
+        select(Show.id)
+        .where(Show.movie_id == movie_id, Show.show_date == show_date, Show.status == "active")
+        .limit(1)
+    )
+    if scheduled_day is None:
+        raise HTTPException(404, "Session not found")
+    return await session.scalar(
         select(Show).where(
             Show.movie_id == movie_id,
             Show.show_date == show_date,
@@ -79,13 +103,14 @@ async def ensure_show(session: AsyncSession, movie_id: int, show_date: str, star
             Show.status == "active",
         )
     )
-    if show is None:
-        raise HTTPException(404, "Session not found")
-    return show
 
 
 async def upcoming_show_times(session: AsyncSession, movie_id: int, show_date: str) -> list[str]:
-    """Times still open for a request on that date, in the cinema's own time."""
+    """The admin's own times for that date that have not started yet.
+
+    Since the viewer may name any time, these are the suggestions the Mini App
+    offers as one tap -- not the set of times a booking is limited to.
+    """
     offset = (await get_settings(session)).timezone_offset_minutes
     if show_date < cinema_now(offset).date().isoformat():
         return []

@@ -1,7 +1,7 @@
 """Stage 3: everything is admin-managed — settings, price, schedule, content."""
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import date, timedelta
 
 from backend.core.db import SessionLocal
 from tests.conftest import (
@@ -136,20 +136,31 @@ async def test_price_change_applies_forward_and_freezes_existing_bookings(client
 # --- schedule ----------------------------------------------------------------
 
 
-async def test_only_scheduled_times_are_bookable(client, movie):
-    """The old code accepted any well-formed HH:MM; the schedule is real now."""
+async def test_the_schedule_gates_the_date_and_the_viewer_names_the_time(client, movie):
+    """The viewer sets the hour; `shows` still decides which days are open.
+
+    Freeform time replaced the old rule that only an exact `shows` slot could
+    be booked, so 03:45 on a day the movie plays is now a real request -- while
+    a day with no active screening is refused as before.
+    """
     user = await login(client, USER_ID)
     response = await client.post(
         "/api/holds",
         json={"movie_id": movie.id, "show_date": SHOW_DATE, "session": "03:45", "seats": ["1-1"]},
         headers=auth_header(user),
     )
-    assert response.status_code == 404
+    assert response.status_code == 200, response.text
 
     seats = await client.get(
         f"/api/sessions/{movie.id}/seats", params={"show_date": SHOW_DATE, "session_time": "03:45"}
     )
-    assert seats.status_code == 404
+    assert seats.status_code == 200
+
+    quiet_day = (date.fromisoformat(SHOW_DATE) + timedelta(days=1)).isoformat()
+    closed = await client.get(
+        f"/api/sessions/{movie.id}/seats", params={"show_date": quiet_day, "session_time": "03:45"}
+    )
+    assert closed.status_code == 404, "a day the movie does not play stays shut"
 
 
 async def test_admin_creates_a_screening_that_becomes_bookable(client, movie):

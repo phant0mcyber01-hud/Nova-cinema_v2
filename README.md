@@ -37,6 +37,11 @@ the ticket price and currency, bonuses, melodies (max 3), gallery images, the ha
 plus the contact block used by both the Mini App and the bot. Environment variables only carry secrets and
 infrastructure settings; `DEFAULT_*` constants seed the settings row once and are never read afterwards.
 
+The `shows` schedule gates the **dates**: a movie can be booked only on a day it has an active screening.
+The **time** is the viewer's own -- the times configured for that day are offered as one tap, but any
+well-formed `HH:MM` may be requested instead. A requested time that matches a `shows` row still picks up that
+row's price override; otherwise the movie price, then the global base price, applies.
+
 ## Environment
 
 Copy the template and fill secrets:
