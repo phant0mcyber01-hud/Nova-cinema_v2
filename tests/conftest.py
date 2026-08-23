@@ -122,6 +122,39 @@ async def database():
         await engine.dispose()
 
 
+class TelegramOutbox(list):
+    """Every Bot API request the backend made during one test."""
+
+    #: Installed by the fixture; a handler may swap it to simulate a failure.
+    responder = None
+
+    def texts(self) -> list[str]:
+        return [json.loads(request.content)["text"] for request in self]
+
+    def chat_ids(self) -> list[int]:
+        return [json.loads(request.content)["chat_id"] for request in self]
+
+
+@pytest.fixture(autouse=True)
+def telegram_outbox(monkeypatch) -> TelegramOutbox:
+    """Intercept outbound Telegram traffic so no test reaches api.telegram.org.
+
+    Autouse on purpose: several endpoints message Telegram as a side effect, and
+    a test suite that quietly depends on the real network is a flaky test suite.
+    """
+    from backend.services import telegram
+
+    outbox = TelegramOutbox()
+    outbox.responder = lambda request: httpx.Response(200, json={"ok": True})
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        outbox.append(request)
+        return outbox.responder(request)
+
+    monkeypatch.setattr(telegram, "transport", httpx.MockTransport(handler))
+    return outbox
+
+
 @pytest.fixture
 async def client():
     transport = httpx.ASGITransport(app=app)

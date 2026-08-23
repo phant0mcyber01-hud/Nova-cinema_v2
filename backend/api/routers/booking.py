@@ -11,12 +11,13 @@ from backend.api.deps import current_user, get_db
 from backend.core.config import AWAITING_STATUSES, BLOCKING_STATUSES, CONFIRMED_STATUSES
 from backend.core.security import optional_user
 from backend.core.db import utcnow
-from backend.models import AdminNotification, Booking, SeatHold, User
+from backend.models import AdminNotification, Booking, Movie, SeatHold, User
 from backend.schemas.booking import BookingConfirmIn, HoldIn
 from backend.services.booking import ensure_show
 from backend.services.hall import valid_seat
 from backend.services.pricing import ticket_price
 from backend.services.settings import get_settings
+from backend.services.telegram import new_booking_admin_message, notify_admins
 
 router = APIRouter(tags=["booking"])
 
@@ -258,7 +259,14 @@ async def confirm_booking(
             SeatHold.user_id == user.id,
         )
     )
+    # Composed while the booking is still loaded, so reading the text costs no
+    # extra query after the commit expires the instance.
+    movie = await session.get(Movie, payload.movie_id)
+    admin_message = new_booking_admin_message(booking, movie.title if movie else "")
     await session.commit()
+    # After the commit on purpose: the booking is already durable, so a dead
+    # network or an admin who never started a chat with the bot cannot undo it.
+    await notify_admins(admin_message)
     return {
         "status": "pending",
         "ticket_code": code,
