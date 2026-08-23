@@ -13,7 +13,7 @@ from backend.core.security import optional_user
 from backend.core.db import utcnow
 from backend.models import AdminNotification, Booking, Movie, SeatHold, User
 from backend.schemas.booking import BookingConfirmIn, HoldIn
-from backend.services.booking import ensure_show
+from backend.services.booking import ensure_bookable_slot
 from backend.services.hall import valid_seat
 from backend.services.pricing import ticket_price
 from backend.services.settings import get_settings
@@ -54,7 +54,7 @@ async def session_seats(
     client's own doing), awaiting confirmation, and booked. A live hold by
     somebody else counts as awaiting — the seat is being taken right now.
     """
-    await ensure_show(session, movie_id, show_date, session_time)
+    await ensure_bookable_slot(session, movie_id, show_date, session_time)
     settings = await get_settings(session)
     await session.execute(SeatHold.__table__.delete().where(SeatHold.expires_at < utcnow()))
     await session.commit()
@@ -97,7 +97,7 @@ async def hold_seats(
     user: User = Depends(current_user),
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, object]:
-    await ensure_show(session, payload.movie_id, payload.show_date, payload.session)
+    await ensure_bookable_slot(session, payload.movie_id, payload.show_date, payload.session)
     settings = await get_settings(session)
     if len(payload.seats) > settings.max_seats_per_booking:
         raise HTTPException(422, f"Maximum {settings.max_seats_per_booking} seats per booking")
@@ -193,7 +193,7 @@ async def confirm_booking(
     user: User = Depends(current_user),
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, object]:
-    await ensure_show(session, payload.movie_id, payload.show_date, payload.session)
+    await ensure_bookable_slot(session, payload.movie_id, payload.show_date, payload.session)
     holds = await session.scalars(
         select(SeatHold)
         .where(
