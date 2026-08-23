@@ -4,10 +4,12 @@ from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.deps import current_user, get_db
-from backend.core.config import BLOCKING_STATUSES
+from backend.core.config import AWAITING_STATUSES, BLOCKING_STATUSES, CONFIRMED_STATUSES
+from backend.core.security import optional_user
 from backend.core.db import utcnow
 from backend.models import AdminNotification, Booking, SeatHold, User
 from backend.schemas.booking import BookingConfirmIn, HoldIn
@@ -19,16 +21,22 @@ from backend.services.settings import get_settings
 router = APIRouter(tags=["booking"])
 
 
-async def _taken_seats(session: AsyncSession, movie_id: int, show_date: str, session_time: str) -> set[str]:
+async def _booked_seats(
+    session: AsyncSession, movie_id: int, show_date: str, session_time: str, statuses: tuple[str, ...]
+) -> set[str]:
     bookings = await session.scalars(
         select(Booking).where(
             Booking.movie_id == movie_id,
             Booking.show_date == show_date,
             Booking.session == session_time,
-            Booking.status.in_(BLOCKING_STATUSES),
+            Booking.status.in_(statuses),
         )
     )
     return {seat for booking in bookings for seat in booking.seats.split(",") if seat}
+
+
+async def _taken_seats(session: AsyncSession, movie_id: int, show_date: str, session_time: str) -> set[str]:
+    return await _booked_seats(session, movie_id, show_date, session_time, BLOCKING_STATUSES)
 
 
 @router.get("/api/sessions/{movie_id}/seats")
@@ -36,21 +44,36 @@ async def session_seats(
     movie_id: int,
     show_date: str,
     session_time: str,
+    user: User | None = Depends(optional_user),
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, object]:
+    """Hall layout with a seat state the client can render directly.
+
+    Four states, as the spec asks: free (in none of the lists), selected (the
+    client's own doing), awaiting confirmation, and booked. A live hold by
+    somebody else counts as awaiting — the seat is being taken right now.
+    """
     await ensure_show(session, movie_id, show_date, session_time)
     settings = await get_settings(session)
     await session.execute(SeatHold.__table__.delete().where(SeatHold.expires_at < utcnow()))
     await session.commit()
-    holds = await session.scalars(
-        select(SeatHold).where(
-            SeatHold.movie_id == movie_id,
-            SeatHold.show_date == show_date,
-            SeatHold.session == session_time,
+
+    holds = list(
+        await session.scalars(
+            select(SeatHold).where(
+                SeatHold.movie_id == movie_id,
+                SeatHold.show_date == show_date,
+                SeatHold.session == session_time,
+            )
         )
     )
-    taken = await _taken_seats(session, movie_id, show_date, session_time)
-    taken |= {hold.seat for hold in holds}
+    mine = {hold.seat for hold in holds if user is not None and hold.user_id == user.id}
+    others_holding = {hold.seat for hold in holds} - mine
+
+    booked = await _booked_seats(session, movie_id, show_date, session_time, CONFIRMED_STATUSES)
+    awaiting = await _booked_seats(session, movie_id, show_date, session_time, AWAITING_STATUSES)
+    awaiting |= others_holding
+
     return {
         "rows": settings.hall_rows,
         "cols": settings.hall_cols,
@@ -58,7 +81,12 @@ async def session_seats(
         "max_seats": settings.max_seats_per_booking,
         "price": await ticket_price(session, movie_id, show_date, session_time),
         "currency": settings.currency,
-        "taken": sorted(taken),
+        "hold_minutes": settings.hold_minutes,
+        "booked": sorted(booked),
+        "awaiting": sorted(awaiting),
+        "mine": sorted(mine),
+        # Union of everything the viewer cannot pick, kept as the simple check.
+        "taken": sorted(booked | awaiting),
     }
 
 
@@ -117,7 +145,13 @@ async def hold_seats(
             for seat in payload.seats
         ]
     )
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError:
+        # uq_seat_hold fired: somebody claimed the same seat between the check
+        # above and this insert. The database is the arbiter, not the check.
+        await session.rollback()
+        raise HTTPException(409, "Seat is temporarily held") from None
     price = await ticket_price(session, payload.movie_id, payload.show_date, payload.session)
     return {
         "expires_at": expires,
@@ -125,6 +159,31 @@ async def hold_seats(
         "ticket_price": price,
         "total": len(payload.seats) * price,
     }
+
+
+@router.delete("/api/holds")
+async def release_seats(
+    movie_id: int,
+    show_date: str,
+    session_time: str,
+    user: User = Depends(current_user),
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    """Drop the caller's hold when they clear their selection or walk away.
+
+    Without this a seat stays blocked for the whole hold window even though
+    nobody is going to take it.
+    """
+    await session.execute(
+        SeatHold.__table__.delete().where(
+            SeatHold.movie_id == movie_id,
+            SeatHold.show_date == show_date,
+            SeatHold.session == session_time,
+            SeatHold.user_id == user.id,
+        )
+    )
+    await session.commit()
+    return {"status": "released"}
 
 
 @router.post("/api/bookings/confirm")
@@ -172,6 +231,17 @@ async def confirm_booking(
         telegram_username=username,
         comment=payload.comment.strip(),
     )
+    # The viewer typed their details into the booking form; keep them on the
+    # profile so the next booking is one tap. Existing values are never
+    # overwritten — someone may be booking on a friend's behalf.
+    if not user.first_name:
+        user.first_name = booking.first_name
+        user.name = booking.first_name or user.name
+    if not user.last_name:
+        user.last_name = booking.last_name
+    if not user.phone:
+        user.phone = phone
+
     session.add(booking)
     await session.flush()
     session.add(

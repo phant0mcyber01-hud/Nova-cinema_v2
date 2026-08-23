@@ -250,6 +250,11 @@ def downgrade() -> None:
         sa.Column("status", sa.String(20), nullable=False, server_default="active"),
         sa.UniqueConstraint("movie_id", "show_date", "session", name="uq_session_price"),
     )
+    # 0007 and 0008 indexed this table and never dropped their indexes, so the
+    # revision below us expects them to exist. Without recreating them here a
+    # downgrade past 0008 dies on "no such index".
+    op.create_index("ix_session_prices_status", "session_prices", ["status"])
+    op.create_index("ix_session_prices_show_date", "session_prices", ["show_date"])
     bind.execute(
         sa.text(
             "INSERT INTO session_prices (movie_id, show_date, session, ticket_price, status)"

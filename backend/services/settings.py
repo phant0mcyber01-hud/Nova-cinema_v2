@@ -5,8 +5,10 @@ database row is authoritative, and `config.DEFAULT_*` only seeds it once.
 """
 from __future__ import annotations
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.core.db import SessionLocal
 from backend.models import CinemaSettings
 from backend.services.i18n import normalize_language
 
@@ -14,14 +16,25 @@ SETTINGS_ID = 1
 
 
 async def get_settings(session: AsyncSession) -> CinemaSettings:
-    """Return the settings row, creating it with seed defaults on first use."""
+    """Return the settings row, creating it with seed defaults on first use.
+
+    Nearly every endpoint calls this, so the first-run insert must survive
+    concurrency: two requests against a fresh database would both see no row,
+    both insert id=1, and one would die on the primary key.
+    """
     settings = await session.get(CinemaSettings, SETTINGS_ID)
-    if settings is None:
-        settings = CinemaSettings(id=SETTINGS_ID)
-        session.add(settings)
-        await session.commit()
-        await session.refresh(settings)
-    return settings
+    if settings is not None:
+        return settings
+
+    # Create it in an independent session: if a parallel request wins the race,
+    # the primary key blows up there and the caller's transaction stays clean.
+    async with SessionLocal() as creator:
+        creator.add(CinemaSettings(id=SETTINGS_ID))
+        try:
+            await creator.commit()
+        except IntegrityError:
+            await creator.rollback()
+    return await session.get(CinemaSettings, SETTINGS_ID)
 
 
 def serialize_settings(settings: CinemaSettings, language: str = "ru") -> dict[str, object]:
@@ -33,6 +46,7 @@ def serialize_settings(settings: CinemaSettings, language: str = "ru") -> dict[s
         "phone": settings.phone,
         "telegram_url": settings.telegram_url,
         "instagram_url": settings.instagram_url,
+        "bot_username": settings.bot_username.lstrip("@"),
         "map_url": settings.map_url,
         "latitude": settings.latitude,
         "longitude": settings.longitude,
@@ -58,6 +72,7 @@ def serialize_settings_admin(settings: CinemaSettings) -> dict[str, object]:
         "phone": settings.phone,
         "telegram_url": settings.telegram_url,
         "instagram_url": settings.instagram_url,
+        "bot_username": settings.bot_username,
         "map_url": settings.map_url,
         "latitude": settings.latitude,
         "longitude": settings.longitude,
@@ -73,5 +88,6 @@ def serialize_settings_admin(settings: CinemaSettings) -> dict[str, object]:
         "max_seats_per_booking": settings.max_seats_per_booking,
         "hold_minutes": settings.hold_minutes,
         "booking_days_ahead": settings.booking_days_ahead,
+        "timezone_offset_minutes": settings.timezone_offset_minutes,
         "updated_at": settings.updated_at,
     }

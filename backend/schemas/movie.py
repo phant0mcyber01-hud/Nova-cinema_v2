@@ -42,3 +42,7 @@ class MovieIn(BaseModel):
 
 class MovieLookupIn(BaseModel):
     title: str = Field(min_length=1, max_length=255)
+
+
+class ReviewModerationIn(BaseModel):
+    approved: bool

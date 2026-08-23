@@ -1,13 +1,11 @@
 import { Link } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
-import { useI18n } from '../i18n'
+import BottomNav from './BottomNav'
 import LanguageSwitcher from './LanguageSwitcher'
 
-/** Common page frame: logo, language switcher and the profile shortcut. */
+/** Common page frame: logo, language switcher and the bottom tab bar. */
 export default function Shell({ children }: { children: ReactNode }) {
-  const { t } = useI18n()
-
   return (
     <main className="app">
       <header className="topbar">
@@ -17,10 +15,10 @@ export default function Shell({ children }: { children: ReactNode }) {
         </Link>
         <div className="header-actions">
           <LanguageSwitcher />
-          <Link className="admin-ghost" to="/profile">{t('profile')}</Link>
         </div>
       </header>
       {children}
+      <BottomNav />
     </main>
   )
 }

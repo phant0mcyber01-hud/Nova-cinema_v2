@@ -9,6 +9,7 @@ from backend.api.deps import current_user, get_db
 from backend.models import AdminNotification, Booking, Favorite, Movie, User, UserNotification
 from backend.schemas.booking import BookingProposalIn
 from backend.schemas.profile import ProfileIn
+from backend.services.booking import ensure_show, seats_taken_by_others
 from backend.services.catalog import serialize_booking, serialize_movie
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
@@ -90,6 +91,12 @@ async def answer_booking_proposal(
     if not booking.proposed_session:
         raise HTTPException(409, "No proposed time")
     if payload.action == "accept":
+        # Moving to another time is a fresh booking decision, not a flag flip:
+        # the screening must still exist and the seats must be free there.
+        await ensure_show(session, booking.movie_id, booking.show_date, booking.proposed_session)
+        clash = await seats_taken_by_others(session, booking, booking.proposed_session)
+        if clash:
+            raise HTTPException(409, f"Seats already taken: {', '.join(sorted(clash))}")
         booking.session = booking.proposed_session
         booking.proposed_session = ""
         booking.admin_note = ""

@@ -13,21 +13,21 @@ Telegram Mini App for Nova Cinema: React frontend, FastAPI backend, Telegram ini
 
 ```
 backend/            FastAPI application
-  core/             config, engine/session, Telegram auth + JWT
+  core/             config, startup checks, engine/session, Telegram auth + JWT
   models/           SQLAlchemy tables
   schemas/          Pydantic request models
-  services/         catalog, settings, i18n, pricing, hall, booking, telegram, tmdb, media, seed
+  services/         catalog, settings, i18n, pricing, hall, deep_link, booking, telegram, tmdb, media, seed
   api/routers/      auth, public, catalog, booking, profile, admin, admin_catalog, admin_content
   main.py           app assembly
 app.py              compatibility shim so `uvicorn app:app` keeps working
 bot.py              aiogram bot (imports the backend package, not the web layer)
-tests/              pytest smoke suite over the critical booking path
+tests/              pytest suite: every stage of the spec, plus the journey end to end
 frontend/src/
   api/              typed API client split by domain
   i18n/             ru.ts / uz.ts dictionaries + language context
   components/       Shell, LanguageSwitcher, Telegram controls, admin guard
-  pages/            Home, MoviePage, booking/*, profile/*, admin/*
-  lib/              haptics, hall labels, booking dates
+  pages/            Home, MoviePage, About, booking/*, profile/*, admin/*
+  lib/              haptics, hall labels, booking dates, deep links, Telegram theme
 ```
 
 ## Admin-Managed Data
@@ -57,6 +57,13 @@ Required variables:
 - `UPLOAD_DIR`: local upload directory for API runtime, default `uploads`.
 - `TMDB_API_KEY`: TMDb API key for admin movie auto-fill.
 - `OMDB_API_KEY`: OMDb API key for IMDb rating during admin movie auto-fill.
+- `DATABASE_URL`: leave empty locally to fall back to SQLite (`nova-dev.db`).
+- `AUTO_CREATE_SCHEMA`: `true` creates the schema and seeds demo data on startup, bypassing Alembic. Keep `false` in production.
+- `TRANSLATION_API_URL`: RU/UZ machine translation for the admin panel; empty turns the feature off.
+
+Every value is read and normalised in `backend/core/config.py` — the only module that touches the
+environment. On startup the API logs a warning for a short `JWT_SECRET`, a missing bot token, an
+empty admin list, a temporary tunnel origin, or SQLite in production; none of them stop the server.
 
 ## Local Development
 
@@ -64,10 +71,19 @@ Backend:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\alembic.exe upgrade head
+.\.venv\Scripts\python.exe -m alembic upgrade head
 .\.venv\Scripts\python.exe seed_movies.py
 .\.venv\Scripts\python.exe -m uvicorn app:app --host 127.0.0.1 --port 8000
 ```
+
+Bot (separate process, not part of docker compose):
+
+```powershell
+.\.venv\Scripts\python.exe bot.py
+```
+
+The bot serves the catalog and the deep links; it reads the cinema contacts from the database,
+so nothing about the cinema needs a code change. It refuses to start without BOT_TOKEN.
 
 Frontend:
 
@@ -103,12 +119,15 @@ docker compose exec -T api python /app/seed_movies.py
 ## Checks
 
 ```powershell
+.\.venv\Scripts\python.exe -m pytest -q
 .\.venv\Scripts\python.exe -m py_compile app.py bot.py
-.\.venv\Scripts\alembic.exe heads
+.\.venv\Scripts\python.exe -m alembic heads
 Set-Location frontend
 npm run lint -- --max-warnings=0
 npm run build
 ```
+
+`PROJECT_STATUS.md` holds the current state of the project stage by stage.
 
 ## Security Notes
 

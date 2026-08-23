@@ -1,36 +1,61 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
+import { getSessions } from '../../api'
 import Shell from '../../components/Shell'
 import { useI18n } from '../../i18n'
+import { apiMessage } from '../../lib/apiMessage'
 import { haptic } from '../../lib/haptic'
 
-// NOTE: this still asks the user to type a time.  Stage 9 replaces it with the
-// real screening list from GET /api/movies/{id}/sessions.
+/** Screenings come from the admin-managed schedule; there is no free-text time. */
 export default function TimePage() {
   const { t } = useI18n()
   const { id, date } = useParams()
-  const [time, setTime] = useState('19:00')
-  const valid = /^([01]\d|2[0-3]):[0-5]\d$/.test(time)
+  const [sessions, setSessions] = useState<string[] | null>(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!id || !date) return
+    let active = true
+    setSessions(null)
+    setError('')
+    void getSessions(Number(id), date)
+      .then(data => {
+        if (active) setSessions(data.sessions)
+      })
+      .catch(reason => {
+        if (active) setError(apiMessage(reason, 'serverError'))
+      })
+    return () => { active = false }
+  }, [date, id])
 
   return (
     <Shell>
       <Link className="back" to={`/booking/${id}/date`}>← {t('date')}</Link>
-      <h1>{t('chooseConvenientTime')}</h1>
-      <div className="manual-time-card">
-        <label>
-          <span>{t('preferredTime')}</span>
-          <input type="time" value={time} onChange={event => setTime(event.target.value)} />
-        </label>
-        {!valid && <p className="error">{t('invalidTime')}</p>}
-        <Link
-          className={`book${valid ? '' : ' disabled-link'}`}
-          to={valid ? `/booking/${id}/date/${date}/time/${time}/hall` : '#'}
-          onClick={event => { if (!valid) event.preventDefault(); else haptic.select() }}
-        >
-          {t('continue')}
-        </Link>
-      </div>
+      <h1>{t('chooseSession')}</h1>
+      {error && <p className="error">{error}</p>}
+      {!error && sessions === null && <p className="empty">{t('loadingSessions')}</p>}
+      {!error && sessions?.length === 0 && (
+        <div className="manual-time-card">
+          <p className="empty">{t('noSessionsForDate')}</p>
+          <Link className="book" to={`/booking/${id}/date`} onClick={haptic.tap}>{t('chooseDate')}</Link>
+        </div>
+      )}
+      {!!sessions?.length && (
+        <div className="choice-list">
+          {sessions.map(time => (
+            <Link
+              key={time}
+              className="choice"
+              to={`/booking/${id}/date/${date}/time/${time}/hall`}
+              onClick={haptic.select}
+            >
+              <b>{time}</b>
+              <span>{t('chooseSeats')}</span>
+            </Link>
+          ))}
+        </div>
+      )}
     </Shell>
   )
 }

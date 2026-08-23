@@ -160,6 +160,7 @@ input,textarea,select,button{max-width:100%}
 .booking-card{grid-template-columns:82px minmax(0,1fr);align-items:center}
 .booking-card div{display:grid;gap:4px;min-width:0}
 .booking-card b,.booking-card span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tickets-list{gap:14px}.ticket-section{display:grid;gap:10px}.ticket-section h2{margin:6px 0 2px;font-size:18px;letter-spacing:-.02em}.ticket-card{align-items:start}.ticket-card b,.ticket-card span{overflow:visible;text-overflow:clip;white-space:normal}.ticket-card span{line-height:1.35}.ticket-card img{align-self:start}.ticket-card div{gap:5px}
 .profile-filters{display:grid;grid-template-columns:1fr 150px 150px;gap:8px;margin-bottom:12px}
 .profile-filters .admin-input{margin:0}
 .qr code{display:block;overflow-wrap:anywhere}
@@ -430,3 +431,166 @@ body{
     grid-template-columns:1fr;
   }
 }
+
+/* --- stage 5: mobile-first home + tab bar ------------------------------- */
+.bottom-nav { position: fixed; left: 50%; bottom: 0; z-index: 20; display: flex; gap: 4px; width: min(100%, 760px); padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); background: #120e0fee; border-top: 1px solid #2f2023; transform: translateX(-50%); backdrop-filter: blur(12px); }
+.bottom-nav a { flex: 1; display: grid; gap: 3px; justify-items: center; padding: 7px 0; border-radius: 13px; color: #8e8184; text-decoration: none; transition: background .15s, color .15s; }
+.bottom-nav a.active { color: #fff; background: #241519; }
+.bottom-nav a:active { transform: scale(.96); }
+.bottom-nav b { font-size: 19px; font-weight: 400; line-height: 1; }
+.bottom-nav small { font-size: 10px; font-weight: 700; letter-spacing: .02em; }
+.strip-title { margin: 22px 0 0; color: #b27480; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.date-strip .dates { margin-top: 10px; }
+.new-strip { margin-top: 26px; }
+.strip-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.strip-head h2 { margin: 0; font-size: 17px; letter-spacing: -.02em; }
+.strip-head p { margin: 0; color: #8e8184; font-size: 12px; }
+.new-rail { display: flex; gap: 12px; margin-top: 12px; padding-bottom: 4px; overflow-x: auto; scrollbar-width: none; }
+.new-rail::-webkit-scrollbar { display: none; }
+.new-card { flex: 0 0 126px; display: grid; gap: 4px; color: inherit; text-decoration: none; }
+.new-card img { width: 100%; aspect-ratio: 2/3; border: 1px solid #2f2023; border-radius: 14px; object-fit: cover; }
+.new-card b { overflow: hidden; font-size: 13px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.new-card span { color: #8e8184; font-size: 11px; }
+.movie { position: relative; }
+.new-badge { position: absolute; top: 10px; left: 10px; z-index: 2; padding: 4px 9px; border-radius: 999px; color: #fff; background: #7d1e31; font-size: 10px; font-weight: 800; letter-spacing: .04em; }
+
+/* --- stage 6: schedule inside the movie card ---------------------------- */
+.schedule-block { margin-top: 26px; }
+.schedule-day { display: grid; gap: 8px; padding: 13px 0; border-bottom: 1px solid #241a1d; }
+.schedule-day:last-child { border-bottom: 0; }
+.schedule-day > b { color: #b27480; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.schedule-times { display: flex; flex-wrap: wrap; gap: 8px; }
+.schedule-time { padding: 9px 15px; border: 1px solid #3b252a; border-radius: 12px; color: #f0e7e9; background: #171214; font-size: 14px; font-weight: 700; text-decoration: none; }
+.schedule-time:active { transform: scale(.96); border-color: #8f2339; background: #241519; }
+
+/* --- stage 7: search + filter reset ------------------------------------- */
+.search-clear { display: grid; place-items: center; width: 26px; height: 26px; border: 0; border-radius: 50%; color: #d3c6c9; background: #2c2024; font-size: 17px; line-height: 1; }
+.search-clear:active { transform: scale(.92); }
+.reset-filters { display: inline-block; margin-top: 14px; }
+
+/* --- stage 8: unreachable movie from a shared link ---------------------- */
+.unavailable { display: grid; gap: 10px; justify-items: center; padding: 64px 20px; text-align: center; }
+.unavailable span { font-size: 46px; }
+.unavailable h1 { margin: 0; font-size: 22px; letter-spacing: -.02em; }
+.unavailable p { margin: 0; max-width: 320px; color: #8e8184; font-size: 14px; }
+.unavailable .book { margin-top: 8px; }
+
+/* --- stage 9: the price is visible before any seat is picked ------------ */
+.price-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 16px; padding: 12px 15px; border: 1px solid #362126; border-radius: 15px; background: #1b1618; }
+.price-banner small { display: block; color: #a08d91; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.price-banner b { font-size: 19px; letter-spacing: -.02em; }
+.price-banner span { color: #97898c; font-size: 12px; }
+.summary-total small { display: block; color: #a08d91; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+
+/* --- stage 10: four seat states + hold countdown ------------------------ */
+/* Booked keeps the old "taken" look; awaiting is visibly different, because
+   the viewer must be able to tell "gone" from "being taken right now". */
+.seat.booked { color: #ffdce0; background: radial-gradient(circle at 35% 28%, #b84650, #8d2b36 48%, #541a24 100%); box-shadow: inset 0 2px 6px #ffffff20, 0 8px 18px #0006; opacity: .8; cursor: not-allowed; }
+.seat.awaiting { color: #2a1c05; background: radial-gradient(circle at 35% 28%, #f0b563, #d68f2c 48%, #9c6414 100%); box-shadow: inset 0 2px 6px #ffffff33, 0 8px 18px #0006; opacity: .9; cursor: not-allowed; }
+.seat.booked:hover, .seat.awaiting:hover { transform: none; }
+.legend i.awaiting { background: #d68f2c; }
+.legend i.booked { background: #98313b; }
+.hold-timer { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 12px; padding: 8px 13px; border: 1px solid #4a3a1c; border-radius: 999px; color: #f0c743; background: #241d10; font-size: 12px; font-weight: 700; }
+
+/* --- stage 16: the cinema's own page ------------------------------------ */
+.about-hero { margin: 0 -18px; padding: 46px 18px 18px; background: linear-gradient(0deg, #0b090a, transparent), radial-gradient(circle at 80% 0, #8f1f3555, transparent 40%); }
+.about-kicker { margin: 0; color: #b27480; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.about-hero h1 { margin: 6px 0 0; font-size: clamp(28px, 8vw, 40px); letter-spacing: -.04em; }
+.about-text { margin: 12px 0 0; color: #b9a8ad; font-size: 14px; line-height: 1.6; }
+.about-block { margin-top: 26px; }
+.about-block h2 { margin: 0 0 12px; font-size: 17px; letter-spacing: -.02em; }
+.about-facts { display: grid; gap: 10px; margin-bottom: 14px; }
+.about-facts div { padding: 12px 15px; border: 1px solid #362126; border-radius: 15px; background: #1b1618; }
+.about-facts small { display: block; color: #a08d91; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.about-facts b { display: block; margin-top: 3px; font-size: 15px; }
+.about-actions { display: grid; gap: 8px; }
+.about-actions .book { display: grid; place-items: center; text-decoration: none; }
+.about-bonuses { display: grid; gap: 10px; }
+.about-bonuses article { padding: 14px 15px; border: 1px solid #362126; border-radius: 15px; background: linear-gradient(135deg, #241a1d, #1b1618); }
+.about-bonuses b { font-size: 15px; letter-spacing: -.01em; }
+.about-bonuses p { margin: 6px 0 0; color: #bcaaad; font-size: 13px; line-height: 1.5; }
+.about-melodies { display: grid; gap: 12px; }
+.about-melodies figure { margin: 0; padding: 12px 14px; border: 1px solid #362126; border-radius: 15px; background: #1b1618; }
+.about-melodies figcaption { margin-bottom: 8px; font-size: 14px; font-weight: 700; }
+.about-melodies audio { width: 100%; }
+.about-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.about-gallery figure { margin: 0; }
+.about-gallery img { width: 100%; aspect-ratio: 4/3; border: 1px solid #2f2023; border-radius: 16px; object-fit: cover; }
+.about-gallery figcaption { margin-top: 6px; color: #97898c; font-size: 12px; }
+.admin-image-preview { width: 100%; max-width: 320px; margin-top: 12px; border: 1px solid #2f2023; border-radius: 16px; object-fit: cover; }
+
+/* --- stage 17: Telegram theme integration ------------------------------- */
+/* The palette stays dark deliberately: a cinema app turning white because the
+   phone is in light mode fights the brand. What does follow Telegram is the
+   chrome — header and background are reported from lib/telegramTheme.ts — and
+   the link accent below. `data-color-scheme` is written to <html>, so a light
+   palette can be added here later without touching a single component. */
+:root {
+  --nova-bg: #0b090a;
+  --nova-surface: #171214;
+  --nova-stroke: #362126;
+  --nova-text: var(--tg-theme-text-color, #f7f3f3);
+  --nova-muted: #97898c;
+  --nova-link: var(--tg-theme-link-color, #d98a9a);
+}
+body { background-color: var(--nova-bg); color: var(--nova-text); }
+.about-text a, .description a { color: var(--nova-link); }
+
+/* --- admin panel on a narrow screen -------------------------------------- */
+/* Two layouts assumed a leading element that half the screens do not have.
+   `.admin-row` reserves a column for a poster, and the bonus and melody lists
+   have no poster — so their text was squeezed into the 64px meant for the
+   image, and the buttons landed on top of it. `.session-step` reserves a
+   column for the step number, and the cinema settings and the gallery have no
+   numbers — so every field in them was 61px wide. Both now start as a single
+   column and only split when the element they were built around is present.
+   A browser without `:has` gets the single column, which is plain but whole. */
+.admin-row { grid-template-columns: minmax(0, 1fr); }
+.admin-row:has(> img) { grid-template-columns: 64px minmax(0, 1fr); }
+.session-step { grid-template-columns: minmax(0, 1fr); }
+.session-step:has(> .session-step-number) { grid-template-columns: 32px minmax(0, 1fr); }
+.booking-admin-meta, .session-step-body, .session-step-body label { min-width: 0; }
+.booking-admin-meta b, .booking-admin-meta span { overflow-wrap: anywhere; }
+
+/* A button label longer than its cell used to be cut off mid-word — "Сделать
+   новинкой" arrived as "ать новинкой". Labels wrap now, and every control in
+   a row keeps the same height whether it wrapped or not. */
+.admin-ghost { white-space: normal; overflow-wrap: anywhere; text-align: center; line-height: 1.2; }
+.admin-actions { align-items: stretch; }
+.admin-actions > * { min-height: 44px; }
+
+/* Headings were fixed at desktop sizes: "Настройки кинотеатра" took three
+   lines of a 400px screen before the first field appeared. */
+.admin h1 { font-size: clamp(23px, 6.5vw, 34px); line-height: 1.08; }
+.admin h2 { font-size: clamp(17px, 4.6vw, 20px); line-height: 1.15; }
+.admin-cards b { font-size: clamp(18px, 5.4vw, 22px); }
+.admin-setting b { font-size: clamp(21px, 6.4vw, 28px); }
+.session-builder > header b { font-size: clamp(17px, 4.8vw, 20px); }
+
+/* Controls with an intrinsic width of their own: a text input defaults to
+   about twenty characters, a file picker to its button plus filename, and an
+   audio player to 300px. None of them shrink on their own, so on a 320px
+   phone they pushed the melody and settings cards sideways. */
+.admin-setting input, .admin-setting select, .admin-inline-field, .admin-inline-field input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+.admin input[type="file"] { max-width: 100%; }
+.admin audio { width: 100%; min-width: 0; }
+
+/* Full-bleed headers pulled themselves out by a flat 18px while the page
+   padding shrinks to 12px on a small screen, so on a 320px phone the About
+   and profile headers stuck 6px past both edges. The home hero already
+   measured the real padding; these two now do the same. */
+.about-hero, .profile-hero {
+  margin-inline: calc(-1 * clamp(12px, 4vw, 18px));
+  padding-inline: clamp(12px, 4vw, 18px);
+}
+
+/* The RU/UZ pill was 36px tall while a later accessibility rule made every
+   button in it 44px, so the active half bled 4px out of the rounded frame at
+   the top and bottom. The frame keeps the 44px touch height and the halves
+   sit inside it. */
+.language-switch { height: auto; min-height: 44px; min-width: 78px; }
+.language-switch button { height: 38px; min-height: 38px; }

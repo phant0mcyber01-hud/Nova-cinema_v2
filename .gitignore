@@ -35,3 +35,12 @@ frontend/dist/
 *.db
 .pytest_cache/
 nova-dev.db
+
+# TypeScript build output. `tsc -b` regenerates these next to the sources, so
+# committing them means every build shows up as a change.
+*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
+frontend/tailwind.config.js
+frontend/tailwind.config.d.ts
+logs/

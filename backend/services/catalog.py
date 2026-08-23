@@ -18,6 +18,45 @@ def is_new_release(movie: Movie, today: str | None = None) -> bool:
     return movie.new_until >= (today or date.today().isoformat())
 
 
+#: Everything the card shows and a viewer might reasonably type.
+SEARCHABLE_FIELDS = ("title", "genre", "description", "country", "director")
+
+
+def matches_query(payload: dict[str, object], query: str) -> bool:
+    """Case-insensitive substring match over the already-localised payload.
+
+    Matching in Python rather than SQL is deliberate: SQLite's LIKE and lower()
+    only fold ASCII, so "дюна" would not find "Дюна" on the development
+    database while working fine on PostgreSQL.
+    """
+    text = query.strip().lower()
+    if not text:
+        return True
+    haystack = [str(payload.get(field) or "") for field in SEARCHABLE_FIELDS]
+    cast = payload.get("cast")
+    if isinstance(cast, list):
+        haystack.extend(str(item) for item in cast if item)
+    haystack.append(str(payload.get("year") or ""))
+    return any(text in value.lower() for value in haystack)
+
+
+def _cast(primary: str, fallback: str) -> list[str]:
+    """Pick the localised cast, falling back to the base column.
+
+    A plain `primary or fallback` is wrong here: the default for these columns is
+    the string "[]", which is truthy, so movies created outside the admin form
+    (the seed, a direct insert) ended up with an empty cast.
+    """
+    for source in (primary, fallback):
+        try:
+            items = json.loads(source or "[]")
+        except (TypeError, ValueError):
+            continue
+        if items:
+            return items
+    return []
+
+
 def localized_movie_text(movie: Movie, language: str) -> dict[str, object]:
     lang = normalize_language(language)
     if lang == "uz":
@@ -27,7 +66,7 @@ def localized_movie_text(movie: Movie, language: str) -> dict[str, object]:
             "description": movie.description_uz or movie.description,
             "country": movie.country_uz or movie.country,
             "director": movie.director_uz or movie.director,
-            "cast": json.loads(movie.cast_json_uz or movie.cast_json),
+            "cast": _cast(movie.cast_json_uz, movie.cast_json),
         }
     return {
         "title": movie.title_ru or movie.title,
@@ -35,7 +74,7 @@ def localized_movie_text(movie: Movie, language: str) -> dict[str, object]:
         "description": movie.description_ru or movie.description,
         "country": movie.country_ru or movie.country,
         "director": movie.director_ru or movie.director,
-        "cast": json.loads(movie.cast_json_ru or movie.cast_json),
+        "cast": _cast(movie.cast_json_ru, movie.cast_json),
     }
 
 
@@ -44,8 +83,13 @@ def serialize_movie(
     reviews: list[Review] | None = None,
     language: str = "ru",
     sessions: list[str] | None = None,
+    today: str | None = None,
 ) -> dict[str, object]:
-    """`sessions` comes from the `shows` table; callers pass it in to avoid N+1."""
+    """`sessions` comes from the `shows` table; callers pass it in to avoid N+1.
+
+    `today` is the cinema's date: whether a release is still new is decided in
+    the cinema's own time, not in the time zone the server happens to sit in.
+    """
     items = [review for review in (reviews if reviews is not None else movie.reviews) if review.approved]
     user_rating = round(sum(item.rating for item in items) / len(items), 1) if items else movie.internal_rating
     text = localized_movie_text(movie, language)
@@ -71,7 +115,7 @@ def serialize_movie(
         "internal_rating": movie.internal_rating,
         "ticket_price": movie.ticket_price,
         "is_published": movie.is_published,
-        "is_new": is_new_release(movie),
+        "is_new": is_new_release(movie, today),
         "new_until": movie.new_until,
         "sort_order": movie.sort_order,
     }

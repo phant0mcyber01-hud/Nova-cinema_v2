@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import WebApp from '@twa-dev/sdk'
 import App from './App'
 import { authenticateTelegram } from './api'
+import { initTelegramTheme } from './lib/telegramTheme'
 import './styles.css'
 
 type TelegramWindow = Window & {
@@ -52,6 +53,7 @@ const bootstrapTelegram = async () => {
   WebApp.ready()
   WebApp.expand()
   WebApp.disableVerticalSwipes()
+  initTelegramTheme()
   await authenticateTelegram(await waitForTelegramInitData())
 }
 

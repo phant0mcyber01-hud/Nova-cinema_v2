@@ -11,7 +11,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 # Docker supplies its own environment.  For a direct local `uvicorn app:app`
 # launch, load this project's .env before reading any configuration values.
 # `override=False` deliberately keeps Docker/Windows environment variables authoritative.
-load_dotenv(PROJECT_ROOT / ".env", override=False)
+# `utf-8-sig` снимает BOM: Блокнот и PowerShell сохраняют файл с ним, а он
+# прилипает к первому ключу — BOT_TOKEN читается как "﻿BOT_TOKEN" и
+# выглядит как незаполненный.
+load_dotenv(PROJECT_ROOT / ".env", override=False, encoding="utf-8-sig")
 
 
 def _clean(value: str | None, fallback: str = "") -> str:
@@ -72,6 +75,9 @@ DEFAULT_TICKET_PRICE = 30000
 DEFAULT_MAX_SEATS_PER_BOOKING = 4
 DEFAULT_HOLD_MINUTES = 10
 DEFAULT_BOOKING_DAYS_AHEAD = 7
+#: The cinema's clock. The server runs in UTC; Uzbekistan is UTC+5 with no
+#: daylight saving, so a fixed offset is exact. Minutes, to allow half-hour zones.
+DEFAULT_TIMEZONE_OFFSET_MINUTES = 300
 
 # Hard ceilings the admin cannot exceed, so a typo cannot break the hall grid.
 MAX_HALL_ROWS = 26
@@ -83,8 +89,12 @@ AUDIO_MAX_BYTES = 10_000_000
 
 # Booking lifecycle (stage 12 of the spec).
 BOOKING_STATUSES = ("pending", "contacting", "confirmed", "cancelled", "watched")
+#: The seat is taken but the admin has not confirmed it yet.
+AWAITING_STATUSES = ("pending", "contacting")
+#: The seat is finally the viewer's.
+CONFIRMED_STATUSES = ("confirmed", "watched")
 #: Statuses that keep a seat occupied.  "cancelled" releases it.
-BLOCKING_STATUSES = ("pending", "contacting", "confirmed", "watched")
+BLOCKING_STATUSES = AWAITING_STATUSES + CONFIRMED_STATUSES
 #: Statuses whose ticket QR is valid at the door.
 QR_VALID_STATUSES = ("confirmed", "watched")
 BOOKING_STATUS_PATTERN = "^(" + "|".join(BOOKING_STATUSES) + ")$"

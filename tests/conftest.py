@@ -5,13 +5,14 @@ import time and db.py builds the engine from it.
 """
 from __future__ import annotations
 
+import atexit
 import hashlib
 import hmac
 import json
 import os
 import tempfile
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, time as time_of_day, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -19,8 +20,20 @@ import pytest
 
 TEST_ROOT = Path(tempfile.gettempdir()) / "nova_cinema_tests"
 TEST_ROOT.mkdir(parents=True, exist_ok=True)
-TEST_DB = TEST_ROOT / "nova_test.db"
+# One database per process. A shared file breaks as soon as two test runs
+# overlap: both call drop_all/create_all on it and one fails with
+# "table movies already exists".
+TEST_DB = TEST_ROOT / f"nova_test_{os.getpid()}.db"
 TEST_DB.unlink(missing_ok=True)
+
+
+@atexit.register
+def _remove_test_database() -> None:
+    """Windows may still hold the handle; leaving a stray temp file is harmless."""
+    try:
+        TEST_DB.unlink(missing_ok=True)
+    except OSError:
+        pass
 
 BOT_TOKEN = "123456:TEST-BOT-TOKEN"
 ADMIN_ID = 111
@@ -58,7 +71,18 @@ def telegram_init_data(telegram_id: int, username: str = "tester", first_name: s
     return urlencode({**values, "hash": signature})
 
 
-SHOW_DATE = (date.today() + timedelta(days=1)).isoformat()
+def cinema_today() -> date:
+    """The cinema's own date. The machine running the tests is elsewhere."""
+    from backend.core.config import DEFAULT_TIMEZONE_OFFSET_MINUTES
+
+    return (
+        datetime.now(timezone.utc) + timedelta(minutes=DEFAULT_TIMEZONE_OFFSET_MINUTES)
+    ).date()
+
+
+TODAY = cinema_today().isoformat()
+YESTERDAY = (cinema_today() - timedelta(days=1)).isoformat()
+SHOW_DATE = (cinema_today() + timedelta(days=1)).isoformat()
 SESSION = "19:00"
 
 
@@ -81,12 +105,21 @@ def movie_row(title: str = "Тестовый фильм") -> Movie:
 
 @pytest.fixture(autouse=True)
 async def database():
+    """Fresh schema per test.
+
+    The engine is disposed on teardown because each test runs in its own event
+    loop: a pooled aiosqlite connection created in a previous loop makes later
+    tests fail sporadically.
+    """
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.drop_all)
         await connection.run_sync(Base.metadata.create_all)
-    yield
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.drop_all)
+    try:
+        yield
+    finally:
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.drop_all)
+        await engine.dispose()
 
 
 @pytest.fixture
@@ -119,3 +152,68 @@ async def login(client: httpx.AsyncClient, telegram_id: int, username: str = "te
 
 def auth_header(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
+
+
+PAST_DATE = YESTERDAY
+PAST_SESSION = "10:00"
+
+
+async def watched_booking_in_the_past(movie_id: int, user_id: int, seats: str = "1-1") -> int:
+    """A finished screening the viewer attended, already marked watched.
+
+    Since stage 14 a review needs the screening to be over, and since stage 9
+    a past date cannot be booked through the API — so this is written straight
+    to the database.
+    """
+    from sqlalchemy import select
+
+    from backend.models import Booking, Show
+
+    async with SessionLocal() as session:
+        existing = await session.scalar(
+            select(Show).where(
+                Show.movie_id == movie_id,
+                Show.show_date == PAST_DATE,
+                Show.start_time == PAST_SESSION,
+            )
+        )
+        if existing is None:
+            session.add(
+                Show(movie_id=movie_id, show_date=PAST_DATE, start_time=PAST_SESSION, status="active")
+            )
+        booking = Booking(
+            user_id=user_id,
+            movie_id=movie_id,
+            show_date=PAST_DATE,
+            session=PAST_SESSION,
+            seats=seats,
+            status="watched",
+            ticket_price=30000,
+            total=30000,
+            code=str(user_id),
+        )
+        session.add(booking)
+        await session.commit()
+        await session.refresh(booking)
+        return booking.id
+
+
+@pytest.fixture()
+def cinema_clock(monkeypatch):
+    """Pin the cinema wall clock to noon today.
+
+    Screenings that have already started are not offered any more, so a test
+    that schedules a fixed time today would pass in the morning and fail in
+    the afternoon. Freezing the clock keeps such tests about the rule instead
+    of about the hour the suite happens to run at.
+    """
+    from backend.core.config import DEFAULT_TIMEZONE_OFFSET_MINUTES
+    from backend.services import booking
+
+    noon_at_the_cinema = datetime.combine(cinema_today(), time_of_day(12, 0))
+    monkeypatch.setattr(
+        booking,
+        "utcnow",
+        lambda: noon_at_the_cinema - timedelta(minutes=DEFAULT_TIMEZONE_OFFSET_MINUTES),
+    )
+    return noon_at_the_cinema

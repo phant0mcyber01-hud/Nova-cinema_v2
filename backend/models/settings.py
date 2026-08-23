@@ -28,6 +28,8 @@ class CinemaSettings(Base):
     phone: Mapped[str] = mapped_column(String(32), default=config.DEFAULT_PHONE)
     telegram_url: Mapped[str] = mapped_column(String(255), default=config.DEFAULT_TELEGRAM_URL)
     instagram_url: Mapped[str] = mapped_column(String(255), default=config.DEFAULT_INSTAGRAM_URL)
+    #: Bot handle without @, used to build share deep links (t.me/<bot>?startapp=…).
+    bot_username: Mapped[str] = mapped_column(String(64), default="")
     map_url: Mapped[str] = mapped_column(String(512), default="")
     latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -46,6 +48,10 @@ class CinemaSettings(Base):
     max_seats_per_booking: Mapped[int] = mapped_column(Integer, default=config.DEFAULT_MAX_SEATS_PER_BOOKING)
     hold_minutes: Mapped[int] = mapped_column(Integer, default=config.DEFAULT_HOLD_MINUTES)
     booking_days_ahead: Mapped[int] = mapped_column(Integer, default=config.DEFAULT_BOOKING_DAYS_AHEAD)
+    #: Offset from UTC in minutes; decides when a screening counts as finished.
+    timezone_offset_minutes: Mapped[int] = mapped_column(
+        Integer, default=config.DEFAULT_TIMEZONE_OFFSET_MINUTES
+    )
 
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 

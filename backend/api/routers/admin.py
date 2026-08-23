@@ -6,11 +6,12 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.deps import admin_required, get_db
-from backend.core.config import BOOKING_STATUSES
+from backend.core.config import BLOCKING_STATUSES, BOOKING_STATUSES
 from backend.core.db import utcnow
 from backend.models import AdminNotification, Booking, Movie, Show, User
 from backend.schemas.booking import BookingDecisionIn, BookingStatusIn
 from backend.schemas.settings import BasePriceIn, SettingsIn
+from backend.services.booking import seats_taken_by_others
 from backend.services.media import save_image_upload
 from backend.services.settings import get_settings, serialize_settings_admin
 from backend.services.telegram import send_telegram_message, user_booking_notification
@@ -66,6 +67,15 @@ async def admin_bookings(session: AsyncSession = Depends(get_db)) -> list[dict[s
     return result
 
 
+async def _refuse_if_seats_were_taken(session: AsyncSession, booking: Booking, next_status: str) -> None:
+    """Block a status change that would revive a request onto an occupied seat."""
+    if next_status not in BLOCKING_STATUSES or booking.status in BLOCKING_STATUSES:
+        return
+    clash = await seats_taken_by_others(session, booking)
+    if clash:
+        raise HTTPException(409, f"Seats already taken: {', '.join(sorted(clash))}")
+
+
 @router.patch("/bookings/{booking_id}/status")
 async def update_booking_status(
     booking_id: int,
@@ -75,6 +85,7 @@ async def update_booking_status(
     booking = await session.get(Booking, booking_id)
     if booking is None:
         raise HTTPException(404, "Booking not found")
+    await _refuse_if_seats_were_taken(session, booking, payload.status)
     booking.status = payload.status
     if payload.status == "watched" and booking.completed_at is None:
         booking.completed_at = utcnow()
@@ -103,6 +114,9 @@ async def decide_booking(
     if item is None:
         raise HTTPException(404, "Booking not found")
     booking, user, movie = item
+    next_status = {"contact": "contacting", "confirm": "confirmed", "decline": "cancelled"}.get(payload.action)
+    if next_status is not None:
+        await _refuse_if_seats_were_taken(session, booking, next_status)
     if payload.action == "contact":
         booking.status = "contacting"
         booking.admin_note = payload.reason.strip()
@@ -148,12 +162,6 @@ async def update_settings(payload: SettingsIn, session: AsyncSession = Depends(g
     await session.commit()
     await session.refresh(settings)
     return serialize_settings_admin(settings)
-
-
-@router.get("/settings/base-price")
-async def base_price(session: AsyncSession = Depends(get_db)) -> dict[str, int]:
-    settings = await get_settings(session)
-    return {"base_ticket_price": settings.base_ticket_price, "currency": settings.currency}
 
 
 @router.patch("/settings/base-price")
