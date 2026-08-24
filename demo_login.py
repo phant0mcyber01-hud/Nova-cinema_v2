@@ -24,6 +24,7 @@ import hmac
 import json
 import os
 import sys
+import webbrowser
 import time
 from urllib.parse import quote, urlencode
 
@@ -53,15 +54,35 @@ def init_data(telegram_id: int, username: str, first_name: str, last_name: str =
     return urlencode({**values, "hash": signature})
 
 
-def link(telegram_id: int, username: str, first_name: str, last_name: str = "") -> str:
+def link(telegram_id: int, username: str, first_name: str, last_name: str = "", base: str | None = None) -> str:
     signed = init_data(telegram_id, username, first_name, last_name)
     # The web SDK looks for these three in the fragment, exactly as Telegram sends them.
     fragment = f"tgWebAppData={quote(signed, safe='')}&tgWebAppVersion=7.0&tgWebAppPlatform=web"
-    return f"{FRONTEND.rstrip(chr(47))}/#{fragment}"
+    return f"{(base or FRONTEND).rstrip(chr(47))}/#{fragment}"
+
+
+#: Адрес для браузера этого компьютера. Публичный адрес туннеля отсюда может
+#: не открыться: локальный DNS не резолвит *.trycloudflare.com.
+LOCAL = "http://localhost:8000"
 
 
 def main() -> None:
     requested = [int(value) for value in sys.argv[1:] if value.lstrip("-").isdigit()]
+    open_browser = "--open" in sys.argv
+
+    if open_browser:
+        admins = sorted(config.ADMIN_TELEGRAM_IDS)
+        if not admins:
+            raise SystemExit("ADMIN_TELEGRAM_IDS пуст — админом входить некому")
+        target = requested[0] if requested else admins[0]
+        if target in admins:
+            address = link(target, "admin", "Администратор", base=LOCAL)
+        else:
+            address = link(target, "demo", "Демо", base=LOCAL)
+        print(f"Открываю браузер: id {target}")
+        webbrowser.open(address)
+        return
+
     if requested:
         people = [(item, "demo", "Демо") for item in requested]
     else:

@@ -139,7 +139,7 @@ function Start-Tunnel {
     foreach ($attempt in 1..80) {
         Start-Sleep -Milliseconds 500
         if (Test-Path $tunnelLog) {
-            $found = Select-String -Path $tunnelLog -Pattern "https://[a-z0-9-]+\.trycloudflare\.com" `
+            $found = Select-String -Path $tunnelLog -Pattern "https://[a-z0-9]+(-[a-z0-9]+)+\.trycloudflare\.com" `
                 -ErrorAction SilentlyContinue | Select-Object -First 1
             if ($found) {
                 $candidate = $found.Matches[0].Value

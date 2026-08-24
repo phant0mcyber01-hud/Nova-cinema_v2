@@ -47,7 +47,7 @@ $public = $null
 foreach ($attempt in 1..60) {
     Start-Sleep -Milliseconds 500
     if (Test-Path $log) {
-        $match = Select-String -Path $log -Pattern "https://[a-z0-9-]+\.trycloudflare\.com" -ErrorAction SilentlyContinue |
+        $match = Select-String -Path $log -Pattern "https://[a-z0-9]+(-[a-z0-9]+)+\.trycloudflare\.com" -ErrorAction SilentlyContinue |
             Select-Object -First 1
         if ($match) {
             $public = $match.Matches[0].Value
