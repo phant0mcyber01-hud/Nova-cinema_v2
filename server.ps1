@@ -66,6 +66,9 @@ function Stop-All {
         Where-Object { $_.CommandLine -like "*bot.py*" -or $_.CommandLine -like "*uvicorn*" } |
         ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
     Get-Process cloudflared -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    Get-CimInstance Win32_Process |
+        Where-Object { $_.CommandLine -like "*tunnelmole*" } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
     Remove-Item $state -ErrorAction SilentlyContinue
 
     # И сам присмотр — иначе он через пятнадцать секунд поднимет всё обратно,
@@ -90,7 +93,6 @@ if ($Status) {
 }
 
 if (-not (Test-Path $python)) { Write-Line "нет $python" "Red"; exit 1 }
-if (-not (Test-Path $cloudflared)) { Write-Line "нет cloudflared" "Red"; exit 1 }
 
 function Start-Hidden($file, $arguments, $workingDirectory, $name) {
     # Без перенаправления вывод скрытого процесса пропадает: бот падал молча, и
@@ -118,34 +120,46 @@ function Test-PublicUrl($address) {
     $hostName = ([Uri]$address).Host
     $ip = $null
     try {
-        $ip = (Resolve-DnsName -Name $hostName -Type A -Server 8.8.8.8 -ErrorAction Stop |
+        $ip = (Resolve-DnsName -Name $hostName -Type A -ErrorAction Stop |
             Where-Object { $_.IPAddress } | Select-Object -First 1).IPAddress
     } catch { $ip = $null }
+    if (-not $ip) {
+        # Имя не разрешилось местным DNS — спрашиваем публичный. Если и там
+        # пусто, адрес действительно мёртв.
+        try {
+            $ip = (Resolve-DnsName -Name $hostName -Type A -Server 8.8.8.8 -ErrorAction Stop |
+                Where-Object { $_.IPAddress } | Select-Object -First 1).IPAddress
+        } catch { return $false }
+    }
     if (-not $ip) { return $false }
-    $code = & curl.exe -s -o NUL -w "%{http_code}" --max-time 20 `
+    $code = & curl.exe -s -o NUL -w "%{http_code}" --max-time 25 `
         --resolve "$($hostName):443:$ip" "$address/api/settings" 2>$null
     return ($code -eq "200")
 }
 
 function Start-Tunnel {
+    <#
+        Туннель через tunnelmole, а не через cloudflared.
+
+        Провайдер Uztelecom не резолвит *.trycloudflare.com — ни здесь, ни на
+        телефонах абонентов. Для нас это выглядело как «туннель не отвечает», а
+        для зрителя — как ERR_NAME_NOT_RESOLVED вместо кинотеатра. Домен
+        tunnelmole.net на этой сети резолвится, и заглушки «вы переходите на
+        туннель» у него нет, в отличие от localtunnel и ngrok: браузер сразу
+        получает приложение, что для Mini App обязательно.
+    #>
     Remove-Item $tunnelLog -ErrorAction SilentlyContinue
-    # Путь к проекту содержит пробелы и тире, а Start-Process не заключает
-    # аргументы в кавычки сам — поэтому не --logfile, а перенаправление потока.
-    # Адрес быстрого туннеля Cloudflare печатает именно в stderr.
-    $processId = (Start-Process -FilePath $cloudflared `
-        -ArgumentList @("tunnel", "--url", "http://localhost:8000", "--no-autoupdate", "--protocol", "http2") `
+    $processId = (Start-Process -FilePath "cmd.exe" `
+        -ArgumentList "/c", "npx --yes tunnelmole 8000" `
         -WorkingDirectory $root -WindowStyle Hidden -PassThru `
-        -RedirectStandardError $tunnelLog).Id
-    foreach ($attempt in 1..80) {
+        -RedirectStandardOutput $tunnelLog).Id
+    foreach ($attempt in 1..120) {
         Start-Sleep -Milliseconds 500
         if (Test-Path $tunnelLog) {
-            $found = Select-String -Path $tunnelLog -Pattern "https://[a-z0-9]+(-[a-z0-9]+)+\.trycloudflare\.com" `
+            $found = Select-String -Path $tunnelLog -Pattern "https://[a-z0-9-]+\.tunnelmole\.net" `
                 -ErrorAction SilentlyContinue | Select-Object -First 1
             if ($found) {
                 $candidate = $found.Matches[0].Value
-                # Адрес печатается раньше, чем поднимается соединение с краем
-                # сети. Ждём, пока он начнёт отвечать, иначе присмотр решит,
-                # что туннель мёртв, и убьёт его на середине подключения.
                 foreach ($probe in 1..20) {
                     if (Test-PublicUrl $candidate) {
                         return @{ id = $processId; url = $candidate; ready = $true }
