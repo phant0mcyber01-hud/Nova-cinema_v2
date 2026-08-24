@@ -194,6 +194,8 @@ export const ru = {
   posterPreviewAlt: 'Превью главного постера',
   potentialIncome: 'Потенциальная прибыль',
   previousPage: 'Назад',
+  promoCode: 'Промокод',
+  promoCodePlaceholder: 'Промокод, если есть',
   proposalAccepted: 'Вы согласились на новое время',
   proposalCommentPrompt: 'Комментарий к предложению времени',
   proposalDeclined: 'Вы отказались от предложенного времени',

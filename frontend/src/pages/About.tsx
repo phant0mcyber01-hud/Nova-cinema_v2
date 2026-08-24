@@ -26,6 +26,13 @@ const mapLink = (settings: PublicSettings) => {
   return ''
 }
 
+/**
+ * The intro is admin-written free text. One line stays a paragraph; several
+ * lines are the short bullet list the cinema asked for, so the admin switches
+ * between the two shapes without anyone touching the code.
+ */
+const aboutLines = (about: string) => about.split('\n').map(line => line.trim()).filter(Boolean)
+
 /** Telegram opens t.me links itself; everything else goes to the browser. */
 const openExternal = (url: string) => {
   haptic.tap()
@@ -72,13 +79,19 @@ export default function About() {
   if (!settings) return <Shell><div className="hall-skeleton compact" /></Shell>
 
   const map = mapLink(settings)
+  const bullets = aboutLines(settings.about)
 
   return (
     <Shell>
       <section className="about-hero">
         <p className="about-kicker">{t('aboutTitle')}</p>
         <h1>{settings.name}</h1>
-        {settings.about && <p className="about-text">{settings.about}</p>}
+        {bullets.length > 1 && (
+          <ul className="about-bullets">
+            {bullets.map(line => <li key={line}>{line}</li>)}
+          </ul>
+        )}
+        {bullets.length === 1 && <p className="about-text">{bullets[0]}</p>}
       </section>
 
       <section className="about-block">

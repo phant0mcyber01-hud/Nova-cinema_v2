@@ -34,6 +34,7 @@ export default function HallPage() {
     phone: '',
     telegram_username: WebApp.initDataUnsafe.user?.username ?? '',
     comment: '',
+    promo_code: '',
   })
   /** Seats restored from an existing hold must not trigger a fresh hold call. */
   const restored = useRef(false)
@@ -243,6 +244,7 @@ export default function HallPage() {
               <input value={contact.last_name} onChange={event => setContact({ ...contact, last_name: event.target.value })} placeholder={t('lastName')} />
               <input value={contact.phone} onChange={event => setContact({ ...contact, phone: event.target.value })} placeholder={t('phone')} inputMode="tel" />
               <input value={contact.telegram_username} onChange={event => setContact({ ...contact, telegram_username: event.target.value })} placeholder={t('telegramUsername')} />
+              <input value={contact.promo_code} onChange={event => setContact({ ...contact, promo_code: event.target.value })} placeholder={t('promoCodePlaceholder')} />
               <textarea value={contact.comment} onChange={event => setContact({ ...contact, comment: event.target.value })} placeholder={t('commentOptional')} />
             </div>
             <div className="summary">

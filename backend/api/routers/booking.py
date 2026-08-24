@@ -231,6 +231,7 @@ async def confirm_booking(
         phone=phone,
         telegram_username=username,
         comment=payload.comment.strip(),
+        promo_code=payload.promo_code.strip(),
     )
     # The viewer typed their details into the booking form; keep them on the
     # profile so the next booking is one tap. Existing values are never

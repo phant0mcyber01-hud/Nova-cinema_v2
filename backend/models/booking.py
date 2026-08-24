@@ -30,6 +30,9 @@ class Booking(Base):
     phone: Mapped[str] = mapped_column(String(32), default="")
     telegram_username: Mapped[str] = mapped_column(String(80), default="")
     comment: Mapped[str] = mapped_column(Text, default="")
+    #: Typed by the viewer, honoured by the admin during the callback — the
+    #: server never computes a discount from it.
+    promo_code: Mapped[str] = mapped_column(String(64), default="")
     proposed_session: Mapped[str] = mapped_column(String(30), default="")
     admin_note: Mapped[str] = mapped_column(Text, default="")
     uuid: Mapped[str] = mapped_column(String(36), default=lambda: str(uuid.uuid4()), unique=True, index=True)

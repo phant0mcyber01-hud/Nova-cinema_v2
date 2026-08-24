@@ -89,6 +89,8 @@ def new_booking_admin_message(booking: Booking, movie_title: str) -> str:
     ]
     if booking.telegram_username:
         lines.append(f"Telegram: @{booking.telegram_username}")
+    if booking.promo_code:
+        lines.append(f"Промокод: {booking.promo_code}")
     if booking.comment:
         lines.append(f"Комментарий: {booking.comment}")
     lines.append(f"Заявка #{booking.id}")

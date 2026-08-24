@@ -94,6 +94,7 @@ export type BookingPayload = {
   phone: string
   telegram_username: string
   comment: string
+  promo_code: string
 }
 
 export type AdminBooking = {
@@ -102,6 +103,7 @@ export type AdminBooking = {
   phone: string
   name: string
   comment: string
+  promo_code: string
   /** Unit price frozen when the request was made. */
   ticket_price: number
   total: number

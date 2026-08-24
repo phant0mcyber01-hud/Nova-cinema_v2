@@ -26,6 +26,7 @@ import {
   type AdminSettings,
   type MovieDetail,
 } from '../../api'
+import BottomNav from '../../components/BottomNav'
 import { formatDateTime, formatMoney, translate, useI18n, type TranslationKey } from '../../i18n'
 import BonusesView from './AdminBonuses'
 import CinemaSettingsView from './AdminCinemaSettings'
@@ -202,6 +203,11 @@ export default function Admin() {
           onRead={id => guard(() => readNotification(id), t('adminNotificationReadToast'))}
         />
       )}
+      {/* The panel builds its own frame instead of using <Shell>, so it has to
+          render the app-wide tab bar itself — without it the viewer tabs
+          disappeared on entering the admin panel. The `admin-nav` above is a
+          different thing: it switches sections inside the panel. */}
+      <BottomNav />
     </main>
   )
 }
@@ -354,6 +360,7 @@ function BookingsView({ bookings, onStatus, onDecision }: BookingsViewProps) {
               <span>{t('telegramId')}: {item.telegram_id}</span>
               <span>{t('createdAt')}: {formatDateTime(item.created_at, language)}</span>
               <span>{t('comment')}: {item.comment || t('none')}</span>
+              {item.promo_code && <span>{t('promoCode')}: {item.promo_code}</span>}
               {item.admin_note && <span>{t('adminComment')}: {item.admin_note}</span>}
             </div>
             <div className="admin-actions booking-admin-actions">

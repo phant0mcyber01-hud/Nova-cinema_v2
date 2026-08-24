@@ -7,6 +7,7 @@ import ProtectedAdminRoute from './components/ProtectedAdminRoute'
 import TelegramRouteControls from './components/TelegramRouteControls'
 import { getPublicSettings } from './api'
 import { LanguageProvider, setCurrency } from './i18n'
+import { AudioProvider } from './lib/audioPlayer'
 import About from './pages/About'
 import Home from './pages/Home'
 import MoviePage from './pages/MoviePage'
@@ -35,22 +36,26 @@ export default function App() {
   useCinemaCurrency()
   return (
     <LanguageProvider>
-      <BrowserRouter>
-        <DeepLinkHandler />
-        <TelegramRouteControls />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/movies/:id" element={<MoviePage />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/admin" element={<ProtectedAdminRoute />} />
-          <Route path="/profile/*" element={<ProfileRoutes />} />
-          <Route path="/booking/:id/date" element={<DatePage />} />
-          <Route path="/booking/:id/date/:date/time" element={<TimePage />} />
-          <Route path="/booking/:id/date/:date/time/:time/hall" element={<HallPage />} />
-          <Route path="/booking/success/:code" element={<Success />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      {/* Above the router on purpose: a provider remounted on navigation would
+          restart the melody on every screen change. */}
+      <AudioProvider>
+        <BrowserRouter>
+          <DeepLinkHandler />
+          <TelegramRouteControls />
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/movies/:id" element={<MoviePage />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/admin" element={<ProtectedAdminRoute />} />
+            <Route path="/profile/*" element={<ProfileRoutes />} />
+            <Route path="/booking/:id/date" element={<DatePage />} />
+            <Route path="/booking/:id/date/:date/time" element={<TimePage />} />
+            <Route path="/booking/:id/date/:date/time/:time/hall" element={<HallPage />} />
+            <Route path="/booking/success/:code" element={<Success />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </AudioProvider>
     </LanguageProvider>
   )
 }

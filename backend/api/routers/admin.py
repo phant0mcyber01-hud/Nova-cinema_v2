@@ -47,6 +47,7 @@ async def admin_bookings(session: AsyncSession = Depends(get_db)) -> list[dict[s
                 "phone": booking.phone,
                 "name": f"{booking.first_name} {booking.last_name}".strip(),
                 "comment": booking.comment,
+                "promo_code": booking.promo_code,
                 "ticket_price": booking.ticket_price,
                 "total": booking.total,
                 "seats": booking.seats,

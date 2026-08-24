@@ -3,8 +3,9 @@ import type { ReactNode } from 'react'
 
 import BottomNav from './BottomNav'
 import LanguageSwitcher from './LanguageSwitcher'
+import SoundToggle from './SoundToggle'
 
-/** Common page frame: logo, language switcher and the bottom tab bar. */
+/** Common page frame: logo, sound and language switches, bottom tab bar. */
 export default function Shell({ children }: { children: ReactNode }) {
   return (
     <main className="app">
@@ -14,6 +15,7 @@ export default function Shell({ children }: { children: ReactNode }) {
           <span>NOVA <i>CINEMA</i></span>
         </Link>
         <div className="header-actions">
+          <SoundToggle />
           <LanguageSwitcher />
         </div>
       </header>

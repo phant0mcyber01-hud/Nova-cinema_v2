@@ -28,6 +28,7 @@ class BookingConfirmIn(HoldIn):
     phone: str = Field(pattern=f"^{PHONE_PATTERN}$")
     telegram_username: str = Field(default="", max_length=80, pattern=USERNAME_PATTERN)
     comment: str = Field(default="", max_length=1000)
+    promo_code: str = Field(default="", max_length=64)
 
 
 class BookingStatusIn(BaseModel):

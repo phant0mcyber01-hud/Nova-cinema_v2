@@ -198,6 +198,8 @@ export const uz: Record<TranslationKey, string> = {
   posterPreviewAlt: 'Asosiy poster prevyusi',
   potentialIncome: 'Potensial daromad',
   previousPage: 'Orqaga',
+  promoCode: 'Promokod',
+  promoCodePlaceholder: 'Promokod, agar bo‘lsa',
   proposalAccepted: 'Siz yangi vaqtga rozi bo‘ldingiz',
   proposalCommentPrompt: 'Taklif qilingan vaqt uchun izoh',
   proposalDeclined: 'Siz taklif qilingan vaqtni rad etdingiz',
