@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b090a" />
     <title>Nova Cinema</title>
+    <script>
+      window.__novaMelodiesEarly = fetch('/api/melodies')
+        .then(function (response) { return response.ok ? response.json() : null })
+        .then(function (melodies) {
+          if (melodies && melodies[0]) {
+            window.__novaAudioWarmup = fetch(melodies[0].file_url, {
+              headers: { Range: 'bytes=0-131071' }
+            }).catch(function () { return null })
+          }
+          return melodies
+        })
+        .catch(function () { return null })
+    </script>
   </head>
   <body>
     <div id="root"></div>

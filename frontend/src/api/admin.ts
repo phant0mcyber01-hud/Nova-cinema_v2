@@ -1,4 +1,5 @@
 import { call } from './client'
+import { invalidateMelodies } from './settings'
 import type {
   AdminBonus,
   AdminBonusPayload,
@@ -123,14 +124,22 @@ export const deleteAdminBonus = (id: number) =>
 
 export const getAdminMelodies = () => call<AdminMelody[]>('/admin/melodies')
 
+const melodyMutation = async <T>(request: Promise<T>): Promise<T> => {
+  const result = await request
+  invalidateMelodies()
+  return result
+}
+
 export const createAdminMelody = (payload: { title: string; file_url: string; sort_order: number }) =>
-  call<{ id: number }>('/admin/melodies', { method: 'POST', body: JSON.stringify(payload) })
+  melodyMutation(call<{ id: number }>('/admin/melodies', { method: 'POST', body: JSON.stringify(payload) }))
 
 export const updateAdminMelody = (id: number, payload: { title?: string; file_url?: string; sort_order?: number }) =>
-  call<{ status: string }>(`/admin/melodies/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
+  melodyMutation(call<{ status: string }>(`/admin/melodies/${id}`, {
+    method: 'PATCH', body: JSON.stringify(payload),
+  }))
 
 export const deleteAdminMelody = (id: number) =>
-  call<{ status: string }>(`/admin/melodies/${id}`, { method: 'DELETE' })
+  melodyMutation(call<{ status: string }>(`/admin/melodies/${id}`, { method: 'DELETE' }))
 
 export const uploadMelodyFile = (file: File) => {
   const form = new FormData()

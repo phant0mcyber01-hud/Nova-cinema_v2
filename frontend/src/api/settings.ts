@@ -7,6 +7,32 @@ export const getPublicSettings = (lang = 'ru') =>
 
 export const getBonuses = (lang = 'ru') => call<Bonus[]>(`/bonuses?lang=${encodeURIComponent(lang)}`)
 
-export const getMelodies = () => call<Melody[]>('/melodies')
+let melodiesRequest: Promise<Melody[]> | null = null
+
+const cacheMelodiesRequest = (request: Promise<Melody[]>): Promise<Melody[]> => {
+  melodiesRequest = request.catch(error => {
+    melodiesRequest = null
+    throw error
+  })
+  return melodiesRequest
+}
+
+const earlyMelodies = (window as Window & {
+  __novaMelodiesEarly?: Promise<Melody[] | null>
+}).__novaMelodiesEarly
+
+if (earlyMelodies) {
+  cacheMelodiesRequest(earlyMelodies.then(melodies => melodies ?? call<Melody[]>('/melodies')))
+}
+
+/** Start once and share the result between the global player and About page. */
+export const preloadMelodies = (): Promise<Melody[]> => {
+  if (!melodiesRequest) return cacheMelodiesRequest(call<Melody[]>('/melodies'))
+  return melodiesRequest
+}
+
+export const invalidateMelodies = () => { melodiesRequest = null }
+
+export const getMelodies = preloadMelodies
 
 export const getGallery = (lang = 'ru') => call<GalleryImage[]>(`/gallery?lang=${encodeURIComponent(lang)}`)

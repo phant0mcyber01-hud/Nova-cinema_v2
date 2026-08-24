@@ -9,6 +9,7 @@ export type AudioContextValue = {
   /** No melody uploaded yet — the toggle has nothing to control. */
   available: boolean
   muted: boolean
+  playing: boolean
   toggleMuted: () => void
 }
 

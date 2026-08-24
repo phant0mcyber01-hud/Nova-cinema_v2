@@ -2,14 +2,10 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { getMelodies, type Melody } from '../api'
 import { AudioPlayerContext } from './audioContext'
+import { createPlaybackRetry, pauseImmediately, requestPlayback } from './audioPlayback'
 
-/**
- * The cinema melody belongs to the whole Mini App, not to the "About" page:
- * it starts on entry and keeps playing across navigation. That is only possible
- * if the <audio> element lives above the router, hence a context rather than a
- * hook each page calls.
- */
-const mutedStorageKey = 'nova-audio-muted'
+/** The audio element stays above the router, so navigation never restarts it. */
+const mutedStorageKey = 'nova-audio-muted-v2'
 
 const readStoredMuted = () => {
   try {
@@ -30,46 +26,106 @@ const saveMuted = (muted: boolean) => {
 export function AudioProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [melody, setMelody] = useState<Melody | null>(null)
+  const [available, setAvailable] = useState(false)
   const [muted, setMuted] = useState(readStoredMuted)
+  const [playing, setPlaying] = useState(false)
+  const mutedRef = useRef(muted)
 
-  // The admin can upload several melodies; the first by sort_order is the one
-  // the app plays. The endpoint already returns them in that order.
+  // main.tsx starts this cached request before React mounts. About reuses it.
   useEffect(() => {
     let active = true
     void getMelodies()
-      .then(melodies => { if (active) setMelody(melodies[0] ?? null) })
-      .catch(() => undefined)
+      .then(melodies => {
+        if (!active) return
+        const primary = melodies[0] ?? null
+        setMelody(primary)
+        setAvailable(primary !== null)
+      })
+      .catch(() => { if (active) setAvailable(false) })
     return () => { active = false }
   }, [])
 
-  // Mobile browsers reject play() without a user gesture. A rejected promise is
-  // not an error here: the track stays paused and the toggle reads "off", so
-  // one tap on it starts the music.
+  const attemptPlayback = useCallback((audio: HTMLAudioElement) => requestPlayback(audio), [])
+
+  useEffect(() => { mutedRef.current = muted }, [muted])
+
   useEffect(() => {
     const audio = audioRef.current
     if (!audio || !melody) return
     if (muted) {
-      audio.pause()
+      pauseImmediately(audio)
+      setPlaying(false)
       return
     }
-    void audio.play().catch(() => {
-      setMuted(true)
-      saveMuted(true)
+    // A browser policy rejection is temporary; never persist it as user mute.
+    void attemptPlayback(audio)
+  }, [attemptPlayback, melody, muted])
+
+  // If autoplay is forbidden, retry during an activation-granting click/key.
+  // The sound button performs its own synchronous play() call.
+  useEffect(() => {
+    if (!melody || muted || playing) return
+    const retry = createPlaybackRetry(() => {
+      const audio = audioRef.current
+      if (!audio || mutedRef.current) return Promise.resolve(false)
+      return attemptPlayback(audio)
     })
-  }, [melody, muted])
+    const unlock = (event: Event) => {
+      if (event.target instanceof Element && event.target.closest('.sound-toggle')) return
+      void retry()
+    }
+    document.addEventListener('click', unlock, { capture: true })
+    document.addEventListener('keydown', unlock, { capture: true })
+    return () => {
+      document.removeEventListener('click', unlock, { capture: true })
+      document.removeEventListener('keydown', unlock, { capture: true })
+    }
+  }, [attemptPlayback, melody, muted, playing])
 
   const toggleMuted = useCallback(() => {
-    setMuted(current => {
-      const next = !current
-      saveMuted(next)
-      return next
-    })
-  }, [])
+    const audio = audioRef.current
+    if (!audio) return
+
+    if (muted || !playing) {
+      mutedRef.current = false
+      setMuted(false)
+      saveMuted(false)
+      // This must stay directly in the click stack for mobile autoplay policy.
+      void attemptPlayback(audio)
+      return
+    }
+
+    mutedRef.current = true
+    pauseImmediately(audio)
+    setPlaying(false)
+    setMuted(true)
+    saveMuted(true)
+  }, [attemptPlayback, muted, playing])
 
   return (
-    <AudioPlayerContext.Provider value={{ available: melody !== null, muted, toggleMuted }}>
+    <AudioPlayerContext.Provider value={{ available, muted, playing, toggleMuted }}>
       {melody && (
-        <audio ref={audioRef} src={melody.file_url} loop preload="auto" aria-hidden="true" hidden />
+        <audio
+          ref={audioRef}
+          src={melody.file_url}
+          loop
+          autoPlay={!muted}
+          playsInline
+          preload="auto"
+          aria-hidden="true"
+          hidden
+          onCanPlay={event => { if (!mutedRef.current) void attemptPlayback(event.currentTarget) }}
+          onPlaying={event => {
+            if (mutedRef.current) {
+              pauseImmediately(event.currentTarget)
+              setPlaying(false)
+            } else {
+              setPlaying(true)
+            }
+          }}
+          onPause={() => setPlaying(false)}
+          onError={() => { setAvailable(false); setPlaying(false) }}
+        />
       )}
       {children}
     </AudioPlayerContext.Provider>

@@ -2,11 +2,15 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from pathlib import Path
+import re
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.datastructures import Headers
+from starlette.types import Receive, Scope, Send
 
 from backend.core.checks import log_configuration_warnings
 from backend.core.config import AUTO_CREATE_SCHEMA, CORS_ORIGINS, PROJECT_ROOT, UPLOAD_DIR
@@ -23,6 +27,59 @@ from backend.api.routers import (
     public,
 )
 from backend.services.seed import seed
+
+
+_AUDIO_SUFFIXES = {".mp3", ".ogg", ".m4a", ".wav"}
+_OPEN_ENDED_RANGE = re.compile(r"bytes=(\d+)-", re.IGNORECASE)
+_AUDIO_RANGE_BYTES = 128 * 1024
+
+
+class StreamableAudioFileResponse(FileResponse):
+    """Bound Chrome's open range so proxies cannot buffer the whole track."""
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        range_header = Headers(scope=scope).get("range", "").strip()
+        match = _OPEN_ENDED_RANGE.fullmatch(range_header)
+        if match is None:
+            await super().__call__(scope, receive, send)
+            return
+
+        digits = match.group(1)
+        if len(digits) > 20:
+            await PlainTextResponse("Malformed range header.", status_code=400)(scope, receive, send)
+            return
+        try:
+            start = int(digits)
+        except ValueError:
+            await PlainTextResponse("Malformed range header.", status_code=400)(scope, receive, send)
+            return
+        bounded_range = f"bytes={start}-{start + _AUDIO_RANGE_BYTES - 1}".encode("ascii")
+        bounded_scope = dict(scope)
+        bounded_scope["headers"] = [
+            (name, bounded_range if name.lower() == b"range" else value)
+            for name, value in scope["headers"]
+        ]
+        await super().__call__(bounded_scope, receive, send)
+
+
+class ImmutableUploadFiles(StaticFiles):
+    """Static uploads have UUID names and never change at the same URL."""
+
+    async def get_response(self, path: str, scope: dict):
+        response = await super().get_response(path, scope)
+        is_audio = Path(path).suffix.lower() in _AUDIO_SUFFIXES
+        if isinstance(response, FileResponse) and is_audio:
+            response = StreamableAudioFileResponse(
+                response.path,
+                status_code=response.status_code,
+                headers=dict(response.headers),
+                stat_result=response.stat_result,
+            )
+        if response.status_code in {200, 206, 304}:
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        if is_audio:
+            response.headers["X-Accel-Buffering"] = "no"
+        return response
 
 
 @asynccontextmanager
@@ -84,7 +141,7 @@ def create_app() -> FastAPI:
         allow_headers=["Authorization", "Content-Type"],
     )
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    application.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+    application.mount("/uploads", ImmutableUploadFiles(directory=UPLOAD_DIR), name="uploads")
     for module in (auth, public, catalog, booking, profile, admin, admin_catalog, admin_content):
         application.include_router(module.router)
     serve_built_frontend(application)

@@ -144,11 +144,11 @@ export default function About() {
         <section className="about-block">
           <h2>{t('aboutMelodies')}</h2>
           <div className="about-melodies">
-            {melodies.map(melody => (
+            {melodies.map((melody, index) => (
               <figure key={melody.id}>
                 <figcaption>{melody.title}</figcaption>
-                {/* Nothing is preloaded: the viewer is on mobile data until they tap. */}
-                <audio controls preload="none" src={melody.file_url} onPlay={haptic.tap} />
+                {/* The global player already warms the primary URL; extra tracks stay deferred. */}
+                <audio controls preload={index === 0 ? 'auto' : 'none'} src={melody.file_url} onPlay={haptic.tap} />
               </figure>
             ))}
           </div>

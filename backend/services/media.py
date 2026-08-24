@@ -83,10 +83,65 @@ async def save_image_upload(file: UploadFile) -> str:
 AUDIO_SUFFIXES = {".mp3", ".ogg", ".m4a", ".wav"}
 
 
+def _strip_leading_id3v2(content: bytes) -> bytes:
+    """Return MP3 bytes starting at the first audio frame.
+
+    ID3v2 stores its payload size as four syncsafe bytes and excludes the
+    ten-byte header from that size. ID3v2.4 may append a ten-byte footer. A
+    malformed tag is rejected instead of slicing arbitrary audio bytes.
+    """
+    while content.startswith(b"ID3"):
+        if len(content) < 10 or content[3] not in {2, 3, 4} or content[4] == 0xFF:
+            raise ValueError("Invalid ID3v2 header")
+
+        major, flags = content[3], content[5]
+        allowed_flags = {2: 0xC0, 3: 0xE0, 4: 0xF0}[major]
+        if flags & ~allowed_flags:
+            raise ValueError("Invalid ID3v2 flags")
+
+        size_bytes = content[6:10]
+        if any(value & 0x80 for value in size_bytes):
+            raise ValueError("Invalid ID3v2 syncsafe size")
+        payload_size = (
+            (size_bytes[0] << 21)
+            | (size_bytes[1] << 14)
+            | (size_bytes[2] << 7)
+            | size_bytes[3]
+        )
+        footer_size = 10 if major == 4 and flags & 0x10 else 0
+        tag_end = 10 + payload_size + footer_size
+        if tag_end > len(content):
+            raise ValueError("Truncated ID3v2 tag")
+        if footer_size and content[tag_end - 10:tag_end] != b"3DI" + content[3:10]:
+            raise ValueError("Invalid ID3v2 footer")
+        content = content[tag_end:]
+    return content
+
+
+def _looks_like_mp3_frame(content: bytes) -> bool:
+    """Validate the fixed fields of an MPEG audio frame header."""
+    if len(content) < 4:
+        return False
+    header = int.from_bytes(content[:4], "big")
+    version = (header >> 19) & 0x3
+    layer = (header >> 17) & 0x3
+    bitrate = (header >> 12) & 0xF
+    sample_rate = (header >> 10) & 0x3
+    emphasis = header & 0x3
+    return (
+        header >> 21 == 0x7FF
+        and version != 0x1
+        and layer != 0x0
+        and bitrate not in {0x0, 0xF}
+        and sample_rate != 0x3
+        and emphasis != 0x2
+    )
+
+
 def _looks_like_audio(suffix: str, content: bytes) -> bool:
     """Signature check so the extension alone cannot smuggle in another format."""
     if suffix == ".mp3":
-        return content.startswith(b"ID3") or (len(content) > 1 and content[0] == 0xFF and content[1] & 0xE0 == 0xE0)
+        return _looks_like_mp3_frame(content)
     if suffix == ".ogg":
         return content.startswith(b"OggS")
     if suffix == ".m4a":
@@ -102,6 +157,11 @@ async def save_audio_upload(file: UploadFile) -> str:
     if suffix not in AUDIO_SUFFIXES:
         raise HTTPException(422, "Unsupported audio format")
     content = await _read_capped(file, AUDIO_MAX_BYTES, "Audio file is too large")
+    if suffix == ".mp3":
+        try:
+            content = _strip_leading_id3v2(content)
+        except ValueError as error:
+            raise HTTPException(422, "Invalid audio content") from error
     if not _looks_like_audio(suffix, content):
         raise HTTPException(422, "Invalid audio content")
     filename = f"{uuid.uuid4().hex}{suffix}"

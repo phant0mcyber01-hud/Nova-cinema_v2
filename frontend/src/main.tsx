@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import WebApp from '@twa-dev/sdk'
 import App from './App'
-import { authenticateTelegram } from './api'
+import { authenticateTelegram, preloadMelodies } from './api'
 import { initTelegramTheme } from './lib/telegramTheme'
 import './styles.css'
 
@@ -46,6 +46,8 @@ const waitForTelegramInitData = async () => {
 }
 
 const bootstrapTelegram = async () => {
+  // Start auth first: it synchronously deactivates any previous user's token.
+  const authentication = authenticateTelegram(waitForTelegramInitData())
   const telegramWebApp = (window as TelegramWindow).Telegram?.WebApp
   telegramWebApp?.ready?.()
   telegramWebApp?.expand?.()
@@ -54,9 +56,11 @@ const bootstrapTelegram = async () => {
   WebApp.expand()
   WebApp.disableVerticalSwipes()
   initTelegramTheme()
-  await authenticateTelegram(await waitForTelegramInitData())
+  await authentication
 }
 
-void bootstrapTelegram().catch(() => undefined).finally(() => {
-  ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><App /></React.StrictMode>)
-})
+// Resolve the primary track and Telegram identity in parallel with first paint.
+// Protected routes observe authReady=false and wait; public routes render now.
+void preloadMelodies().catch(() => undefined)
+void bootstrapTelegram().catch(() => undefined)
+ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><App /></React.StrictMode>)
