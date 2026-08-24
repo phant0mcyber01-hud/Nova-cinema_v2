@@ -4,9 +4,8 @@ import { Link } from 'react-router-dom'
 import { getMovies, getPublicSettings, type Movie } from '../api'
 import MovieCard from '../components/MovieCard'
 import Shell from '../components/Shell'
-import { formatDateShort, setCurrency, useI18n } from '../i18n'
+import { setCurrency, useI18n } from '../i18n'
 import { apiMessage } from '../lib/apiMessage'
-import { fallbackBookingDates } from '../lib/dates'
 import { haptic } from '../lib/haptic'
 
 const SEARCH_DEBOUNCE_MS = 300
@@ -14,8 +13,6 @@ const SEARCH_DEBOUNCE_MS = 300
 export default function Home() {
   const { language, t } = useI18n()
   const [movies, setMovies] = useState<Movie[]>([])
-  const [dates, setDates] = useState<string[]>(fallbackBookingDates)
-  const [date, setDate] = useState('')
   const [query, setQuery] = useState('')
   const [appliedQuery, setAppliedQuery] = useState('')
   const [onlyNew, setOnlyNew] = useState(false)
@@ -23,14 +20,13 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // The booking window and the currency are admin settings, so they are fetched.
+  // The currency is an admin setting, so it is fetched.
   useEffect(() => {
     let active = true
     void getPublicSettings(language)
       .then(settings => {
         if (!active) return
         setCurrency(settings.currency)
-        if (settings.booking_dates.length) setDates(settings.booking_dates)
       })
       .catch(() => undefined)
     return () => { active = false }
@@ -45,7 +41,7 @@ export default function Home() {
   useEffect(() => {
     let active = true
     setLoading(true)
-    void getMovies(language, { date: date || undefined, q: appliedQuery, onlyNew })
+    void getMovies(language, { q: appliedQuery, onlyNew })
       .then(data => {
         if (!active) return
         setMovies(data)
@@ -58,7 +54,7 @@ export default function Home() {
         if (active) setLoading(false)
       })
     return () => { active = false }
-  }, [appliedQuery, date, language, onlyNew])
+  }, [appliedQuery, language, onlyNew])
 
   const genres = useMemo(
     () => Array.from(new Set(movies.map(movie => movie.genre)))
@@ -71,15 +67,11 @@ export default function Home() {
     [genre, movies],
   )
   const newReleases = useMemo(() => movies.filter(movie => movie.is_new), [movies])
-  const filtered = Boolean(appliedQuery.trim() || date || onlyNew || genre)
-  const dateLabel = (value: string, index: number) => (
-    index === 0 ? t('today') : index === 1 ? t('tomorrow') : formatDateShort(value, language)
-  )
+  const filtered = Boolean(appliedQuery.trim() || onlyNew || genre)
   const reset = () => {
     haptic.tap()
     setQuery('')
     setAppliedQuery('')
-    setDate('')
     setOnlyNew(false)
     setGenre('')
   }
@@ -101,24 +93,6 @@ export default function Home() {
         {query && <button className="search-clear" onClick={() => setQuery('')} aria-label={t('resetFilters')}>×</button>}
       </div>
 
-      <section className="date-strip" aria-label={t('availableDates')}>
-        <h2 className="strip-title">{t('availableDates')}</h2>
-        <div className="filters dates">
-          <button className={!date ? 'active' : ''} onClick={() => { haptic.select(); setDate('') }}>
-            {t('allDates')}
-          </button>
-          {dates.map((value, index) => (
-            <button
-              key={value}
-              className={date === value ? 'active' : ''}
-              onClick={() => { haptic.select(); setDate(date === value ? '' : value) }}
-            >
-              {dateLabel(value, index)}
-            </button>
-          ))}
-        </div>
-      </section>
-
       <div className="filters genres">
         <button
           className={onlyNew ? 'active' : ''}
@@ -132,7 +106,7 @@ export default function Home() {
         ))}
       </div>
 
-      {!date && !onlyNew && !appliedQuery.trim() && newReleases.length > 0 && (
+      {!onlyNew && !appliedQuery.trim() && newReleases.length > 0 && (
         <section className="new-strip">
           <div className="strip-head">
             <h2>🆕 {t('newSection')}</h2>
