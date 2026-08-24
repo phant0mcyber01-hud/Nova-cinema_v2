@@ -8,6 +8,7 @@ import {
   type AdminMelody,
 } from '../../api'
 import { useI18n } from '../../i18n'
+import { AUDIO_MAX_BYTES } from '../../lib/audioUpload'
 
 const MAX_MELODIES = 3
 
@@ -22,6 +23,7 @@ export default function MelodiesView({ melodies, onSaved }: MelodiesViewProps) {
   const [title, setTitle] = useState('')
   const [fileUrl, setFileUrl] = useState('')
   const [busy, setBusy] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null)
   const [error, setError] = useState('')
   const addInput = useRef<HTMLInputElement>(null)
   const replaceInput = useRef<HTMLInputElement>(null)
@@ -30,15 +32,21 @@ export default function MelodiesView({ melodies, onSaved }: MelodiesViewProps) {
   const full = melodies.length >= MAX_MELODIES
 
   const upload = async (file: File): Promise<string | null> => {
+    if (file.size > AUDIO_MAX_BYTES) {
+      setError(t('audioTooLarge'))
+      return null
+    }
     setBusy(true)
+    setUploadProgress(0)
     setError('')
     try {
-      return (await uploadMelodyFile(file)).url
+      return (await uploadMelodyFile(file, setUploadProgress)).url
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t('serverError'))
       return null
     } finally {
       setBusy(false)
+      setUploadProgress(null)
     }
   }
 
@@ -129,9 +137,12 @@ export default function MelodiesView({ melodies, onSaved }: MelodiesViewProps) {
               }}
             />
             <small>{t('audioFormatHint')}</small>
+            {busy && uploadProgress !== null && <small>{t('uploading')} · {uploadProgress}%</small>}
             {fileUrl && <audio controls src={fileUrl} />}
             <button className="book fit" onClick={() => { void create() }} disabled={busy}>
-              {busy ? t('uploading') : t('add')}
+              {busy
+                ? (uploadProgress !== null ? `${t('uploading')} ${uploadProgress}%` : t('uploading'))
+                : t('add')}
             </button>
           </>
         )}

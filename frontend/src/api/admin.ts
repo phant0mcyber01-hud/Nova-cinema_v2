@@ -1,5 +1,6 @@
 import { call } from './client'
 import { invalidateMelodies } from './settings'
+import { audioChunkRanges, createAudioUploadId } from '../lib/audioUpload'
 import type {
   AdminBonus,
   AdminBonusPayload,
@@ -141,10 +142,28 @@ export const updateAdminMelody = (id: number, payload: { title?: string; file_ur
 export const deleteAdminMelody = (id: number) =>
   melodyMutation(call<{ status: string }>(`/admin/melodies/${id}`, { method: 'DELETE' }))
 
-export const uploadMelodyFile = (file: File) => {
-  const form = new FormData()
-  form.append('file', file)
-  return call<{ url: string }>('/admin/melodies/upload', { method: 'POST', body: form })
+export const uploadMelodyFile = async (file: File, onProgress?: (percent: number) => void) => {
+  const ranges = audioChunkRanges(file.size)
+  const uploadId = createAudioUploadId()
+  let finalUrl = ''
+
+  for (const [index, range] of ranges.entries()) {
+    const form = new FormData()
+    form.append('upload_id', uploadId)
+    form.append('chunk_index', String(index))
+    form.append('total_chunks', String(ranges.length))
+    form.append('total_size', String(file.size))
+    form.append('filename', file.name)
+    form.append('file', file.slice(range.start, range.end), `chunk-${index}.bin`)
+    const result = await call<{ complete: boolean; url?: string }>('/admin/melodies/upload/chunk', {
+      method: 'POST', body: form,
+    })
+    if (result.complete) finalUrl = result.url ?? ''
+    onProgress?.(Math.round(((index + 1) / ranges.length) * 100))
+  }
+
+  if (!finalUrl) throw new Error('Audio upload did not complete')
+  return { url: finalUrl }
 }
 
 // --- review moderation -------------------------------------------------------

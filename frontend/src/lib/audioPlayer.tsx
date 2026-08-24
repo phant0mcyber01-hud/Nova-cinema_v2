@@ -82,6 +82,18 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }
   }, [attemptPlayback, melody, muted, playing])
 
+  useEffect(() => {
+    if (!melody) return
+    const resumeAfterBackground = () => {
+      const audio = audioRef.current
+      if (document.visibilityState === 'visible' && audio?.paused && !mutedRef.current) {
+        void attemptPlayback(audio)
+      }
+    }
+    document.addEventListener('visibilitychange', resumeAfterBackground)
+    return () => document.removeEventListener('visibilitychange', resumeAfterBackground)
+  }, [attemptPlayback, melody])
+
   const toggleMuted = useCallback(() => {
     const audio = audioRef.current
     if (!audio) return
@@ -121,6 +133,12 @@ export function AudioProvider({ children }: { children: ReactNode }) {
               setPlaying(false)
             } else {
               setPlaying(true)
+            }
+          }}
+          onEnded={event => {
+            if (!mutedRef.current) {
+              event.currentTarget.currentTime = 0
+              void attemptPlayback(event.currentTarget)
             }
           }}
           onPause={() => setPlaying(false)}

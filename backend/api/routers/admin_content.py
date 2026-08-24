@@ -1,7 +1,7 @@
 """Admin CRUD for bonuses, melodies and the gallery (spec 4.6, 4.7, 16)."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,7 +9,7 @@ from backend.api.deps import admin_required, get_db
 from backend.core.config import MAX_MELODIES
 from backend.models import Bonus, GalleryImage, Melody
 from backend.schemas.settings import BonusIn, GalleryImageIn, MelodyIn, MelodyPatchIn
-from backend.services.media import save_audio_upload
+from backend.services.media import save_audio_upload, save_audio_upload_chunk
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(admin_required)])
 
@@ -90,6 +90,25 @@ async def list_melodies(session: AsyncSession = Depends(get_db)) -> list[dict[st
 @router.post("/melodies/upload")
 async def upload_melody(file: UploadFile = File(...)) -> dict[str, str]:
     return {"url": await save_audio_upload(file)}
+
+
+@router.post("/melodies/upload/chunk")
+async def upload_melody_chunk(
+    upload_id: str = Form(...),
+    chunk_index: int = Form(...),
+    total_chunks: int = Form(...),
+    total_size: int = Form(...),
+    filename: str = Form(...),
+    file: UploadFile = File(...),
+) -> dict[str, object]:
+    return await save_audio_upload_chunk(
+        upload_id=upload_id,
+        chunk_index=chunk_index,
+        total_chunks=total_chunks,
+        total_size=total_size,
+        filename=filename,
+        file=file,
+    )
 
 
 @router.post("/melodies")

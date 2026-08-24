@@ -86,7 +86,9 @@ MAX_HALL_COLS = 20
 MAX_MELODIES = 3
 
 UPLOAD_MAX_BYTES = 5_000_000
-AUDIO_MAX_BYTES = 10_000_000
+AUDIO_MAX_BYTES = 50_000_000
+AUDIO_CHUNK_BYTES = 1_000_000
+AUDIO_TRANSCODE_THRESHOLD_BYTES = 10_000_000
 
 # Booking lifecycle (stage 12 of the spec).
 BOOKING_STATUSES = ("pending", "contacting", "confirmed", "cancelled", "watched")

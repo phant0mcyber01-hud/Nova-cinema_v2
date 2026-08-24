@@ -1,6 +1,15 @@
 """Regression tests for fast, streamable cinema melodies."""
 from __future__ import annotations
 
+import io
+import math
+import wave
+from pathlib import Path
+
+import pytest
+from fastapi import HTTPException
+
+from backend.core.config import AUDIO_MAX_BYTES
 from tests.conftest import ADMIN_ID, auth_header, login
 
 
@@ -17,6 +26,18 @@ def _id3v2(payload: bytes, *, footer: bool = False) -> bytes:
 
 # A frame-like MP3 prefix is sufficient for the upload signature validator.
 MP3_AUDIO = b"\xff\xfb\x90\x64" + b"audio-frame" * 32
+
+
+def _silent_wav(minimum_bytes: int) -> bytes:
+    """A valid large WAV that FFmpeg can decode quickly in integration tests."""
+    output = io.BytesIO()
+    frame_count = math.ceil((minimum_bytes - 44) / 4)
+    with wave.open(output, "wb") as audio:
+        audio.setnchannels(2)
+        audio.setsampwidth(2)
+        audio.setframerate(44_100)
+        audio.writeframes(b"\0" * (frame_count * 4))
+    return output.getvalue()
 
 
 async def _upload(client, content: bytes):
@@ -98,3 +119,80 @@ async def test_uploaded_audio_is_immutable_cached_and_keeps_range_support(client
 
     malformed_range = await client.get(long_url, headers={"Range": f"bytes={'9' * 5000}-"})
     assert malformed_range.status_code in {400, 416}
+
+
+async def test_audio_over_20_mb_uploads_in_proxy_safe_chunks_and_is_optimized(client):
+    admin = await login(client, ADMIN_ID, "admin")
+    source = _silent_wav(20_500_000)
+    chunk_size = 1_000_000
+    total_chunks = math.ceil(len(source) / chunk_size)
+    final = None
+
+    for index in range(total_chunks):
+        start = index * chunk_size
+        chunk = source[start:start + chunk_size]
+        response = await client.post(
+            "/api/admin/melodies/upload/chunk",
+            data={
+                "upload_id": "a" * 32,
+                "chunk_index": str(index),
+                "total_chunks": str(total_chunks),
+                "total_size": str(len(source)),
+                "filename": "large.wav",
+            },
+            files={"file": ("chunk.bin", chunk, "application/octet-stream")},
+            headers=auth_header(admin),
+        )
+        assert response.status_code == 200, response.text
+        final = response.json()
+        assert final["complete"] is (index == total_chunks - 1)
+
+    assert final is not None and final["url"].endswith(".mp3")
+    stored = await client.get(final["url"])
+    assert stored.status_code == 200
+    assert len(stored.content) < 10_000_000
+    assert stored.content.startswith(b"\xff")
+
+
+async def test_chunked_audio_upload_rejects_oversize_and_out_of_order_parts(client):
+    admin = await login(client, ADMIN_ID, "admin")
+    common = {
+        "upload_id": "b" * 32,
+        "total_chunks": "11",
+        "total_size": "50000001",
+        "filename": "too-large.mp3",
+    }
+    oversized = await client.post(
+        "/api/admin/melodies/upload/chunk",
+        data={**common, "chunk_index": "0"},
+        files={"file": ("chunk.bin", MP3_AUDIO, "application/octet-stream")},
+        headers=auth_header(admin),
+    )
+    assert oversized.status_code == 413
+
+    out_of_order = await client.post(
+        "/api/admin/melodies/upload/chunk",
+        data={
+            "upload_id": "c" * 32,
+            "chunk_index": "1",
+            "total_chunks": "2",
+            "total_size": str(1_000_000 + len(MP3_AUDIO)),
+            "filename": "song.mp3",
+        },
+        files={"file": ("chunk.bin", MP3_AUDIO, "application/octet-stream")},
+        headers=auth_header(admin),
+    )
+    assert out_of_order.status_code == 409
+
+
+def test_transcode_output_is_bounded_before_it_is_read_into_memory(monkeypatch):
+    from backend.services import media
+
+    def oversized_output(command, **_kwargs):
+        with Path(command[-1]).open("wb") as target:
+            target.truncate(AUDIO_MAX_BYTES)
+
+    monkeypatch.setattr(media.subprocess, "run", oversized_output)
+    with pytest.raises(HTTPException) as error:
+        media._transcode_large_audio(b"OggS" + b"0" * 100, ".ogg")
+    assert error.value.status_code == 413
