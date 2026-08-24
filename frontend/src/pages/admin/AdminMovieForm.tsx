@@ -215,6 +215,10 @@ export default function AdminMovieForm({ draft, editing, busy, error, onChange, 
                 <input type="date" value={draft.new_until} onChange={event => onChange({ ...draft, new_until: event.target.value })} />
               </Field>
             )}
+            <div className="publication-options">
+              <button className={draft.is_hit ? 'active' : ''} onClick={() => onChange({ ...draft, is_hit: true })}><b>{t('markAsHit')}</b><small>{t('hitsSectionHint')}</small></button>
+              <button className={!draft.is_hit ? 'active' : ''} onClick={() => onChange({ ...draft, is_hit: false })}><b>{t('unmarkHit')}</b><small>{t('hitsSectionHint')}</small></button>
+            </div>
             <Field label={t('catalogPosition')} hint={t('catalogPositionHint')}><input type="number" value={draft.sort_order} onChange={event => onChange({ ...draft, sort_order: Number(event.target.value) })} placeholder="0" /></Field>
           </section>
         </div>

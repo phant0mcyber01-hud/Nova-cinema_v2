@@ -32,6 +32,7 @@ class MovieIn(BaseModel):
     is_published: bool = True
     is_new: bool = False
     new_until: str = Field(default="", pattern=f"^$|{DATE_PATTERN[1:-1]}")
+    is_hit: bool = False
     sort_order: int = 0
 
     @field_validator("trailer_id")

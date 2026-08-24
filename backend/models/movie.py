@@ -46,6 +46,8 @@ class Movie(Base):
     #: Marked as a new release by the admin; `new_until` optionally expires it.
     is_new: Mapped[bool] = mapped_column(default=False, index=True)
     new_until: Mapped[str] = mapped_column(String(10), default="")
+    #: Included in the independent "Hits" rail on the public catalog.
+    is_hit: Mapped[bool] = mapped_column(default=False, index=True)
 
     reviews: Mapped[list["Review"]] = relationship(back_populates="movie", cascade="all, delete-orphan")
 

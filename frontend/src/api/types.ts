@@ -15,6 +15,7 @@ export type Movie = {
   is_published: boolean
   is_new: boolean
   new_until: string
+  is_hit: boolean
   sort_order: number
 }
 
@@ -59,6 +60,7 @@ export type MoviePayload = {
   is_published: boolean
   is_new: boolean
   new_until: string
+  is_hit: boolean
   sort_order: number
 }
 

@@ -21,6 +21,7 @@ export const toMoviePayload = (movie: MovieDetail): MoviePayload => ({
   is_published: movie.is_published,
   is_new: movie.is_new,
   new_until: movie.new_until,
+  is_hit: movie.is_hit,
   sort_order: movie.sort_order,
 })
 
@@ -44,5 +45,6 @@ export const emptyMoviePayload = (): MoviePayload => ({
   is_published: true,
   is_new: false,
   new_until: '',
+  is_hit: false,
   sort_order: 0,
 })

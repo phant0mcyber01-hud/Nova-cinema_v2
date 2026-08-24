@@ -117,6 +117,7 @@ def serialize_movie(
         "is_published": movie.is_published,
         "is_new": is_new_release(movie, today),
         "new_until": movie.new_until,
+        "is_hit": movie.is_hit,
         "sort_order": movie.sort_order,
     }
 

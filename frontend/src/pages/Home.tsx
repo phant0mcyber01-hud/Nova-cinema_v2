@@ -9,6 +9,7 @@ import { apiMessage } from '../lib/apiMessage'
 import { haptic } from '../lib/haptic'
 
 const SEARCH_DEBOUNCE_MS = 300
+const PRIORITY_GENRES = ['Ужасы', "Qo'rqinchli", 'Мультфильм', 'Multfilm']
 
 export default function Home() {
   const { language, t } = useI18n()
@@ -56,17 +57,21 @@ export default function Home() {
     return () => { active = false }
   }, [appliedQuery, language, onlyNew])
 
-  const genres = useMemo(
-    () => Array.from(new Set(movies.map(movie => movie.genre)))
-      .sort((left, right) => left.localeCompare(right, language)),
-    [language, movies],
-  )
+  const genres = useMemo(() => {
+    const unique = Array.from(new Set(movies.map(movie => movie.genre)))
+    const priority = PRIORITY_GENRES.filter(item => unique.includes(item))
+    const rest = unique
+      .filter(item => !PRIORITY_GENRES.includes(item))
+      .sort((left, right) => left.localeCompare(right, language))
+    return [...priority, ...rest]
+  }, [language, movies])
   // Genre stays a client-side facet over whatever the server returned.
   const visible = useMemo(
     () => movies.filter(movie => !genre || movie.genre === genre),
     [genre, movies],
   )
   const newReleases = useMemo(() => movies.filter(movie => movie.is_new), [movies])
+  const hits = useMemo(() => movies.filter(movie => movie.is_hit), [movies])
   const filtered = Boolean(appliedQuery.trim() || onlyNew || genre)
   const reset = () => {
     haptic.tap()
@@ -114,6 +119,24 @@ export default function Home() {
           </div>
           <div className="new-rail">
             {newReleases.map(movie => (
+              <Link className="new-card" to={`/movies/${movie.id}`} key={movie.id} onClick={haptic.tap}>
+                <img src={movie.poster} alt={movie.title} loading="lazy" />
+                <b>{movie.title}</b>
+                <span>{movie.genre} · {movie.age}+</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {!onlyNew && !appliedQuery.trim() && hits.length > 0 && (
+        <section className="new-strip hits-strip">
+          <div className="strip-head">
+            <h2>🔥 {t('hitsSection')}</h2>
+            <p>{t('hitsSectionHint')}</p>
+          </div>
+          <div className="new-rail">
+            {hits.map(movie => (
               <Link className="new-card" to={`/movies/${movie.id}`} key={movie.id} onClick={haptic.tap}>
                 <img src={movie.poster} alt={movie.title} loading="lazy" />
                 <b>{movie.title}</b>
