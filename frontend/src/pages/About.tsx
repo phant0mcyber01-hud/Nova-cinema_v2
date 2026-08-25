@@ -12,6 +12,7 @@ import {
   type PublicSettings,
 } from '../api'
 import Shell from '../components/Shell'
+import Icon from '../components/Icon'
 import { useI18n } from '../i18n'
 import { apiMessage } from '../lib/apiMessage'
 import { haptic } from '../lib/haptic'
@@ -107,20 +108,20 @@ export default function About() {
         <div className="about-actions">
           {settings.phone && (
             <a className="book fit" href={`tel:${settings.phone.replace(/[^\d+]/g, '')}`} onClick={haptic.tap}>
-              ☏ {settings.phone}
+              <Icon name="phone" /> {settings.phone}
             </a>
           )}
           {map && (
-            <button className="admin-ghost" onClick={() => openExternal(map)}>⚲ {t('openMap')}</button>
+            <button className="admin-ghost" onClick={() => openExternal(map)}><Icon name="map" /> {t('openMap')}</button>
           )}
           {settings.telegram_url && (
             <button className="admin-ghost" onClick={() => openExternal(settings.telegram_url)}>
-              ➤ {t('writeTelegram')}
+              <Icon name="send" /> {t('writeTelegram')}
             </button>
           )}
           {settings.instagram_url && (
             <button className="admin-ghost" onClick={() => openExternal(settings.instagram_url)}>
-              ▢ {t('instagram')}
+              <Icon name="instagram" /> {t('instagram')}
             </button>
           )}
         </div>

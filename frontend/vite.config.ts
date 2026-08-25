@@ -3,6 +3,13 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '')
-  const target = env.VITE_API_TARGET || 'http://127.0.0.1:8000'
-  return { plugins: [react()], server: { proxy: { '/api': target, '/uploads': target } } }
+  const apiTarget = env.VITE_API_TARGET || 'http://127.0.0.1:8000'
+  return {
+    plugins: [react()],
+    build: {
+      target: ['es2018', 'chrome69', 'safari12'],
+      cssTarget: ['chrome69', 'safari12'],
+    },
+    server: { proxy: { '/api': apiTarget, '/uploads': apiTarget } },
+  }
 })

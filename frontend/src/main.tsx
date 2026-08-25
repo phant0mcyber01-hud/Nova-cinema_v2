@@ -4,6 +4,7 @@ import WebApp from '@twa-dev/sdk'
 import App from './App'
 import { authenticateTelegram, preloadMelodies } from './api'
 import { initTelegramTheme } from './lib/telegramTheme'
+import '@fontsource-variable/inter/wght.css'
 import './styles.css'
 
 type TelegramWindow = Window & {

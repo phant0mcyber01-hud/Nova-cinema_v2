@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 
 import { deleteAdminReview, moderateReview, type AdminReview } from '../../api'
+import Icon from '../../components/Icon'
 import { formatDateTime, useI18n } from '../../i18n'
 
 type ReviewsViewProps = {
@@ -63,7 +64,7 @@ export default function ReviewsView({ reviews, onSaved }: ReviewsViewProps) {
           <article className="admin-row" key={review.id}>
             <img src={review.poster} alt={review.movie} loading="lazy" />
             <div className="booking-admin-meta">
-              <b>{review.movie} · ★ {review.rating}/5</b>
+              <b>{review.movie} · <Icon name="star" /> {review.rating}/5</b>
               <span>
                 {review.user_name}
                 {review.telegram_username ? ` · @${review.telegram_username}` : ''}

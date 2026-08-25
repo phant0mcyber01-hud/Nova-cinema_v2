@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { ApiError, addFavorite, createReview, getAuthState, getMovie, type MovieDetail } from '../api'
+import Icon from '../components/Icon'
 import Shell from '../components/Shell'
 import { formatDateShort, useI18n } from '../i18n'
 import { apiMessage } from '../lib/apiMessage'
@@ -102,7 +103,7 @@ export default function MoviePage() {
     return (
       <Shell>
         <section className="unavailable">
-          <span aria-hidden="true">🎬</span>
+          <span aria-hidden="true"><Icon name="film" /></span>
           <h1>{t('movieUnavailable')}</h1>
           <p>{t('movieUnavailableHint')}</p>
           <Link className="book fit" to="/">{t('toCatalog')}</Link>
@@ -122,18 +123,18 @@ export default function MoviePage() {
           <p>{movie.genre} · {movie.year} · {movie.country}</p>
           <h1>{movie.title}</h1>
           <div className="detail-stats">
-            {!!movie.imdb && <span>IMDb ★ {movie.imdb}</span>}
-            {!!movie.kinopoisk && <span>{t('kinopoiskShort')} ★ {movie.kinopoisk}</span>}
-            {/* Nobody has rated it yet: "Nova ★ 0" reads as a bad score, not as silence. */}
+            {!!movie.imdb && <span>IMDb <Icon name="star" /> {movie.imdb}</span>}
+            {!!movie.kinopoisk && <span>{t('kinopoiskShort')} <Icon name="star" /> {movie.kinopoisk}</span>}
+            {/* Nobody has rated it yet: a Nova score of zero reads as a bad score, not as silence. */}
             {!!(movie.user_rating ?? movie.rating) && (
-              <span>Nova ★ {movie.user_rating ?? movie.rating}</span>
+              <span>Nova <Icon name="star" /> {movie.user_rating ?? movie.rating}</span>
             )}
             <span>{movie.age}+</span>
             <span>{movie.duration} {t('minutes')}</span>
           </div>
           <Link className="book" to={`/booking/${movie.id}/date`} onClick={haptic.tap}>{t('bookTicket')}</Link>
           <button className="admin-ghost detail-favorite" onClick={() => { void saveFavorite() }}>{t('addToFavorites')}</button>
-          <button className="admin-ghost detail-favorite" onClick={() => { void share() }}>📤 {t('share')}</button>
+          <button className="admin-ghost detail-favorite" onClick={() => { void share() }}><Icon name="share" /> {t('share')}</button>
         </div>
       </section>
       <p className="description">{movie.description}</p>
@@ -172,7 +173,7 @@ export default function MoviePage() {
       {movie.gallery.length > 0 && <div className="gallery">{movie.gallery.map(image => <img key={image} src={image} alt={t('galleryFrame')} loading="lazy" />)}</div>}
       <section className="reviews">
         <h2>{t('reviews')}</h2>
-        {movie.reviews.map(review => <article className="review" key={`${review.user_name}-${review.created_at}`}><div><b>{review.user_name}</b><span>★ {review.rating}/5</span></div><p>{review.text}</p><small>{new Date(review.created_at).toLocaleDateString()}</small></article>)}
+        {movie.reviews.map(review => <article className="review" key={`${review.user_name}-${review.created_at}`}><div><b>{review.user_name}</b><span><Icon name="star" /> {review.rating}/5</span></div><p>{review.text}</p><small>{new Date(review.created_at).toLocaleDateString()}</small></article>)}
         {!movie.reviews.length && <p className="empty">{t('noReviews')}</p>}
         {movie.has_reviewed && <p className="empty">{t('reviewAlreadyLeft')}</p>}
         {!movie.has_reviewed && !movie.can_review && <p className="empty">{t('reviewAfterViewing')}</p>}
@@ -180,7 +181,7 @@ export default function MoviePage() {
           <div className="review-form">
             <label>{t('reviewRating')}<select value={reviewRating} onChange={event => setReviewRating(Number(event.target.value))}>{[5, 4, 3, 2, 1].map(value => <option value={value} key={value}>{value}/5</option>)}</select></label>
             <textarea value={reviewText} onChange={event => setReviewText(event.target.value)} placeholder={t('reviewPlaceholder')} maxLength={1000} />
-            <button className="book fit" onClick={() => { void submitReview() }} disabled={reviewBusy || reviewText.trim().length < 3}>⭐ {t('sendReview')}</button>
+            <button className="book fit" onClick={() => { void submitReview() }} disabled={reviewBusy || reviewText.trim().length < 3}><Icon name="star" /> {t('sendReview')}</button>
           </div>
         )}
       </section>

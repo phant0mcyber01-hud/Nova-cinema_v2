@@ -3,25 +3,35 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "browserslist": [
+    "Chrome >= 69",
+    "Android >= 7",
+    "iOS >= 12",
+    "Safari >= 12",
+    "Firefox >= 68"
+  ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && npm run check:fonts",
     "lint": "eslint . --max-warnings=0",
     "test:frontend": "node --test tests/*.test.mjs",
     "check:chunks": "node scripts/assert-lazy-build.mjs",
+    "check:fonts": "node scripts/assert-font-build.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
     "@twa-dev/sdk": "^8.0.2",
+    "lucide-react": "^1.34.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.1.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.17.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
-    "@eslint/js": "^9.17.0",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.17.0",
     "eslint-plugin-react-hooks": "^5.1.0",

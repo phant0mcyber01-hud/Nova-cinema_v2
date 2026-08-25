@@ -8,6 +8,7 @@ import {
   type AdminGalleryImage,
   type AdminGalleryImagePayload,
 } from '../../api'
+import Icon from '../../components/Icon'
 import { useI18n } from '../../i18n'
 
 type GalleryViewProps = {
@@ -167,7 +168,7 @@ export default function GalleryView({ images, onSaved }: GalleryViewProps) {
               <small>{t('catalogPosition')}: {image.sort_order}</small>
             </div>
             <div className="admin-card-actions">
-              <button className="admin-ghost" onClick={() => edit(image)}>✎ {t('edit')}</button>
+              <button className="admin-ghost" onClick={() => edit(image)}><Icon name="pencil" /> {t('edit')}</button>
               <button className="admin-ghost danger" onClick={() => { void remove(image) }}>{t('remove')}</button>
             </div>
           </article>

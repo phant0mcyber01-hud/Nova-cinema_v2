@@ -1,5 +1,6 @@
 import { useAudioPlayer } from '../lib/audioContext'
 import { haptic } from '../lib/haptic'
+import Icon from './Icon'
 
 /** Mutes the cinema melody that plays across the whole Mini App. */
 export default function SoundToggle() {
@@ -17,7 +18,7 @@ export default function SoundToggle() {
       aria-pressed={active}
       onClick={() => { haptic.tap(); toggleMuted() }}
     >
-      {active ? '♫' : '⊘'}
+      <Icon name={active ? 'music' : 'muted'} />
     </button>
   )
 }

@@ -8,6 +8,7 @@ import {
 } from '../../api'
 import AdminMovieForm from './AdminMovieForm'
 import { emptyMoviePayload, toMoviePayload } from './moviePayload'
+import Icon from '../../components/Icon'
 import { formatMoney, useI18n } from '../../i18n'
 
 const includes = (source: string, query: string) => source.toLowerCase().includes(query.trim().toLowerCase())
@@ -88,7 +89,7 @@ export default function MoviesView({ movies, onSaved }: MoviesViewProps) {
         <button className="book fit admin-primary" onClick={startCreate}>＋ {t('addMovie')}</button>
       </div>
       <label className="admin-search">
-        <span>⌕</span>
+        <span><Icon name="search" /></span>
         <input value={query} onChange={event => setQuery(event.target.value)} placeholder={t('movieSearchAdminPlaceholder')} />
       </label>
       <div className="admin-movie-grid">
@@ -107,7 +108,7 @@ export default function MoviesView({ movies, onSaved }: MoviesViewProps) {
               <small>{movie.country} · {movie.year} · {movie.duration} {t('minutes')} · {t('photo')}: {movie.gallery.length}{movie.ticket_price ? ` · ${formatMoney(movie.ticket_price, language)}` : ''}</small>
             </div>
             <div className="admin-card-actions">
-              <button className="admin-ghost" onClick={() => startEdit(movie)}>✎ {t('editMovie')}</button>
+              <button className="admin-ghost" onClick={() => startEdit(movie)}><Icon name="pencil" /> {t('editMovie')}</button>
               <button className="admin-ghost" onClick={() => { void togglePublish(movie) }}>{movie.is_published ? t('hide') : t('publish')}</button>
               <button className="admin-ghost danger" onClick={() => { void remove(movie) }}>{t('remove')}</button>
             </div>

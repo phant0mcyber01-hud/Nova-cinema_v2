@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { confirmBooking, getHall, getProfile, holdSeats, releaseSeats, type Hall } from '../../api'
+import Icon from '../../components/Icon'
 import Shell from '../../components/Shell'
 import { formatMoney, setCurrency, translate, useI18n } from '../../i18n'
 import { apiMessage } from '../../lib/apiMessage'
@@ -197,7 +198,7 @@ export default function HallPage() {
           {hall && <span>{t('maxSeatsHint').replace('{n}', String(hall.max_seats))}</span>}
         </div>
         {holdUntil !== null && !expired && (
-          <p className="hold-timer">⏳ {t('holdExpiresIn')} {clock(holdUntil - now)}</p>
+          <p className="hold-timer"><Icon name="timer" /> {t('holdExpiresIn')} {clock(holdUntil - now)}</p>
         )}
         <div className="legend">
           <span><i /> {t('free')}</span>
@@ -208,7 +209,7 @@ export default function HallPage() {
         {hall ? (
           <>
             <div className="cinema-screen">
-              <span>🎬 {t('screen')}</span>
+              <span><Icon name="film" /> {t('screen')}</span>
               <i aria-hidden="true" />
             </div>
             <div className="hall" style={{ ['--seat-count' as string]: String(hall.cols) }}>

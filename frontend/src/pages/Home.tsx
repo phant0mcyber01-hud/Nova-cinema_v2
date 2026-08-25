@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 
 import { getMovies, getPublicSettings, type Movie } from '../api'
 import MovieCard from '../components/MovieCard'
+import Icon from '../components/Icon'
 import Shell from '../components/Shell'
 import { setCurrency, useI18n } from '../i18n'
 import { apiMessage } from '../lib/apiMessage'
@@ -89,7 +90,7 @@ export default function Home() {
       </section>
 
       <div className="search">
-        <span>⌕</span>
+        <span><Icon name="search" /></span>
         <input
           value={query}
           onChange={event => setQuery(event.target.value)}
@@ -103,7 +104,7 @@ export default function Home() {
           className={onlyNew ? 'active' : ''}
           onClick={() => { haptic.select(); setOnlyNew(!onlyNew) }}
         >
-          🆕 {t('newSection')}
+          <Icon name="new" /> {t('newSection')}
         </button>
         <button className={!genre ? 'active' : ''} onClick={() => setGenre('')}>{t('allGenres')}</button>
         {genres.map(item => (
@@ -114,7 +115,7 @@ export default function Home() {
       {!onlyNew && !appliedQuery.trim() && newReleases.length > 0 && (
         <section className="new-strip">
           <div className="strip-head">
-            <h2>🆕 {t('newSection')}</h2>
+            <h2><Icon name="new" /> {t('newSection')}</h2>
             <p>{t('newSectionHint')}</p>
           </div>
           <div className="new-rail">
@@ -132,7 +133,7 @@ export default function Home() {
       {!onlyNew && !appliedQuery.trim() && hits.length > 0 && (
         <section className="new-strip hits-strip">
           <div className="strip-head">
-            <h2>🔥 {t('hitsSection')}</h2>
+            <h2><Icon name="flame" /> {t('hitsSection')}</h2>
             <p>{t('hitsSectionHint')}</p>
           </div>
           <div className="new-rail">

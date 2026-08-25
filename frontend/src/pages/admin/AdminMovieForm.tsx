@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent, type ReactNode } from 'react'
 import { lookupAdminMovie, uploadAdminImage, type MoviePayload } from '../../api'
+import Icon from '../../components/Icon'
 import { useI18n } from '../../i18n'
 
 type MovieFormProps = {
@@ -106,7 +107,7 @@ export default function AdminMovieForm({ draft, editing, busy, error, onChange, 
 
         <div className="cms-sections">
           <section className="cms-section movie-lookup-section">
-            <div className="cms-section-title"><span>🔍</span><div><h3>{t('findMovie')}</h3><p>{t('movieLookupHint')}</p></div></div>
+            <div className="cms-section-title"><span><Icon name="search" /></span><div><h3>{t('findMovie')}</h3><p>{t('movieLookupHint')}</p></div></div>
             <div className="movie-lookup-row">
               <input value={lookupTitle} onChange={event => setLookupTitle(event.target.value)} placeholder={t('movieLookupPlaceholder')} />
               <button className="book fit" onClick={() => { void lookupMovie() }} disabled={lookupBusy}>{lookupBusy ? t('searching') : t('findMovie')}</button>

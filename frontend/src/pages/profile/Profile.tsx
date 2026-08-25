@@ -21,6 +21,7 @@ import {
 import { formatDateShort, formatDateTime, formatMoney, translate, useI18n, type TranslationKey } from '../../i18n'
 import { apiMessage } from '../../lib/apiMessage'
 import BottomNav from '../../components/BottomNav'
+import Icon from '../../components/Icon'
 import NotFound from '../../components/NotFound'
 import LanguageSwitcher from '../../components/LanguageSwitcher'
 
@@ -153,7 +154,7 @@ function ProfileHome() {
           <Link className="choice" to="/profile/notifications"><b>{t('notifications')}</b><span>{t('statuses')}</span></Link>
           {isAdmin() && (
             <Link className="choice admin-management-card" to="/admin">
-              <span className="admin-menu-icon">⚙</span>
+              <span className="admin-menu-icon"><Icon name="settings" /></span>
               <div><b>{t('adminPanel')}</b><span>{t('adminPanelHint')}</span></div>
               <strong>→</strong>
             </Link>
