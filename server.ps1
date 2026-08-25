@@ -94,6 +94,27 @@ if ($Status) {
 
 if (-not (Test-Path $python)) { Write-Line "нет $python" "Red"; exit 1 }
 
+function Stop-AllBots {
+    <#
+        Убивает каждый bot.py, а не только тот PID, что помнит присмотр.
+
+        Stop-Process -Force не гарантирует, что процесс исчезнет мгновенно —
+        на Windows это TerminateProcess, а он асинхронный: команда возвращает
+        управление, не дожидаясь фактического завершения. Запуск нового бота
+        сразу следующей строкой иногда обгонял смерть старого, и оба
+        оставались в эфире с одним токеном — Telegram отдаёт обновления
+        только одному из двух опрашивающих, и было непредсказуемо, какой
+        именно отвечает зрителю. Полная чистка перед каждым запуском бота
+        закрывает это независимо от того, как разошлось отслеживание PID.
+    #>
+    Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+        Where-Object { $_.CommandLine -like "*bot.py*" } |
+        ForEach-Object {
+            Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+            try { (Get-Process -Id $_.ProcessId -ErrorAction Stop).WaitForExit(3000) | Out-Null } catch {}
+        }
+}
+
 function Start-Hidden($file, $arguments, $workingDirectory, $name) {
     # Без перенаправления вывод скрытого процесса пропадает: бот падал молча, и
     # понять почему было нельзя.
@@ -196,8 +217,8 @@ function Wait-Api {
     return $false
 }
 
-function Find-Process($pattern) {
-    $found = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+function Find-Process($pattern, $name = "python.exe") {
+    $found = Get-CimInstance Win32_Process -Filter "Name='$name'" |
         Where-Object { $_.CommandLine -like $pattern } |
         Select-Object -First 1
     if ($found) { return $found.ProcessId }
@@ -220,10 +241,15 @@ $existingUrl = Read-EnvUrl
 if ($existingUrl -and $existingUrl -like "https://*") {
     if (Test-PublicUrl $existingUrl) {
         $api = Find-Process "*uvicorn*"
-        $tunnelProcess = Get-Process cloudflared -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($api -and $tunnelProcess) {
+        # cloudflared ушёл вместе с миграцией на tunnelmole (см. комментарий в
+        # Start-Tunnel), а эта проверка искала его и по старой памяти всегда
+        # получала пусто. В итоге ни один перезапуск server.ps1 не подхватывал
+        # рабочий стенд — каждый сносил исправный туннель и выдавал новый
+        # адрес, из-за чего ссылка у зрителей устаревала чаще, чем нужно.
+        $tunnelId = Find-Process "*tunnelmole*" "cmd.exe"
+        if ($api -and $tunnelId) {
             $url = $existingUrl
-            $tunnel = @{ id = $tunnelProcess.Id; url = $url; ready = $true }
+            $tunnel = @{ id = $tunnelId; url = $url; ready = $true }
             $bot = Find-Process "*bot.py*"
             if (-not $bot) {
                 $bot = Start-Hidden $python @("bot.py") $root "bot"
@@ -306,9 +332,8 @@ while ($true) {
             $url = $tunnel.url
             Set-PublicUrl $url
             Write-Line "новый адрес: $url — перезапускаю API и бота" "Yellow"
-            foreach ($processId in @($api, $bot)) {
-                if (Test-Alive $processId) { Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue }
-            }
+            if (Test-Alive $api) { Stop-Process -Id $api -Force -ErrorAction SilentlyContinue }
+            Stop-AllBots
             $api = Start-Hidden $python @("-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000") $root "api"
             Wait-Api | Out-Null
             $bot = Start-Hidden $python @("bot.py") $root "bot"
@@ -330,6 +355,7 @@ while ($true) {
         $botFailures = $botFailures + 1
         if ($botFailures -le 3 -or ($botFailures % [Math]::Min(20, $botFailures * 2)) -eq 0) {
             Write-Line "бот не работает (попытка $botFailures), поднимаю заново" "Yellow"
+            Stop-AllBots
             $bot = Start-Hidden $python @("bot.py") $root "bot"
         }
     } else {
