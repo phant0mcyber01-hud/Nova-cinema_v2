@@ -19,8 +19,6 @@ export const ru = {
   timeMinute: 'Мин',
   admin: 'Админ',
   adminBasePriceSaved: 'Базовая цена сохранена',
-  adminBookingStatusUpdated: 'Статус заявки обновлён',
-  adminBookingsTab: 'Заявки',
   adminDashboard: 'Dashboard',
   adminLoadFailed: 'Не удалось загрузить админ-панель',
   adminMoviesTab: 'Фильмы',

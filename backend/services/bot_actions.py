@@ -17,14 +17,22 @@ from backend.services.booking_decisions import (
     BookingNotFound,
     DecisionResult,
     HallIsFull,
+    ProposalNotFound,
     ProposedTimeRequired,
     SeatsAlreadyTaken,
+    answer_proposal,
     apply_decision,
 )
 from backend.services.slots import active_slot_times
-from backend.services.telegram import admin_action_card, admin_action_keyboard, admin_propose_time_keyboard
+from backend.services.telegram import (
+    admin_action_card,
+    admin_action_keyboard,
+    admin_propose_time_keyboard,
+    notify_admins,
+    viewer_proposal_keyboard,
+)
 
-__all__ = ["CallbackOutcome", "handle_booking_callback"]
+__all__ = ["CallbackOutcome", "handle_booking_callback", "handle_proposal_callback"]
 
 
 @dataclass
@@ -40,6 +48,9 @@ class CallbackOutcome:
     edit_keyboard: dict[str, object] | None = None
     viewer_telegram_id: int | None = None
     viewer_message: str | None = None
+    #: Buttons attached to the viewer's own message (currently only the
+    #: Accept/Decline pair after a proposed time). `None` means plain text.
+    viewer_keyboard: dict[str, object] | None = None
     show_alert: bool = False
     alert: str = ""
 
@@ -106,6 +117,7 @@ async def handle_booking_callback(session: AsyncSession, data: str) -> CallbackO
             edit_keyboard=keyboard,
             viewer_telegram_id=result.viewer_telegram_id,
             viewer_message=result.viewer_message,
+            viewer_keyboard=viewer_proposal_keyboard(booking_id),
         )
 
     if action not in ("contact", "confirm", "decline"):
@@ -127,3 +139,37 @@ async def handle_booking_callback(session: AsyncSession, data: str) -> CallbackO
         viewer_telegram_id=result.viewer_telegram_id,
         viewer_message=result.viewer_message,
     )
+
+
+async def handle_proposal_callback(session: AsyncSession, telegram_id: int, data: str) -> CallbackOutcome:
+    """Route the viewer's own `pr:accept:<id>` / `pr:decline:<id>` tap.
+
+    `telegram_id` is the id of whoever pressed the button -- passed in rather
+    than trusted from the callback data, so answering somebody else's proposal
+    is refused even if the booking id is guessed. This edits the viewer's own
+    message (buttons removed once answered) and separately tells the admins,
+    exactly as the panel's own accept/decline endpoint always did.
+    """
+    parts = data.split(":")
+    if len(parts) != 3 or parts[0] != "pr" or parts[1] not in ("accept", "decline"):
+        return CallbackOutcome(show_alert=True, alert="Неизвестная команда")
+    action = parts[1]
+    try:
+        booking_id = int(parts[2])
+    except ValueError:
+        return CallbackOutcome(show_alert=True, alert="Неизвестная заявка")
+
+    try:
+        result = await answer_proposal(session, booking_id, telegram_id, action)
+    except (BookingNotFound, ProposalNotFound):
+        return CallbackOutcome(show_alert=True, alert="Это предложение вам недоступно")
+    except HallIsFull:
+        return CallbackOutcome(show_alert=True, alert="Зал уже заполнен на это время")
+    except SeatsAlreadyTaken as error:
+        return CallbackOutcome(show_alert=True, alert=str(error))
+
+    # Same rule the panel's own endpoint follows: the admins get a live copy,
+    # and a delivery failure never touches the answer already committed above.
+    await notify_admins(result.admin_message)
+    # The buttons are removed either way: answered once, the offer is settled.
+    return CallbackOutcome(edit_text=result.viewer_message, edit_keyboard={"inline_keyboard": []})

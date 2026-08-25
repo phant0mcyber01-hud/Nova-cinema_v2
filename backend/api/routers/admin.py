@@ -21,7 +21,7 @@ from backend.services.booking_decisions import (
 from backend.services.capacity import booking_party_size
 from backend.services.media import save_image_upload
 from backend.services.settings import get_settings, serialize_settings_admin
-from backend.services.telegram import send_telegram_message
+from backend.services.telegram import send_telegram_message, viewer_proposal_keyboard
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(admin_required)])
 
@@ -126,7 +126,10 @@ async def decide_booking(
     except ProposedTimeRequired:
         raise HTTPException(422, "Proposed time is required")
 
-    await send_telegram_message(result.viewer_telegram_id, result.viewer_message)
+    # A proposed time needs an answer, not just a notification: the viewer
+    # gets Accept/Decline buttons right in the same message.
+    keyboard = viewer_proposal_keyboard(booking_id) if payload.action == "propose" else None
+    await send_telegram_message(result.viewer_telegram_id, result.viewer_message, reply_markup=keyboard)
     return {
         "status": result.status,
         "proposed_session": result.proposed_session,

@@ -17,7 +17,7 @@ from sqlalchemy.orm import selectinload
 from backend.core import config
 from backend.core.db import SessionLocal
 from backend.models import Movie
-from backend.services.bot_actions import handle_booking_callback
+from backend.services.bot_actions import handle_booking_callback, handle_proposal_callback
 from backend.services.catalog import serialize_movie
 from backend.services.deep_link import movie_id_from_payload
 from backend.services.settings import get_settings
@@ -373,9 +373,39 @@ async def cb_booking_action(call: CallbackQuery) -> None:
 
     if outcome.viewer_telegram_id and outcome.viewer_message:
         try:
-            await call.bot.send_message(outcome.viewer_telegram_id, outcome.viewer_message)
+            await call.bot.send_message(
+                outcome.viewer_telegram_id,
+                outcome.viewer_message,
+                reply_markup=_to_aiogram_markup(outcome.viewer_keyboard),
+            )
         except TelegramBadRequest:
             logger.warning("Could not message viewer %s after a bot decision", outcome.viewer_telegram_id)
+
+    await call.answer()
+
+
+# The viewer's own answer to a proposed time: `pr:accept:<id>` / `pr:decline:<id>`.
+# No admin check here -- ownership is enforced inside `answer_proposal` itself
+# by matching the caller's own telegram id against the booking's user.
+@dp.callback_query(F.data.startswith("pr:"))
+async def cb_proposal_answer(call: CallbackQuery) -> None:
+    if call.from_user is None:
+        await call.answer("Недоступно", show_alert=True)
+        return
+    async with SessionLocal() as session:
+        outcome = await handle_proposal_callback(session, call.from_user.id, str(call.data))
+
+    if outcome.show_alert:
+        await call.answer(outcome.alert or "Не удалось выполнить", show_alert=True)
+        return
+
+    if call.message is not None:
+        try:
+            await call.message.edit_text(
+                outcome.edit_text or "", reply_markup=_to_aiogram_markup(outcome.edit_keyboard)
+            )
+        except TelegramBadRequest:
+            pass
 
     await call.answer()
 

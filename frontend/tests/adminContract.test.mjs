@@ -67,7 +67,11 @@ test('the dashboard shows no counter the generic flow leaves permanently at zero
   assert.doesNotMatch(adminPanel, /potential_income|potentialIncome/, 'nothing is paid inside the app')
 })
 
-test('a booking row never claims a seat or a film the request does not have', () => {
+test('the mini app no longer renders a per-request bookings screen at all', () => {
+  // Every request is now worked entirely through the bot's own DM buttons
+  // (backend/services/bot_actions.py); a second, weaker copy of the same
+  // workflow inside the Mini App would just give the administrator two
+  // places that can silently disagree.
   assert.doesNotMatch(adminPanel, /item\.seats\b/, 'a generic request holds places, not chairs')
-  assert.match(adminPanel, /party_size/)
+  assert.doesNotMatch(adminPanel, /getAdminBookings|decideBooking|setBookingStatus/)
 })

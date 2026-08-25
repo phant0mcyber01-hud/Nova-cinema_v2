@@ -21,8 +21,6 @@ export const uz: Record<TranslationKey, string> = {
   timeMinute: 'Daqiqa',
   admin: 'Admin',
   adminBasePriceSaved: 'Bazaviy narx saqlandi',
-  adminBookingStatusUpdated: 'Ariza statusi yangilandi',
-  adminBookingsTab: 'Arizalar',
   adminDashboard: 'Dashboard',
   adminLoadFailed: 'Admin panelni yuklab bo‘lmadi',
   adminMoviesTab: 'Filmlar',

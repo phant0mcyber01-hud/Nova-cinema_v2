@@ -4,7 +4,6 @@ import type {
   AdminBonusPayload,
   AdminGalleryImage,
   AdminGalleryImagePayload,
-  AdminBooking,
   AdminReview,
   AdminSession,
   AdminSessionPayload,
@@ -21,23 +20,8 @@ export const getDashboard = () =>
     movies: number
     bookings: number
     statuses: Record<string, number>
-    recent_bookings: Pick<AdminBooking, 'id' | 'name' | 'phone' | 'status' | 'total'>[]
+    recent_bookings: { id: number; name: string; phone: string; status: string; total: number }[]
   }>('/admin/dashboard')
-
-export const getAdminBookings = () => call<AdminBooking[]>('/admin/bookings')
-
-export const setBookingStatus = (id: number, status: string) =>
-  call<{ status: string }>(`/admin/bookings/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) })
-
-export const decideBooking = (
-  id: number,
-  payload: { action: 'contact' | 'confirm' | 'decline' | 'propose'; reason?: string; proposed_session?: string },
-) =>
-  call<{ status: string; proposed_session: string; admin_note: string }>(`/admin/bookings/${id}/decision`, {
-    method: 'PATCH',
-    body: JSON.stringify(payload),
-  })
-
 
 export const setBasePrice = (base_ticket_price: number) =>
   call<{ base_ticket_price: number }>('/admin/settings/base-price', {

@@ -16,18 +16,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.core.config import BLOCKING_STATUSES
 from backend.core.db import utcnow
 from backend.models import Booking, Movie, User
-from backend.services.booking import seats_taken_by_others
+from backend.services.booking import ensure_bookable_slot, seats_taken_by_others
 from backend.services.capacity import reassign_booking_tokens
 from backend.services.settings import get_settings
+from backend.services.slots import ensure_slot_is_bookable
 from backend.services.telegram import generic_booking_confirmed_message, user_booking_notification
 
 __all__ = [
     "BookingNotFound",
     "DecisionResult",
     "HallIsFull",
+    "ProposalNotFound",
     "ProposedTimeRequired",
     "SeatsAlreadyTaken",
     "apply_decision",
+    "apply_status",
+    "answer_proposal",
 ]
 
 
@@ -51,6 +55,10 @@ class ProposedTimeRequired(Exception):
     """`propose` was called without a `proposed_session`."""
 
 
+class ProposalNotFound(Exception):
+    """The booking has no time proposed to answer, or it isn't the caller's own."""
+
+
 @dataclass
 class DecisionResult:
     """Everything a caller -- the HTTP router or the bot callback -- needs to render."""
@@ -68,6 +76,9 @@ class DecisionResult:
     show_date: str
     session_time: str
     movie_title: str | None
+    #: Set only by `answer_proposal` -- the live copy every admin gets, distinct
+    #: from `viewer_message` which goes to the one person who just answered.
+    admin_message: str = ""
 
 
 _ACTION_TO_STATUS = {"contact": "contacting", "confirm": "confirmed", "decline": "cancelled"}
@@ -203,4 +214,74 @@ async def apply_status(session: AsyncSession, booking_id: int, status: str) -> D
         show_date=booking.show_date,
         session_time=booking.session,
         movie_title=movie.title if movie is not None else None,
+    )
+
+
+async def answer_proposal(
+    session: AsyncSession, booking_id: int, telegram_id: int, action: str
+) -> DecisionResult:
+    """The viewer's own answer to a time the administrator proposed.
+
+    `telegram_id` scopes the lookup to the caller's own booking -- the same
+    ownership check `/api/profile/bookings/{id}/proposal` always enforced, and
+    the one thing that stops a stranger who somehow learns a booking id from
+    answering somebody else's proposal through the bot's buttons.
+
+    Accepting is a fresh booking decision, not a flag flip: the slot must
+    still be open and the hall must still have room there, exactly as moving
+    a booking to any other time would require.
+    """
+    from backend.models import AdminNotification
+
+    booking = await session.scalar(
+        select(Booking).join(User, Booking.user_id == User.id).where(
+            Booking.id == booking_id, User.telegram_id == telegram_id
+        )
+    )
+    if booking is None or not booking.proposed_session:
+        raise ProposalNotFound(f"Booking #{booking_id} has no proposal for this caller")
+
+    user = await session.get(User, booking.user_id)
+    movie = await session.get(Movie, booking.movie_id) if booking.movie_id is not None else None
+
+    if action == "accept":
+        if booking.movie_id is None:
+            await ensure_slot_is_bookable(session, booking.show_date, booking.proposed_session)
+        else:
+            await ensure_bookable_slot(session, booking.movie_id, booking.show_date, booking.proposed_session)
+            clash = await seats_taken_by_others(session, booking, booking.proposed_session)
+            if clash:
+                raise SeatsAlreadyTaken(clash)
+        moved = await reassign_booking_tokens(session, booking, booking.show_date, booking.proposed_session)
+        if not moved:
+            raise HallIsFull()
+        booking.session = booking.proposed_session
+        booking.proposed_session = ""
+        booking.admin_note = ""
+        admin_message = f"Клиент согласился на новое время заявки #{booking.id}: {booking.session}"
+        viewer_message = f"Вы согласились на новое время заявки #{booking.id}: {booking.session}"
+    else:
+        booking.status = "cancelled"
+        booking.admin_note = "Клиент отказался от предложенного времени"
+        admin_message = f"Клиент отказался от нового времени заявки #{booking.id}"
+        viewer_message = f"Вы отказались от предложенного времени. Заявка #{booking.id} отменена."
+
+    session.add(AdminNotification(booking_id=booking.id, message=admin_message))
+    await session.commit()
+
+    return DecisionResult(
+        booking_id=booking.id,
+        status=booking.status,
+        proposed_session=booking.proposed_session,
+        admin_note=booking.admin_note,
+        viewer_telegram_id=user.telegram_id,
+        viewer_message=viewer_message,
+        telegram_username=booking.telegram_username or user.username,
+        party_size=booking.party_size,
+        total=booking.total,
+        phone=booking.phone,
+        show_date=booking.show_date,
+        session_time=booking.session,
+        movie_title=movie.title if movie is not None else None,
+        admin_message=admin_message,
     )

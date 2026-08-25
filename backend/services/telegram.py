@@ -260,6 +260,23 @@ def admin_propose_time_keyboard(booking_id: int, times: list[str]) -> dict[str, 
     return {"inline_keyboard": rows}
 
 
+def viewer_proposal_keyboard(booking_id: int) -> dict[str, object]:
+    """What the viewer taps to answer a proposed time: `pr:accept:<id>` / `pr:decline:<id>`.
+
+    Namespaced `pr:` rather than `bk:` so the bot's single callback dispatcher
+    can tell "the administrator is deciding a request" apart from "the viewer
+    is answering a proposal" without inspecting who pressed the button.
+    """
+    return {
+        "inline_keyboard": [
+            [
+                {"text": "Принять", "callback_data": f"pr:accept:{booking_id}"},
+                {"text": "Отклонить", "callback_data": f"pr:decline:{booking_id}"},
+            ]
+        ]
+    }
+
+
 def admin_action_card(result) -> str:
     """The text the administrator reads above the buttons.
 
