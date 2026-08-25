@@ -132,6 +132,27 @@ export const formatDateShort = (date: string, language: Language) => {
     .format(value)
 }
 
+/**
+ * The day chip needs each part on its own line -- weekday, day number, month
+ * -- rather than one formatted sentence, so this is `formatDateShort` split
+ * into its pieces instead of a second date computation to keep in sync.
+ *
+ * Anchored at noon like `formatDateShort`: a plain `new Date(dateOnlyString)`
+ * parses as UTC midnight, and in a negative-UTC-offset browser timezone that
+ * reads back as the previous day.
+ */
+export const formatDateParts = (date: string, language: Language) => {
+  const value = new Date(`${date}T12:00:00`)
+  if (language === 'uz') {
+    return { weekday: uzWeekdays[value.getDay()], day: value.getDate(), month: uzMonths[value.getMonth()] }
+  }
+  return {
+    weekday: new Intl.DateTimeFormat(localeByLanguage[language], { weekday: 'short' }).format(value),
+    day: value.getDate(),
+    month: new Intl.DateTimeFormat(localeByLanguage[language], { month: 'short' }).format(value),
+  }
+}
+
 export const formatDateTime = (value: string, language: Language) => (
   new Date(value).toLocaleString(localeByLanguage[language])
 )

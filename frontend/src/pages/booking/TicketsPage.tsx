@@ -15,7 +15,7 @@ import {
 } from '../../api'
 import Shell from '../../components/Shell'
 import AdminContacts from '../../components/AdminContacts'
-import { formatDateShort, formatMoney, setCurrency, useI18n } from '../../i18n'
+import { formatDateParts, formatMoney, setCurrency, useI18n } from '../../i18n'
 import { apiMessage } from '../../lib/apiMessage'
 import { haptic } from '../../lib/haptic'
 
@@ -86,6 +86,44 @@ function HallPreview({ filled, capacity }: { filled: number; capacity: number })
         <i className={index < filled ? 'filled' : index >= capacity ? 'unavailable' : ''} key={index} />
       ))}
     </div>
+  )
+}
+
+/**
+ * One day of the calendar strip: weekday, day number and month on their own
+ * lines, plus a fill meter -- how much of the hall this day still has free,
+ * read straight off the same `available`/`capacity` the text label uses.
+ * A full day is shown, not hidden, so the viewer sees the whole week at a
+ * glance instead of days quietly vanishing from the strip.
+ */
+function DateChip({
+  date, language, active, full, available, capacity, label, onSelect,
+}: {
+  date: string
+  language: 'ru' | 'uz'
+  active: boolean
+  full: boolean
+  available: number
+  capacity: number
+  label: string
+  onSelect: () => void
+}) {
+  const parts = formatDateParts(date, language)
+  const fill = capacity > 0 ? Math.max(0, Math.min(1, available / capacity)) : 0
+  return (
+    <button
+      className={`date-chip${active ? ' active' : ''}${full ? ' full' : ''}`}
+      disabled={full}
+      onClick={onSelect}
+    >
+      <span className="date-chip-weekday">{parts.weekday}</span>
+      <span className="date-chip-day">{parts.day}</span>
+      <span className="date-chip-month">{parts.month}</span>
+      <span className="date-chip-meter" aria-hidden="true">
+        <i style={{ width: `${fill * 100}%` }} />
+      </span>
+      <small>{label}</small>
+    </button>
   )
 }
 
@@ -236,17 +274,19 @@ export default function TicketsPage() {
         <h2>{copy.date}</h2>
         {dates === null && <div className="hall-skeleton compact" />}
         {dates?.length === 0 && <p className="empty">{copy.empty}</p>}
-        <div className="ticket-options">
+        <div className="date-strip">
           {dates?.map(item => (
-            <button
-              className={date === item.date ? 'active' : ''}
-              disabled={item.slots === 0}
+            <DateChip
+              active={date === item.date}
+              available={item.available}
+              capacity={capacity}
+              date={item.date}
+              full={item.slots === 0}
               key={item.date}
-              onClick={() => { haptic.tap(); setDate(item.date); setSlot(null); setHold(null) }}
-            >
-              <b>{formatDateShort(item.date, language)}</b>
-              <small>{item.slots ? left(item.available) : copy.full}</small>
-            </button>
+              label={item.slots ? left(item.available) : copy.full}
+              language={language}
+              onSelect={() => { haptic.tap(); setDate(item.date); setSlot(null); setHold(null) }}
+            />
           ))}
         </div>
 

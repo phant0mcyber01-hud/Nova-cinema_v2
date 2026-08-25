@@ -6,20 +6,22 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.deps import admin_required, get_db
-from backend.core.config import BLOCKING_STATUSES, BOOKING_STATUSES
-from backend.core.db import utcnow
-from backend.models import AdminNotification, Booking, Movie, Show, User
+from backend.core.config import BOOKING_STATUSES
+from backend.models import AdminNotification, Booking, Movie, User
 from backend.schemas.booking import BookingDecisionIn, BookingStatusIn
 from backend.schemas.settings import BasePriceIn, SettingsIn
-from backend.services.booking import seats_taken_by_others
-from backend.services.capacity import booking_party_size, reassign_booking_tokens
+from backend.services.booking_decisions import (
+    BookingNotFound,
+    HallIsFull,
+    ProposedTimeRequired,
+    SeatsAlreadyTaken,
+    apply_decision,
+    apply_status,
+)
+from backend.services.capacity import booking_party_size
 from backend.services.media import save_image_upload
 from backend.services.settings import get_settings, serialize_settings_admin
-from backend.services.telegram import (
-    generic_booking_confirmed_message,
-    send_telegram_message,
-    user_booking_notification,
-)
+from backend.services.telegram import send_telegram_message
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(admin_required)])
 
@@ -79,46 +81,26 @@ async def admin_bookings(session: AsyncSession = Depends(get_db)) -> list[dict[s
     return result
 
 
-async def _refuse_if_the_hall_cannot_take_it(
-    session: AsyncSession, booking: Booking, next_status: str
-) -> None:
-    """Block a status change that would put a request back into a full hall.
-
-    Reviving a cancelled request is not a flag flip: the places it used to hold
-    were released the moment it was cancelled, and somebody else may be sitting
-    in them.  A generic booking is re-allocated fresh capacity tokens, because
-    the numbers it carried mean nothing once they were given away.
-    """
-    if next_status not in BLOCKING_STATUSES or booking.status in BLOCKING_STATUSES:
-        return
-    if booking.movie_id is not None:
-        clash = await seats_taken_by_others(session, booking)
-        if clash:
-            raise HTTPException(409, f"Seats already taken: {', '.join(sorted(clash))}")
-    if not await reassign_booking_tokens(session, booking, booking.show_date, booking.session):
-        raise HTTPException(409, "The hall is full at that time")
-
-
 @router.patch("/bookings/{booking_id}/status")
 async def update_booking_status(
     booking_id: int,
     payload: BookingStatusIn,
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, str]:
-    booking = await session.get(Booking, booking_id)
-    if booking is None:
+    """The blunt panel action: set a status directly (`watched` and manual overrides).
+
+    Shares `apply_status` with the bot's own callback handler, so a booking
+    processed from either surface obeys exactly the same hall-capacity rule.
+    """
+    try:
+        result = await apply_status(session, booking_id, payload.status)
+    except BookingNotFound:
         raise HTTPException(404, "Booking not found")
-    await _refuse_if_the_hall_cannot_take_it(session, booking, payload.status)
-    booking.status = payload.status
-    if payload.status == "watched" and booking.completed_at is None:
-        booking.completed_at = utcnow()
-    session.add(
-        user_booking_notification(
-            booking, "Статус бронирования изменён", f"Заявка #{booking.id}: {payload.status}"
-        )
-    )
-    await session.commit()
-    return {"status": booking.status}
+    except HallIsFull:
+        raise HTTPException(409, "The hall is full at that time")
+    except SeatsAlreadyTaken as error:
+        raise HTTPException(409, str(error))
+    return {"status": result.status}
 
 
 @router.patch("/bookings/{booking_id}/decision")
@@ -127,56 +109,28 @@ async def decide_booking(
     payload: BookingDecisionIn,
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, object]:
-    row = await session.execute(
-        select(Booking, User, Movie)
-        .join(User, Booking.user_id == User.id)
-        .outerjoin(Movie, Booking.movie_id == Movie.id)
-        .where(Booking.id == booking_id)
-    )
-    item = row.first()
-    if item is None:
+    """`contact`/`confirm`/`decline`/`propose` -- the same actions the bot's inline
+    buttons trigger, run through the shared `apply_decision`.
+    """
+    try:
+        result = await apply_decision(
+            session, booking_id, payload.action,
+            reason=payload.reason, proposed_session=payload.proposed_session,
+        )
+    except BookingNotFound:
         raise HTTPException(404, "Booking not found")
-    booking, user, movie = item
-    next_status = {"contact": "contacting", "confirm": "confirmed", "decline": "cancelled"}.get(payload.action)
-    if next_status is not None:
-        await _refuse_if_the_hall_cannot_take_it(session, booking, next_status)
-    if payload.action == "contact":
-        booking.status = "contacting"
-        booking.admin_note = payload.reason.strip()
-        message = f"Мы получили заявку #{booking.id} и свяжемся с вами для подтверждения."
-    elif payload.action == "confirm":
-        booking.status = "confirmed"
-        booking.proposed_session = ""
-        booking.admin_note = ""
-        if movie is None:
-            # Nothing was promised about a film, so the confirmation must not
-            # imply one -- and it carries the contacts for arranging it.
-            message = generic_booking_confirmed_message(booking, await get_settings(session))
-        else:
-            message = (
-                f"Ваша бронь #{booking.id} подтверждена: {movie.title}, "
-                f"{booking.show_date} {booking.session}."
-            )
-    elif payload.action == "decline":
-        booking.status = "cancelled"
-        booking.admin_note = payload.reason.strip()
-        message = f"Заявка #{booking.id} отклонена. Причина: {booking.admin_note or 'не указана'}."
-    else:
-        if not payload.proposed_session:
-            raise HTTPException(422, "Proposed time is required")
-        booking.proposed_session = payload.proposed_session
-        booking.admin_note = payload.reason.strip()
-        message = (
-            f"Nova Cinema предлагает другое время для заявки #{booking.id}: "
-            f"{booking.proposed_session}. {booking.admin_note}"
-        ).strip()
-    session.add(user_booking_notification(booking, "Nova Cinema", message))
-    await session.commit()
-    await send_telegram_message(user.telegram_id, message)
+    except HallIsFull:
+        raise HTTPException(409, "The hall is full at that time")
+    except SeatsAlreadyTaken as error:
+        raise HTTPException(409, str(error))
+    except ProposedTimeRequired:
+        raise HTTPException(422, "Proposed time is required")
+
+    await send_telegram_message(result.viewer_telegram_id, result.viewer_message)
     return {
-        "status": booking.status,
-        "proposed_session": booking.proposed_session,
-        "admin_note": booking.admin_note,
+        "status": result.status,
+        "proposed_session": result.proposed_session,
+        "admin_note": result.admin_note,
     }
 
 
@@ -253,3 +207,4 @@ async def dashboard(session: AsyncSession = Depends(get_db)) -> dict[str, object
 @router.post("/uploads")
 async def upload_image(file: UploadFile = File(...)) -> dict[str, str]:
     return {"url": await save_image_upload(file)}
+

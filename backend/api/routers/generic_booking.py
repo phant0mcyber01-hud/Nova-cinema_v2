@@ -32,6 +32,7 @@ from backend.services.slots import (
     ensure_slot_is_bookable,
 )
 from backend.services.telegram import (
+    admin_action_keyboard,
     generic_booking_admin_message,
     generic_booking_user_message,
     notify_admins,
@@ -252,13 +253,14 @@ async def create_request(
     # extra query after the commit expires the instance.
     settings = await get_settings(session)
     admin_message = generic_booking_admin_message(booking)
+    admin_keyboard = admin_action_keyboard(booking.id, "pending", telegram_username=username, telegram_id=user.telegram_id)
     user_message = generic_booking_user_message(booking, settings)
     booking_id = booking.id
     ticket_code = booking.code
     await session.commit()
     # After the commit on purpose: the request is already durable, so a dead
     # network or an admin who never started a chat cannot undo it.
-    await notify_admins(admin_message)
+    await notify_admins(admin_message, reply_markup=admin_keyboard)
     return {
         "id": booking_id,
         "status": "pending",

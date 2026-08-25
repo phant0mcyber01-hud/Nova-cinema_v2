@@ -78,6 +78,24 @@ html,body,#root{min-height:100%;overflow-x:hidden}.app{width:100%;max-width:760p
 .hall{--row-label-size:clamp(20px,7vw,32px);--seat-gap:clamp(7px,2.4vw,13px);display:grid;grid-template-columns:1fr;gap:12px;width:100%;max-width:460px;overflow:hidden;margin:0 auto 18px;padding:16px clamp(8px,3vw,16px) 18px;border-radius:24px;background:radial-gradient(circle at 50% 0,#451923 0,#181315 48%,#0d0b0c 100%)}
 .hall-numbers,.hall-row{display:grid;grid-template-columns:var(--row-label-size) repeat(var(--seat-count),minmax(0,1fr));gap:var(--seat-gap);align-items:center;width:100%;max-width:none}
 .hall-numbers span{display:block}
+
+/* Nova Cinema: the designed day picker (calendar strip) */
+.date-strip{display:flex;gap:10px;margin-top:4px;padding-bottom:4px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+.date-strip::-webkit-scrollbar{display:none}
+.date-chip{display:grid;flex:0 0 auto;gap:2px;width:74px;padding:14px 8px 12px;border:1px solid #3b252a;border-radius:16px;color:inherit;text-align:center;background:linear-gradient(180deg,#1b1517,#120f10);scroll-snap-align:start;transition:transform .18s ease,border-color .18s ease,background .18s ease}
+.date-chip-weekday{color:#b8afb1;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.date-chip-day{font-size:24px;font-weight:900;line-height:1.05}
+.date-chip-month{color:#97898c;font-size:11px}
+.date-chip-meter{display:block;overflow:hidden;width:100%;height:4px;margin:6px 0 4px;border-radius:999px;background:#2c2023}
+.date-chip-meter i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#2ab768,#158146);transition:width .25s ease}
+.date-chip small{color:#8e8184;font-size:9px;line-height:1.25}
+.date-chip:not(:disabled):hover{border-color:#8f2339;transform:translateY(-2px)}
+.date-chip.active{border-color:#a12f45;background:linear-gradient(180deg,#3a1721,#22121a);box-shadow:0 12px 28px #8f1f3533}
+.date-chip.active .date-chip-meter i{background:linear-gradient(90deg,#f0c743,#bd8618)}
+.date-chip.full{opacity:.4}
+.date-chip.full .date-chip-meter i{background:#5b2530}
+.date-chip:disabled{cursor:not-allowed}
+@media(min-width:600px){.date-chip{width:82px}}
 .hall-numbers b{display:grid;place-items:center;min-width:0;color:#ccb9be;font-size:clamp(11px,3vw,13px);font-weight:900;text-align:center}
 .row-label{display:grid;place-items:center;min-width:0;color:#ffdce4;font-size:clamp(15px,4vw,18px);font-weight:900;text-align:center}
 .seat{justify-self:center;width:min(100%,58px);min-width:0;height:auto;aspect-ratio:1;border-radius:50%;font-size:clamp(13px,4.1vw,18px)}

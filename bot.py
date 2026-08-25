@@ -17,6 +17,7 @@ from sqlalchemy.orm import selectinload
 from backend.core import config
 from backend.core.db import SessionLocal
 from backend.models import Movie
+from backend.services.bot_actions import handle_booking_callback
 from backend.services.catalog import serialize_movie
 from backend.services.deep_link import movie_id_from_payload
 from backend.services.settings import get_settings
@@ -321,6 +322,62 @@ async def cmd_admin(message: types.Message) -> None:
         ]
     )
     await message.answer("<b>Админ-раздел Nova Cinema</b>\n\nУправление контентом доступно внутри Mini App.", reply_markup=keyboard)
+
+
+def _to_aiogram_markup(keyboard: dict[str, object] | None) -> InlineKeyboardMarkup | None:
+    """`backend.services.telegram.admin_action_keyboard`'s plain dict -> aiogram markup."""
+    if keyboard is None:
+        return None
+    rows = keyboard.get("inline_keyboard", [])
+    if not rows:
+        # aiogram refuses an empty keyboard outright, and a settled request
+        # legitimately offers none -- clearing the markup is done by editing
+        # with `reply_markup=None` instead of an empty `InlineKeyboardMarkup`.
+        return None
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(**button) for button in row]
+            for row in rows
+        ]
+    )
+
+
+# Every request notification's keyboard calls back here: `bk:<action>:<id>`,
+# `bk:proposetime:<id>:<time>` and `bk:cancelpropose:<id>`. This is the entire
+# admin workflow the client asked to live in the bot's own DM -- the panel in
+# the Mini App keeps working, but day to day nothing has to be opened for it.
+@dp.callback_query(F.data.startswith("bk:"))
+async def cb_booking_action(call: CallbackQuery) -> None:
+    if call.from_user is None or call.from_user.id not in ADMIN_TELEGRAM_IDS:
+        await call.answer("Недоступно", show_alert=True)
+        return
+    async with SessionLocal() as session:
+        outcome = await handle_booking_callback(session, str(call.data))
+
+    if outcome.show_alert:
+        await call.answer(outcome.alert or "Не удалось выполнить", show_alert=True)
+        return
+
+    if call.message is not None and (outcome.edit_text is not None or outcome.edit_keyboard is not None):
+        try:
+            if outcome.edit_text is not None:
+                await call.message.edit_text(
+                    outcome.edit_text, reply_markup=_to_aiogram_markup(outcome.edit_keyboard)
+                )
+            else:
+                await call.message.edit_reply_markup(reply_markup=_to_aiogram_markup(outcome.edit_keyboard))
+        except TelegramBadRequest:
+            # The card was already in this exact state (a double tap racing
+            # itself) -- Telegram's "message is not modified" is not an error.
+            pass
+
+    if outcome.viewer_telegram_id and outcome.viewer_message:
+        try:
+            await call.bot.send_message(outcome.viewer_telegram_id, outcome.viewer_message)
+        except TelegramBadRequest:
+            logger.warning("Could not message viewer %s after a bot decision", outcome.viewer_telegram_id)
+
+    await call.answer()
 
 
 async def main() -> None:

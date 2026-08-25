@@ -25,22 +25,28 @@ TELEGRAM_API_BASE = "https://api.telegram.org"
 transport: httpx.AsyncBaseTransport | None = None
 
 
-async def send_telegram_message(telegram_id: int, message: str) -> None:
+async def send_telegram_message(telegram_id: int, message: str, *, reply_markup: dict[str, object] | None = None) -> None:
     """Deliver one message, swallowing every failure.
 
     A booking must never be lost because Telegram was unreachable, the token was
     rotated, or the recipient never pressed Start -- a bot cannot open a chat the
     user has not initiated, and that returns 403 rather than raising here.
+
+    `reply_markup` attaches an inline keyboard (see `admin_action_keyboard`)
+    when the caller wants the message to double as an action card.
     """
     token = config.bot_token()
     if not token:
         logger.warning("BOT_TOKEN is empty: skipping Telegram message to %s", telegram_id)
         return
+    payload: dict[str, object] = {"chat_id": telegram_id, "text": message}
+    if reply_markup is not None:
+        payload["reply_markup"] = reply_markup
     try:
         async with httpx.AsyncClient(timeout=8, transport=transport) as client:
             response = await client.post(
                 f"{TELEGRAM_API_BASE}/bot{token}/sendMessage",
-                json={"chat_id": telegram_id, "text": message},
+                json=payload,
             )
         if response.status_code != 200:
             # 403 here almost always means the admin has never started a chat
@@ -55,7 +61,7 @@ async def send_telegram_message(telegram_id: int, message: str) -> None:
         logger.exception("Could not send a Telegram message to %s", telegram_id)
 
 
-async def notify_admins(message: str) -> None:
+async def notify_admins(message: str, *, reply_markup: dict[str, object] | None = None) -> None:
     """Push a live copy of an admin notification into the admins' Telegram chats.
 
     The `AdminNotification` row in the database stays the record of truth for the
@@ -67,7 +73,7 @@ async def notify_admins(message: str) -> None:
         logger.warning("ADMIN_TELEGRAM_IDS is empty: nobody to notify about %r", message[:80])
         return
     for admin_id in sorted(admin_ids):
-        await send_telegram_message(admin_id, message)
+        await send_telegram_message(admin_id, message, reply_markup=reply_markup)
 
 
 def new_booking_admin_message(booking: Booking, movie_title: str) -> str:
@@ -196,3 +202,84 @@ def generic_booking_confirmed_message(booking: Booking, settings) -> str:
             *(["", *_admin_contacts(settings)] if _admin_contacts(settings) else []),
         ]
     )
+
+
+# --- the administrator's own workflow: buttons in the bot's DM ----------------
+#
+# The client wants the everyday work to happen in Telegram itself: the request
+# notification carries real inline buttons, so the administrator never has to
+# open the Mini App to move a request along. The panel keeps working exactly
+# as before -- both surfaces call the same `apply_decision` in
+# `backend.services.booking_decisions`; this module only draws the keyboard.
+
+_STATUS_LABELS = {
+    "pending": "Ожидает",
+    "contacting": "В обработке",
+    "confirmed": "Подтверждена",
+    "cancelled": "Отклонена",
+    "watched": "Состоялась",
+}
+
+#: Actions offered for each still-open status. A settled request (confirmed,
+#: cancelled, watched) offers none -- there is nothing left to relitigate.
+_ACTIONS_FOR_STATUS = {
+    "pending": (("contact", "Начать обработку"), ("confirm", "Подтвердить"), ("propose", "Предложить время"), ("decline", "Отклонить")),
+    "contacting": (("confirm", "Подтвердить"), ("propose", "Предложить время"), ("decline", "Отклонить")),
+}
+
+
+def admin_action_keyboard(
+    booking_id: int,
+    status: str,
+    *,
+    telegram_username: str = "",
+    telegram_id: int | None = None,
+) -> dict[str, object]:
+    """The buttons under a request the administrator can still act on.
+
+    A `url` chat button is included whenever there is somewhere to send it:
+    a public `@username` opens `t.me/username`, and a viewer with none is
+    still reachable at `tg://user?id=...` from the same Telegram client.
+    """
+    rows: list[list[dict[str, object]]] = [
+        [{"text": label, "callback_data": f"bk:{action}:{booking_id}"}]
+        for action, label in _ACTIONS_FOR_STATUS.get(status, ())
+    ]
+    handle = telegram_username.strip().lstrip("@")
+    if handle:
+        rows.append([{"text": "Открыть чат", "url": f"https://t.me/{handle}"}])
+    elif telegram_id:
+        rows.append([{"text": "Открыть чат", "url": f"tg://user?id={telegram_id}"}])
+    return {"inline_keyboard": rows}
+
+
+def admin_propose_time_keyboard(booking_id: int, times: list[str]) -> dict[str, object]:
+    """One fixed time per button, plus a way back to the main actions."""
+    rows = [[{"text": time, "callback_data": f"bk:proposetime:{booking_id}:{time}"}] for time in times]
+    rows.append([{"text": "Назад", "callback_data": f"bk:cancelpropose:{booking_id}"}])
+    return {"inline_keyboard": rows}
+
+
+def admin_action_card(result) -> str:
+    """The text the administrator reads above the buttons.
+
+    `result` is a `backend.services.booking_decisions.DecisionResult` (or
+    anything with the same attributes) -- accepted duck-typed so this module
+    never has to import that one and risk a cycle.
+    """
+    lines = [f"Заявка #{result.booking_id}", f"Статус: {_STATUS_LABELS.get(result.status, result.status)}"]
+    if result.movie_title:
+        lines.append(f"Фильм: {result.movie_title}")
+    else:
+        lines.append("Фильм согласуется с администратором лично")
+    lines.append(f"Дата: {format_date(result.show_date)} {result.session_time}")
+    lines.append(f"Гостей: {result.party_size}")
+    lines.append(f"Сумма: {format_money(result.total, 'UZS')}")
+    lines.append(f"Телефон: {result.phone}")
+    if result.telegram_username:
+        lines.append(f"Telegram: @{result.telegram_username}")
+    if result.proposed_session:
+        lines.append(f"Предложено время: {result.proposed_session}")
+    if result.admin_note:
+        lines.append(f"Заметка: {result.admin_note}")
+    return "\n".join(lines)
