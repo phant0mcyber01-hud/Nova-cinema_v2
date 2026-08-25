@@ -39,6 +39,8 @@ class SettingsIn(BaseModel):
     max_seats_per_booking: int = Field(ge=1, le=50)
     hold_minutes: int = Field(ge=1, le=180)
     booking_days_ahead: int = Field(ge=1, le=60)
+    #: 0 switches automatic expiry off; the ceiling is a fortnight.
+    pending_expire_hours: int = Field(default=24, ge=0, le=336)
     timezone_offset_minutes: int = Field(ge=-720, le=840)
 
     @field_validator("phone", "admin_phone")

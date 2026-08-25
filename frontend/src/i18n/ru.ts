@@ -402,6 +402,8 @@ export const ru = {
   reviewAlreadyLeft: 'Вы уже оставили отзыв на этот фильм',
   timezoneOffset: 'Часовой пояс, минут от UTC',
   timezoneOffsetHint: 'Узбекистан — 300 (UTC+5). Определяет, когда сеанс считается завершённым.',
+  pendingExpireHours: 'Срок ожидания заявки, часов',
+  pendingExpireHoursHint: 'Через столько часов неподтверждённая заявка отменяется и места возвращаются в зал. 0 — не отменять автоматически.',
   navAbout: 'О нас',
   aboutTitle: 'О кинотеатре',
   howToFindUs: 'Как нас найти',

@@ -35,6 +35,7 @@ const toPayload = (settings: AdminSettings): AdminSettingsPayload => ({
   max_seats_per_booking: settings.max_seats_per_booking,
   hold_minutes: settings.hold_minutes,
   booking_days_ahead: settings.booking_days_ahead,
+  pending_expire_hours: settings.pending_expire_hours ?? 24,
   timezone_offset_minutes: settings.timezone_offset_minutes,
 })
 
@@ -252,6 +253,16 @@ export default function CinemaSettingsView({ settings, onSaved }: CinemaSettings
                 max="840"
                 value={draft.timezone_offset_minutes}
                 onChange={event => set('timezone_offset_minutes', Number(event.target.value))}
+              />
+            </label>
+            <label>
+              <b>{t('pendingExpireHours')}</b><small>{t('pendingExpireHoursHint')}</small>
+              <input
+                type="number"
+                min="0"
+                max="336"
+                value={draft.pending_expire_hours}
+                onChange={event => set('pending_expire_hours', Number(event.target.value))}
               />
             </label>
             <label>

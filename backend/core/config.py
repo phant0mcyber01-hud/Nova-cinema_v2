@@ -83,6 +83,9 @@ DEFAULT_TICKET_PRICE = 30000
 DEFAULT_MAX_SEATS_PER_BOOKING = 4
 DEFAULT_HOLD_MINUTES = 10
 DEFAULT_BOOKING_DAYS_AHEAD = 7
+#: How long a request may wait for the administrator before it is cancelled and
+#: its places go back to the hall. 0 switches the timer off entirely.
+DEFAULT_PENDING_EXPIRE_HOURS = 24
 #: The cinema's clock. The server runs in UTC; Uzbekistan is UTC+5 with no
 #: daylight saving, so a fixed offset is exact. Minutes, to allow half-hour zones.
 DEFAULT_TIMEZONE_OFFSET_MINUTES = 300

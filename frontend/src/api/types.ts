@@ -238,6 +238,8 @@ export type AdminSettings = {
   max_seats_per_booking: number
   hold_minutes: number
   booking_days_ahead: number
+  /** Hours a request may wait for the admin; 0 turns automatic expiry off. */
+  pending_expire_hours: number
   timezone_offset_minutes: number
   updated_at: string
 }

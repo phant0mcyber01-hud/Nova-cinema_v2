@@ -404,6 +404,8 @@ export const uz: Record<TranslationKey, string> = {
   reviewAlreadyLeft: 'Siz bu filmga sharh qoldirgansiz',
   timezoneOffset: 'Vaqt mintaqasi, UTC dan daqiqa',
   timezoneOffsetHint: 'Oʻzbekiston — 300 (UTC+5). Seans tugaganini shu belgilaydi.',
+  pendingExpireHours: 'Ariza kutish muddati, soat',
+  pendingExpireHoursHint: 'Shuncha soatdan keyin tasdiqlanmagan ariza bekor qilinadi va joylar zalga qaytadi. 0 — avtomatik bekor qilinmasin.',
   navAbout: 'Biz haqimizda',
   aboutTitle: 'Kinoteatr haqida',
   howToFindUs: 'Bizni qanday topish',

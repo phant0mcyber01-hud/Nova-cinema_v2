@@ -51,6 +51,11 @@ class CinemaSettings(Base):
     max_seats_per_booking: Mapped[int] = mapped_column(Integer, default=config.DEFAULT_MAX_SEATS_PER_BOOKING)
     hold_minutes: Mapped[int] = mapped_column(Integer, default=config.DEFAULT_HOLD_MINUTES)
     booking_days_ahead: Mapped[int] = mapped_column(Integer, default=config.DEFAULT_BOOKING_DAYS_AHEAD)
+    #: Hours a `pending` request may wait for the administrator before it is
+    #: cancelled and its places return to the hall. 0 turns the timer off.
+    pending_expire_hours: Mapped[int] = mapped_column(
+        Integer, default=config.DEFAULT_PENDING_EXPIRE_HOURS, server_default=str(config.DEFAULT_PENDING_EXPIRE_HOURS)
+    )
     #: Offset from UTC in minutes; decides when a screening counts as finished.
     timezone_offset_minutes: Mapped[int] = mapped_column(
         Integer, default=config.DEFAULT_TIMEZONE_OFFSET_MINUTES

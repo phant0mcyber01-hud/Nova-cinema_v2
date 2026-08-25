@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.core.config import BLOCKING_STATUSES
 from backend.core.db import utcnow
 from backend.models import Booking, CapacityHold, SeatHold
+from backend.services.requests import expire_stale_requests
 from backend.services.settings import get_settings
 
 __all__ = [
@@ -97,6 +98,12 @@ class SlotUsage:
 
 
 async def purge_expired_holds(session: AsyncSession) -> None:
+    """Drop expired capacity holds, and release requests nobody ever answered.
+    Both are done in the same place so every read of the hall sees the same
+    truth: a `pending` request past the admin's window is no longer holding
+    anything, and its places are offered to the next viewer.
+    """
+    await expire_stale_requests(session)
     await session.execute(CapacityHold.__table__.delete().where(CapacityHold.expires_at < utcnow()))
 
 
