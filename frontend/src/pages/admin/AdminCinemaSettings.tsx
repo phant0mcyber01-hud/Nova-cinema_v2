@@ -25,6 +25,9 @@ const toPayload = (settings: AdminSettings): AdminSettingsPayload => ({
   work_hours_uz: settings.work_hours_uz,
   about: settings.about,
   about_uz: settings.about_uz,
+  important: settings.important ?? '',
+  important_uz: settings.important_uz ?? '',
+  faq: settings.faq ?? [],
   base_ticket_price: settings.base_ticket_price,
   currency: settings.currency,
   hall_rows: settings.hall_rows,
@@ -103,6 +106,16 @@ export default function CinemaSettingsView({ settings, onSaved }: CinemaSettings
               <input value={draft.work_hours_uz} onChange={event => set('work_hours_uz', event.target.value)} />
             </label>
           </div>
+        </div>
+      </section>
+
+      <section className="session-builder">
+        <header><span>FAQ</span><b>Важно / Muhim</b></header>
+        <div className="session-step-body session-options">
+          <label><b>Важно знать</b><small>{t('russianVersion')}</small><textarea value={draft.important} onChange={event => set('important', event.target.value)} /></label>
+          <label><b>Muhim maʼlumot</b><small>{t('uzbekVersion')}</small><textarea value={draft.important_uz} onChange={event => set('important_uz', event.target.value)} /></label>
+          <label><b>FAQ RU</b><textarea value={draft.faq[0]?.question_ru ?? ''} placeholder="Вопрос" onChange={event => set('faq', [{ question_ru: event.target.value, answer_ru: draft.faq[0]?.answer_ru ?? '', question_uz: draft.faq[0]?.question_uz ?? '', answer_uz: draft.faq[0]?.answer_uz ?? '' }])} /><textarea value={draft.faq[0]?.answer_ru ?? ''} placeholder="Ответ" onChange={event => set('faq', [{ question_ru: draft.faq[0]?.question_ru ?? '', answer_ru: event.target.value, question_uz: draft.faq[0]?.question_uz ?? '', answer_uz: draft.faq[0]?.answer_uz ?? '' }])} /></label>
+          <label><b>FAQ UZ</b><textarea value={draft.faq[0]?.question_uz ?? ''} placeholder="Savol" onChange={event => set('faq', [{ question_ru: draft.faq[0]?.question_ru ?? '', answer_ru: draft.faq[0]?.answer_ru ?? '', question_uz: event.target.value, answer_uz: draft.faq[0]?.answer_uz ?? '' }])} /><textarea value={draft.faq[0]?.answer_uz ?? ''} placeholder="Javob" onChange={event => set('faq', [{ question_ru: draft.faq[0]?.question_ru ?? '', answer_ru: draft.faq[0]?.answer_ru ?? '', question_uz: draft.faq[0]?.question_uz ?? '', answer_uz: event.target.value }])} /></label>
         </div>
       </section>
 

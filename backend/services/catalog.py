@@ -22,6 +22,18 @@ def is_new_release(movie: Movie, today: str | None = None) -> bool:
 SEARCHABLE_FIELDS = ("title", "genre", "description", "country", "director")
 
 
+def split_genres(value: str) -> list[str]:
+    """The genres a film belongs to.
+
+    The catalog stores them in one field, comma-separated ("Фантастика,
+    Боевик"), because that is how the administrator types them. Reading the
+    field whole made that string its own genre: a filter nobody clicks and a
+    section with one film in it, while the real "Боевик" section was missing
+    the film entirely.
+    """
+    return [genre.strip() for genre in (value or "").split(",") if genre.strip()]
+
+
 def matches_query(payload: dict[str, object], query: str) -> bool:
     """Case-insensitive substring match over the already-localised payload.
 
@@ -122,21 +134,35 @@ def serialize_movie(
     }
 
 
-def serialize_booking(booking, movie: Movie, language: str = "ru") -> dict[str, object]:
-    text = localized_movie_text(movie, language)
+#: What a request shows instead of a film title before one is agreed.
+FALLBACK_TITLE = "Nova Cinema"
+
+
+def serialize_booking(booking, movie: Movie | None, language: str = "ru") -> dict[str, object]:
+    """`movie` is None for a generic request: the mini app books the hall.
+
+    The payload then carries the cinema's own name rather than a film, and the
+    internal capacity tokens are withheld -- the viewer reserved a number of
+    places, and promising them a row and a chair would be a lie.
+    """
+    text = localized_movie_text(movie, language) if movie is not None else {}
+    party_size = booking.party_size or len([seat for seat in booking.seats.split(",") if seat])
     return {
         "id": booking.id,
         "uuid": booking.uuid,
         "qr_token": booking.qr_token,
         "qr_valid": booking.status in QR_VALID_STATUSES,
-        "movie": text["title"],
-        "poster": movie.poster,
-        "description": text["description"],
-        "trailer_id": movie.trailer_id,
+        "movie_id": booking.movie_id,
+        "movie": text.get("title") if movie is not None else FALLBACK_TITLE,
+        "movie_agreed": movie is not None,
+        "poster": movie.poster if movie is not None else "",
+        "description": text.get("description", "") if movie is not None else "",
+        "trailer_id": movie.trailer_id if movie is not None else "",
         "show_date": booking.show_date,
         "session": booking.session,
-        "seats": booking.seats,
-        "seats_count": len([seat for seat in booking.seats.split(",") if seat]),
+        "seats": booking.seats if movie is not None else "",
+        "seats_count": party_size,
+        "party_size": party_size,
         "ticket_price": booking.ticket_price,
         "total": booking.total,
         "status": booking.status,

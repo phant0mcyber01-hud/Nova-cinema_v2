@@ -25,12 +25,15 @@ def test_admin_ids_ignore_junk():
 
 
 def test_hall_seed_matches_the_real_auditorium():
-    """Nova Cinema has one hall: 3 rows of 5 seats.
+    """Nova Cinema has one hall: 3 rows of 4 seats, twelve places in all.
 
-    These constants only seed the settings row -- after the first run the
-    admin-managed database values are authoritative.
+    Twelve is the whole booking inventory of the cinema, so it is also the
+    largest party a single request can be for. These constants only seed the
+    settings row -- after the first run the admin-managed database values are
+    authoritative.
     """
-    assert (config.DEFAULT_HALL_ROWS, config.DEFAULT_HALL_COLS) == (3, 5)
+    assert (config.DEFAULT_HALL_ROWS, config.DEFAULT_HALL_COLS) == (3, 4)
+    assert config.DEFAULT_HALL_ROWS * config.DEFAULT_HALL_COLS == 12
     assert config.DEFAULT_MAX_SEATS_PER_BOOKING <= config.DEFAULT_HALL_ROWS * config.DEFAULT_HALL_COLS
 
 

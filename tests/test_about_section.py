@@ -120,22 +120,7 @@ async def test_bonuses_the_admin_switched_on_reach_the_about_screen(client):
     assert uz[0]["title"] == "Tugʻilgan kun"
 
 
-async def test_melodies_the_admin_uploaded_reach_the_about_screen(client):
-    admin = await login(client, ADMIN_ID, "admin")
-    for title, url, order in (("Заставка", "/uploads/intro.mp3", 2), ("Антракт", "/uploads/break.mp3", 1)):
-        response = await client.post(
-            "/api/admin/melodies",
-            json={"title": title, "file_url": url, "sort_order": order},
-            headers=auth_header(admin),
-        )
-        assert response.status_code == 200
-
-    public = (await client.get("/api/melodies")).json()
-    assert [item["title"] for item in public] == ["Антракт", "Заставка"]
-    assert public[0]["file_url"] == "/uploads/break.mp3", "the player needs a real source"
-
-
 async def test_about_content_is_readable_without_signing_in(client):
     """The About screen is the first thing a stranger opens."""
-    for path in ("/api/settings", "/api/gallery", "/api/bonuses", "/api/melodies"):
+    for path in ("/api/settings", "/api/gallery", "/api/bonuses"):
         assert (await client.get(path)).status_code == 200, path

@@ -86,10 +86,10 @@ SHOW_DATE = (cinema_today() + timedelta(days=1)).isoformat()
 SESSION = "19:00"
 
 
-def movie_row(title: str = "Тестовый фильм") -> Movie:
+def movie_row(title: str = "Тестовый фильм", genre: str = "Драма") -> Movie:
     return Movie(
         title=title,
-        genre="Драма",
+        genre=genre,
         description="Описание",
         poster="https://example.test/poster.jpg",
         trailer_id="abcdefghijk",

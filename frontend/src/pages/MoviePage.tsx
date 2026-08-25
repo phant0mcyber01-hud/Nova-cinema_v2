@@ -5,7 +5,7 @@ import { Link, useParams } from 'react-router-dom'
 import { ApiError, addFavorite, createReview, getAuthState, getMovie, type MovieDetail } from '../api'
 import Icon from '../components/Icon'
 import Shell from '../components/Shell'
-import { formatDateShort, useI18n } from '../i18n'
+import { useI18n } from '../i18n'
 import { apiMessage } from '../lib/apiMessage'
 import { haptic } from '../lib/haptic'
 
@@ -132,7 +132,6 @@ export default function MoviePage() {
             <span>{movie.age}+</span>
             <span>{movie.duration} {t('minutes')}</span>
           </div>
-          <Link className="book" to={`/booking/${movie.id}/date`} onClick={haptic.tap}>{t('bookTicket')}</Link>
           <button className="admin-ghost detail-favorite" onClick={() => { void saveFavorite() }}>{t('addToFavorites')}</button>
           <button className="admin-ghost detail-favorite" onClick={() => { void share() }}><Icon name="share" /> {t('share')}</button>
         </div>
@@ -141,29 +140,6 @@ export default function MoviePage() {
       <section className="credits">
         {!!movie.director && <div><small>{t('director')}</small><b>{movie.director}</b></div>}
         {!!movie.cast.length && <div><small>{t('cast')}</small><b>{movie.cast.join(', ')}</b></div>}
-      </section>
-      <section className="schedule-block">
-        <div className="strip-head">
-          <h2>{t('availableSessions')}</h2>
-          <p>{t('availableSessionsHint')}</p>
-        </div>
-        {movie.schedule.length ? movie.schedule.map(day => (
-          <div className="schedule-day" key={day.date}>
-            <b>{formatDateShort(day.date, language)}</b>
-            <div className="schedule-times">
-              {day.times.map(time => (
-                <Link
-                  key={time}
-                  className="schedule-time"
-                  to={`/booking/${movie.id}/date/${day.date}/time/${time}/hall`}
-                  onClick={haptic.select}
-                >
-                  {time}
-                </Link>
-              ))}
-            </div>
-          </div>
-        )) : <p className="empty">{t('noSessionsYet')}</p>}
       </section>
       {movie.trailer_id ? (
         <div className="trailer">

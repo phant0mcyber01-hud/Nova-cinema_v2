@@ -10,7 +10,9 @@ from backend.models import AdminNotification, Booking, Favorite, Movie, User, Us
 from backend.schemas.booking import BookingProposalIn
 from backend.schemas.profile import ProfileIn
 from backend.services.booking import ensure_bookable_slot, seats_taken_by_others
+from backend.services.capacity import reassign_booking_tokens
 from backend.services.catalog import serialize_booking, serialize_movie
+from backend.services.slots import ensure_slot_is_bookable
 from backend.services.telegram import notify_admins
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
@@ -51,7 +53,9 @@ async def profile_bookings(
 ) -> list[dict[str, object]]:
     rows = await session.execute(
         select(Booking, Movie)
-        .join(Movie, Booking.movie_id == Movie.id)
+        # Outer: a generic request carries no film, and an inner join would drop
+        # every new booking out of the viewer's own history.
+        .outerjoin(Movie, Booking.movie_id == Movie.id)
         .where(Booking.user_id == user.id)
         .order_by(Booking.id.desc())
     )
@@ -67,7 +71,7 @@ async def profile_booking(
 ) -> dict[str, object]:
     rows = await session.execute(
         select(Booking, Movie)
-        .join(Movie, Booking.movie_id == Movie.id)
+        .outerjoin(Movie, Booking.movie_id == Movie.id)
         .where(Booking.id == booking_id, Booking.user_id == user.id)
     )
     item = rows.first()
@@ -93,11 +97,21 @@ async def answer_booking_proposal(
         raise HTTPException(409, "No proposed time")
     if payload.action == "accept":
         # Moving to another time is a fresh booking decision, not a flag flip:
-        # the screening must still exist and the seats must be free there.
-        await ensure_bookable_slot(session, booking.movie_id, booking.show_date, booking.proposed_session)
-        clash = await seats_taken_by_others(session, booking, booking.proposed_session)
-        if clash:
-            raise HTTPException(409, f"Seats already taken: {', '.join(sorted(clash))}")
+        # the slot must still be open and the hall must still have room there.
+        if booking.movie_id is None:
+            await ensure_slot_is_bookable(session, booking.show_date, booking.proposed_session)
+        else:
+            await ensure_bookable_slot(
+                session, booking.movie_id, booking.show_date, booking.proposed_session
+            )
+            clash = await seats_taken_by_others(session, booking, booking.proposed_session)
+            if clash:
+                raise HTTPException(409, f"Seats already taken: {', '.join(sorted(clash))}")
+        moved = await reassign_booking_tokens(
+            session, booking, booking.show_date, booking.proposed_session
+        )
+        if not moved:
+            raise HTTPException(409, "The hall is full at that time")
         booking.session = booking.proposed_session
         booking.proposed_session = ""
         booking.admin_note = ""

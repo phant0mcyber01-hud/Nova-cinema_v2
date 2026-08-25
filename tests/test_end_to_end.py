@@ -159,7 +159,7 @@ async def test_the_whole_journey_from_catalog_to_review(client):
             params={"show_date": TOMORROW, "session_time": "19:00"},
         )
     ).json()
-    assert (hall["rows"], hall["cols"]) == (3, 5)
+    assert (hall["rows"], hall["cols"]) == (3, 4)
     assert hall["price"] == 40000, "the price the admin has just set"
     assert hall["taken"] == []
 
@@ -286,7 +286,10 @@ async def test_the_whole_journey_from_catalog_to_review(client):
     dashboard = (await client.get("/api/admin/dashboard", headers=auth_header(admin))).json()
     assert dashboard["statuses"]["watched"] == 1
     assert dashboard["movies"] == 1
-    assert dashboard["potential_income"] == 80000
+    # No revenue figure: the app never sees the money. Payment is a transfer the
+    # administrator takes by hand, so a sum of requests is not income and must
+    # not be dressed up as it.
+    assert "potential_income" not in dashboard
 
 
 async def test_the_journey_reads_the_same_in_uzbek(client):

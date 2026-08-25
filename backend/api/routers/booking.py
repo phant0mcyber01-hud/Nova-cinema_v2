@@ -14,6 +14,7 @@ from backend.core.db import utcnow
 from backend.models import AdminNotification, Booking, Movie, SeatHold, User
 from backend.schemas.booking import BookingConfirmIn, HoldIn
 from backend.services.booking import ensure_bookable_slot
+from backend.services.capacity import slot_usage
 from backend.services.hall import valid_seat
 from backend.services.pricing import ticket_price
 from backend.services.settings import get_settings
@@ -123,6 +124,12 @@ async def hold_seats(
         raise HTTPException(409, "Seat is temporarily held")
     if set(payload.seats) & await _taken_seats(session, payload.movie_id, payload.show_date, payload.session):
         raise HTTPException(409, "Seat is already booked")
+    # The hall is one physical room. Places already taken for this hour -- by a
+    # generic request, or for a completely different film -- are gone whatever
+    # the seat map for this movie says.
+    usage = await slot_usage(session, payload.show_date, payload.session, user_id=user.id)
+    if len(payload.seats) > usage.available:
+        raise HTTPException(409, f"Only {usage.available} places left for this time")
 
     await session.execute(
         SeatHold.__table__.delete().where(
@@ -208,6 +215,9 @@ async def confirm_booking(
     )
     if len(list(holds)) != len(payload.seats):
         raise HTTPException(409, "Hold expired")
+    usage = await slot_usage(session, payload.show_date, payload.session, user_id=user.id)
+    if len(payload.seats) > usage.available:
+        raise HTTPException(409, f"Only {usage.available} places left for this time")
     phone = "+" + "".join(char for char in payload.phone if char.isdigit())
     if not 8 <= len(phone) <= 16:
         raise HTTPException(422, "Invalid phone number")
@@ -222,6 +232,7 @@ async def confirm_booking(
         show_date=payload.show_date,
         session=payload.session,
         seats=",".join(payload.seats),
+        party_size=len(payload.seats),
         code=code,
         ticket_price=price,
         total=len(payload.seats) * price,

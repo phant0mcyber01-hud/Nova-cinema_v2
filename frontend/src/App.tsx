@@ -5,17 +5,14 @@ import DeepLinkHandler from './components/DeepLinkHandler'
 import TelegramRouteControls from './components/TelegramRouteControls'
 import { getPublicSettings } from './api'
 import { LanguageProvider, setCurrency } from './i18n'
-import { AudioProvider } from './lib/audioPlayer'
 
 const NotFound = lazy(() => import('./components/NotFound'))
 const ProtectedAdminRoute = lazy(() => import('./components/ProtectedAdminRoute'))
 const About = lazy(() => import('./pages/About'))
 const Home = lazy(() => import('./pages/Home'))
 const MoviePage = lazy(() => import('./pages/MoviePage'))
-const DatePage = lazy(() => import('./pages/booking/DatePage'))
-const HallPage = lazy(() => import('./pages/booking/HallPage'))
+const TicketsPage = lazy(() => import('./pages/booking/TicketsPage'))
 const Success = lazy(() => import('./pages/booking/Success'))
-const TimePage = lazy(() => import('./pages/booking/TimePage'))
 const ProfileRoutes = lazy(() => import('./pages/profile/Profile'))
 
 /**
@@ -45,8 +42,6 @@ export default function App() {
   useCinemaCurrency()
   return (
     <LanguageProvider>
-      {/* Above the router on purpose: navigation must not restart the melody. */}
-      <AudioProvider>
         <BrowserRouter>
           <DeepLinkHandler />
           <TelegramRouteControls />
@@ -57,15 +52,12 @@ export default function App() {
               <Route path="/about" element={<About />} />
               <Route path="/admin" element={<ProtectedAdminRoute />} />
               <Route path="/profile/*" element={<ProfileRoutes />} />
-              <Route path="/booking/:id/date" element={<DatePage />} />
-              <Route path="/booking/:id/date/:date/time" element={<TimePage />} />
-              <Route path="/booking/:id/date/:date/time/:time/hall" element={<HallPage />} />
+              <Route path="/tickets" element={<TicketsPage />} />
               <Route path="/booking/success/:code" element={<Success />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
         </BrowserRouter>
-      </AudioProvider>
     </LanguageProvider>
   )
 }

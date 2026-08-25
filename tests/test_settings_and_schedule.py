@@ -48,7 +48,7 @@ async def test_public_settings_expose_the_seeded_cinema_profile(client):
     assert data["address"] == "Юксалиш 97А"
     assert data["phone"] == "+998 91 326 20 65"
     assert data["telegram_url"] == "https://t.me/novasinema"
-    assert (data["hall_rows"], data["hall_cols"], data["hall_seats"]) == (3, 5, 15)
+    assert (data["hall_rows"], data["hall_cols"], data["hall_seats"]) == (3, 4, 12)
     assert data["currency"] == "UZS"
     assert len(data["booking_dates"]) == 7
 
@@ -333,25 +333,6 @@ async def test_bonuses_are_managed_by_the_admin(client):
         headers=auth_header(admin),
     )
     assert (await client.get("/api/bonuses")).json() == []
-
-
-async def test_melodies_are_capped_at_three(client):
-    admin = await login(client, ADMIN_ID, "admin")
-    for index in range(3):
-        response = await client.post(
-            "/api/admin/melodies",
-            json={"title": f"Мелодия {index + 1}", "file_url": f"/uploads/m{index}.mp3"},
-            headers=auth_header(admin),
-        )
-        assert response.status_code == 200
-
-    overflow = await client.post(
-        "/api/admin/melodies",
-        json={"title": "Четвёртая", "file_url": "/uploads/m4.mp3"},
-        headers=auth_header(admin),
-    )
-    assert overflow.status_code == 409
-    assert len((await client.get("/api/melodies")).json()) == 3
 
 
 async def test_gallery_images_are_managed_by_the_admin(client):

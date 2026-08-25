@@ -4,11 +4,9 @@ import { useEffect, useState } from 'react'
 import {
   getBonuses,
   getGallery,
-  getMelodies,
   getPublicSettings,
   type Bonus,
   type GalleryImage,
-  type Melody,
   type PublicSettings,
 } from '../api'
 import Shell from '../components/Shell'
@@ -51,7 +49,6 @@ export default function About() {
   const [settings, setSettings] = useState<PublicSettings | null>(null)
   const [photos, setPhotos] = useState<GalleryImage[]>([])
   const [bonuses, setBonuses] = useState<Bonus[]>([])
-  const [melodies, setMelodies] = useState<Melody[]>([])
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -60,14 +57,12 @@ export default function About() {
       getPublicSettings(language),
       getGallery(language),
       getBonuses(language),
-      getMelodies(),
     ])
-      .then(([profile, images, promotions, audio]) => {
+      .then(([profile, images, promotions]) => {
         if (!active) return
         setSettings(profile)
         setPhotos(images)
         setBonuses(promotions)
-        setMelodies(audio)
         setError('')
       })
       .catch(reason => {
@@ -94,6 +89,11 @@ export default function About() {
         )}
         {bullets.length === 1 && <p className="about-text">{bullets[0]}</p>}
       </section>
+
+      {(settings.important || settings.faq?.length) && <section className="about-block">
+        {settings.important && <><h2>{language === 'ru' ? 'Важно знать' : 'Muhim maʼlumot'}</h2><p className="about-text">{settings.important}</p></>}
+        {!!settings.faq?.length && <div className="about-bonuses">{settings.faq.map(item => <article key={item.question}><b>{item.question}</b><p>{item.answer}</p></article>)}</div>}
+      </section>}
 
       <section className="about-block">
         <h2>{t('howToFindUs')}</h2>
@@ -141,20 +141,6 @@ export default function About() {
         </section>
       )}
 
-      {!!melodies.length && (
-        <section className="about-block">
-          <h2>{t('aboutMelodies')}</h2>
-          <div className="about-melodies">
-            {melodies.map((melody, index) => (
-              <figure key={melody.id}>
-                <figcaption>{melody.title}</figcaption>
-                {/* The global player already warms the primary URL; extra tracks stay deferred. */}
-                <audio controls preload={index === 0 ? 'auto' : 'none'} src={melody.file_url} onPlay={haptic.tap} />
-              </figure>
-            ))}
-          </div>
-        </section>
-      )}
 
       <section className="about-block">
         <h2>{t('cinemaPhotos')}</h2>

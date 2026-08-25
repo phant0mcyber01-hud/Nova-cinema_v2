@@ -44,6 +44,10 @@ def serialize_settings(settings: CinemaSettings, language: str = "ru") -> dict[s
         "name": (settings.name_uz or settings.name) if uz else settings.name,
         "address": (settings.address_uz or settings.address) if uz else settings.address,
         "phone": settings.phone,
+        # The person a viewer calls about the film and the transfer, shown
+        # next to every confirmed request.
+        "admin_phone": settings.admin_phone,
+        "admin_telegram": settings.admin_telegram,
         "telegram_url": settings.telegram_url,
         "instagram_url": settings.instagram_url,
         "bot_username": settings.bot_username.lstrip("@"),
@@ -70,6 +74,8 @@ def serialize_settings_admin(settings: CinemaSettings) -> dict[str, object]:
         "address": settings.address,
         "address_uz": settings.address_uz,
         "phone": settings.phone,
+        "admin_phone": settings.admin_phone,
+        "admin_telegram": settings.admin_telegram,
         "telegram_url": settings.telegram_url,
         "instagram_url": settings.instagram_url,
         "bot_username": settings.bot_username,

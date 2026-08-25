@@ -17,6 +17,9 @@ class SettingsIn(BaseModel):
     address: str = Field(default="", max_length=255)
     address_uz: str = Field(default="", max_length=255)
     phone: str = Field(default="", max_length=32)
+    #: Whoever the viewer settles the film and the manual transfer with.
+    admin_phone: str = Field(default="", max_length=32)
+    admin_telegram: str = Field(default="", max_length=64, pattern=r"^$|^@?[A-Za-z0-9_]{4,63}$")
     telegram_url: str = Field(default="", max_length=255)
     instagram_url: str = Field(default="", max_length=255)
     bot_username: str = Field(default="", max_length=64, pattern=r"^$|^@?[A-Za-z0-9_]{4,63}$")
@@ -38,7 +41,7 @@ class SettingsIn(BaseModel):
     booking_days_ahead: int = Field(ge=1, le=60)
     timezone_offset_minutes: int = Field(ge=-720, le=840)
 
-    @field_validator("phone")
+    @field_validator("phone", "admin_phone")
     @classmethod
     def validate_phone(cls, value: str) -> str:
         import re

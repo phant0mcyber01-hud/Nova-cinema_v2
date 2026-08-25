@@ -9,13 +9,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from backend.api.deps import admin_required, get_db
-from backend.models import Booking, Movie, Review, Show, User
+from backend.models import Booking, Movie, Review, Show, SlotTemplate, User
+from backend.schemas.booking import SlotTemplateIn
 from backend.schemas.movie import MovieIn, MovieLookupIn, ReviewModerationIn
 from backend.schemas.show import ShowBulkIn, ShowIn
 from backend.services.booking import show_times_by_movie
 from backend.services.catalog import serialize_movie
 from backend.services.i18n import localize_movie_payload
 from backend.services.pricing import base_price
+from backend.services.slots import slot_templates
 from backend.services.tmdb import lookup_movie_payload
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(admin_required)])
@@ -68,6 +70,76 @@ async def delete_movie(movie_id: int, session: AsyncSession = Depends(get_db)) -
     if booked is not None:
         raise HTTPException(409, "Movie has bookings")
     await session.execute(Show.__table__.delete().where(Show.movie_id == movie_id))
+    await session.delete(item)
+    await session.commit()
+    return {"status": "deleted"}
+
+
+# --- generic slots -----------------------------------------------------------
+#
+# The times the hall opens, owned by the administrator and attached to no film.
+# `shows` below is the legacy movie-bound schedule and is on its way out; these
+# are what the booking flow actually reads.
+
+
+def _serialize_slot(item: SlotTemplate) -> dict[str, object]:
+    return {
+        "id": item.id,
+        "start_time": item.start_time,
+        "is_active": item.is_active,
+        "sort_order": item.sort_order,
+    }
+
+
+@router.get("/slots")
+async def admin_slots(session: AsyncSession = Depends(get_db)) -> list[dict[str, object]]:
+    return [_serialize_slot(item) for item in await slot_templates(session)]
+
+
+@router.post("/slots")
+async def create_slot(payload: SlotTemplateIn, session: AsyncSession = Depends(get_db)) -> dict[str, object]:
+    await slot_templates(session)  # seed the defaults before adding to them
+    duplicate = await session.scalar(
+        select(SlotTemplate.id).where(SlotTemplate.start_time == payload.start_time)
+    )
+    if duplicate is not None:
+        raise HTTPException(409, "This time already exists")
+    item = SlotTemplate(**payload.model_dump())
+    session.add(item)
+    await session.commit()
+    return _serialize_slot(item)
+
+
+@router.patch("/slots/{slot_id}")
+async def edit_slot(
+    slot_id: int, payload: SlotTemplateIn, session: AsyncSession = Depends(get_db)
+) -> dict[str, object]:
+    item = await session.get(SlotTemplate, slot_id)
+    if item is None:
+        raise HTTPException(404, "Slot not found")
+    duplicate = await session.scalar(
+        select(SlotTemplate.id).where(
+            SlotTemplate.start_time == payload.start_time, SlotTemplate.id != slot_id
+        )
+    )
+    if duplicate is not None:
+        raise HTTPException(409, "This time already exists")
+    for key, value in payload.model_dump().items():
+        setattr(item, key, value)
+    await session.commit()
+    return _serialize_slot(item)
+
+
+@router.delete("/slots/{slot_id}")
+async def delete_slot(slot_id: int, session: AsyncSession = Depends(get_db)) -> dict[str, str]:
+    """Remove a time.
+
+    Requests already filed for it keep their own date and time -- history is
+    never rewritten because the administrator stopped offering an hour.
+    """
+    item = await session.get(SlotTemplate, slot_id)
+    if item is None:
+        raise HTTPException(404, "Slot not found")
     await session.delete(item)
     await session.commit()
     return {"status": "deleted"}

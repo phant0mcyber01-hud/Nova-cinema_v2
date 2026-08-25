@@ -42,7 +42,7 @@ const statusLabel = (status: string, translate: (key: TranslationKey) => string)
 
 const ticketMeta = (booking: ProfileBooking) => {
   const detailed = booking as ProfileBooking & { seats_count?: number; ticket_price?: number }
-  const seatsCount = detailed.seats_count ?? booking.seats.split(',').filter(Boolean).length
+  const seatsCount = booking.party_size ?? detailed.seats_count ?? booking.seats?.split(',').filter(Boolean).length ?? 0
   return {
     seatsCount,
     ticketPrice: detailed.ticket_price ?? (seatsCount ? booking.total / seatsCount : booking.total),
@@ -239,12 +239,12 @@ function TicketCard({ booking }: { booking: ProfileBooking }) {
   const { seatsCount, ticketPrice } = ticketMeta(booking)
   return (
     <Link className="booking-card ticket-card" to={`/profile/bookings/${booking.id}`}>
-      <img src={booking.poster} alt="" loading="lazy" />
+      {booking.poster && <img src={booking.poster} alt="" loading="lazy" />}
       <div>
-        <b>{booking.movie}</b>
+        {booking.movie && <b>{booking.movie}</b>}
         <span>{formatDateShort(booking.show_date, language)} · {booking.session}</span>
-        <span>{t('seats')}: {booking.seats}</span>
-        <span>{t('seatsCountLabel')}: {seatsCount} · {t('pricePerTicket')}: {formatMoney(ticketPrice, language)}</span>
+        {booking.seats && <span>{t('seats')}: {booking.seats}</span>}
+        <span>{language === 'ru' ? 'Гостей' : 'Mehmonlar'}: {seatsCount} · {t('pricePerTicket')}: {formatMoney(ticketPrice, language)}</span>
         <span>{t('amount')}: {formatMoney(booking.total, language)}</span>
         <span>{t('statusLabel')}: {statusLabel(booking.status, t)}</span>
         {booking.comment && <span>{t('comment')}: {booking.comment}</span>}
@@ -293,14 +293,14 @@ function BookingDetail() {
   return (
     <Box>
       <Link className="back" to="/profile/bookings">← {t('bookings')}</Link>
-      <img className="detail-poster" src={booking.poster} alt={booking.movie} loading="lazy" />
-      <h1>{booking.movie}</h1>
+      {booking.poster && <img className="detail-poster" src={booking.poster} alt={booking.movie ?? ''} loading="lazy" />}
+      {booking.movie && <h1>{booking.movie}</h1>}
       <p>{booking.description}</p>
       <div className="detail-stats">
         <span>{formatDateShort(booking.show_date, language)} · {booking.session}</span>
         {booking.proposed_session && <span>{t('proposedTime')}: {booking.proposed_session}</span>}
-        <span>{t('seats')} {booking.seats}</span>
-        <span>{t('seatsCountLabel')}: {seatsCount}</span>
+        {booking.seats && <span>{t('seats')} {booking.seats}</span>}
+        <span>{language === 'ru' ? 'Гостей' : 'Mehmonlar'}: {seatsCount}</span>
         <span>{t('pricePerTicket')}: {formatMoney(ticketPrice, language)}</span>
         <span>{t('amount')}: {formatMoney(booking.total, language)}</span>
         <span>{statusLabel(booking.status, t)}</span>

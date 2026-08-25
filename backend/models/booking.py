@@ -15,10 +15,21 @@ class Booking(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
-    movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id"), index=True)
+    #: Nullable since the generic booking flow: the mini app reserves places in
+    #: the hall, and which film is played is agreed with the administrator
+    #: outside the app. Kept for the legacy movie-bound history and for the
+    #: film an administrator may attach to a request after the fact.
+    movie_id: Mapped[int | None] = mapped_column(
+        ForeignKey("movies.id"), nullable=True, index=True
+    )
     session: Mapped[str] = mapped_column(String(30))
     show_date: Mapped[str] = mapped_column(String(10), default="", index=True)
+    #: Legacy bookings hold real seat labels ("2-3"). Generic ones hold the
+    #: internal capacity tokens ("1,2,3"), which are never shown to a viewer.
     seats: Mapped[str] = mapped_column(String(255))
+    #: How many people the request is for. Authoritative for capacity; on
+    #: legacy rows it was backfilled from the length of the seat list.
+    party_size: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
     code: Mapped[str] = mapped_column(String(32), default="")
     total: Mapped[int] = mapped_column(Integer, default=0)

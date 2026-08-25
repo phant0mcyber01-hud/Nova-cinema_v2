@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom'
 
 import type { Movie } from '../api'
 import { useI18n } from '../i18n'
-import { haptic } from '../lib/haptic'
 
 /** Catalog tile shared by the poster grid and any filtered list. */
 export default function MovieCard({ movie }: { movie: Movie }) {
@@ -19,9 +18,6 @@ export default function MovieCard({ movie }: { movie: Movie }) {
           <h2>{movie.title}</h2>
           <p>{movie.genre} · {movie.age}+ · {movie.duration} {t('minutes')}</p>
         </div>
-      </Link>
-      <Link className="book movie-book" to={`/booking/${movie.id}/date`} onClick={haptic.tap}>
-        {t('bookTicket')}
       </Link>
     </article>
   )

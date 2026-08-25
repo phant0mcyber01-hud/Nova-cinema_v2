@@ -12,7 +12,7 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && npm run check:fonts",
+    "build": "tsc -b && vite build --config vite.config.ts --configLoader runner && npm run check:fonts",
     "lint": "eslint . --max-warnings=0",
     "test:frontend": "node --test tests/*.test.mjs",
     "check:chunks": "node scripts/assert-lazy-build.mjs",

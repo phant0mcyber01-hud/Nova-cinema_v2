@@ -107,15 +107,16 @@ export type AdminBooking = {
   /** Unit price frozen when the request was made. */
   ticket_price: number
   total: number
-  seats: string
-  seats_count: number
+  seats: string | null
+  seats_count: number | null
+  party_size: number
   created_at: string
   telegram_id: number
   session: string
   show_date: string
   movie_id: number
-  movie: string
-  poster: string
+  movie: string | null
+  poster: string | null
   telegram_username: string
   chat_url: string | null
   proposed_session: string
@@ -124,8 +125,6 @@ export type AdminBooking = {
 
 export type AdminSession = {
   id: number
-  movie_id: number
-  movie: string
   show_date: string
   start_time: string
   /** Legacy mirror of start_time kept while the API accepts both. */
@@ -133,14 +132,6 @@ export type AdminSession = {
   ticket_price: number | null
   resolved_price: number
   status: string
-}
-
-export type AdminNotification = {
-  id: number
-  booking_id: number
-  message: string
-  is_read: boolean
-  created_at: string
 }
 
 export type Profile = {
@@ -163,7 +154,8 @@ export type ProfileBooking = {
   trailer_id: string
   show_date: string
   session: string
-  seats: string
+  seats: string | null
+  party_size: number
   total: number
   status: string
   phone: string
@@ -193,6 +185,9 @@ export type PublicSettings = {
   name: string
   address: string
   phone: string
+  /** The person a viewer calls about the film and the transfer. */
+  admin_phone: string
+  admin_telegram: string
   telegram_url: string
   instagram_url: string
   bot_username: string
@@ -201,6 +196,8 @@ export type PublicSettings = {
   longitude: number | null
   work_hours: string
   about: string
+  important?: string
+  faq?: { question: string; answer: string }[]
   base_ticket_price: number
   currency: string
   hall_rows: number
@@ -212,7 +209,6 @@ export type PublicSettings = {
 }
 
 export type Bonus = { id: number; title: string; text: string }
-export type Melody = { id: number; title: string; file_url: string }
 export type GalleryImage = { id: number; image_url: string; caption: string }
 
 export type AdminSettings = {
@@ -231,6 +227,9 @@ export type AdminSettings = {
   work_hours_uz: string
   about: string
   about_uz: string
+  important: string
+  important_uz: string
+  faq: { question_ru: string; answer_ru: string; question_uz: string; answer_uz: string }[]
   base_ticket_price: number
   currency: string
   hall_rows: number
@@ -258,13 +257,12 @@ export type AdminBonus = {
 
 export type AdminBonusPayload = Omit<AdminBonus, 'id'>
 
-export type AdminMelody = { id: number; title: string; file_url: string; sort_order: number }
 
 export type AdminReview = {
   id: number
-  movie_id: number
-  movie: string
-  poster: string
+  movie_id: number | null
+  movie: string | null
+  poster: string | null
   user_name: string
   telegram_username: string
   rating: number
@@ -273,9 +271,18 @@ export type AdminReview = {
   created_at: string
 }
 
+/** One of the cinema's fixed times. It belongs to the hall, not to a film. */
+export type AdminSlot = {
+  id: number
+  start_time: string
+  is_active: boolean
+  sort_order: number
+}
+
+export type AdminSlotPayload = Omit<AdminSlot, 'id'>
+
 /** What the schedule form submits. `session` is not sent — the API takes `start_time`. */
 export type AdminSessionPayload = {
-  movie_id: number
   show_date: string
   start_time: string
   ticket_price: number | null

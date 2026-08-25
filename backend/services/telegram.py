@@ -99,3 +99,100 @@ def new_booking_admin_message(booking: Booking, movie_title: str) -> str:
 
 def user_booking_notification(booking: Booking, title: str, message: str) -> UserNotification:
     return UserNotification(user_id=booking.user_id, type="booking_status", title=title, message=message)
+
+
+#: Nominative months would read "27 август"; the message needs the genitive.
+_RU_MONTHS = (
+    "января", "февраля", "марта", "апреля", "мая", "июня",
+    "июля", "августа", "сентября", "октября", "ноября", "декабря",
+)
+
+
+def format_date(show_date: str) -> str:
+    """"2026-08-27" -> "27 августа". Unparseable input is passed through."""
+    from datetime import date
+
+    try:
+        day = date.fromisoformat(show_date)
+    except ValueError:
+        return show_date
+    return f"{day.day} {_RU_MONTHS[day.month - 1]}"
+
+
+def format_money(amount: int, currency: str) -> str:
+    """"90 000 сум" -- grouped the way the price is written on the wall."""
+    grouped = f"{amount:,}".replace(",", "\u00a0")
+    return f"{grouped} сум" if currency.upper() == "UZS" else f"{grouped} {currency}"
+
+
+def _summary(booking: Booking, currency: str) -> list[str]:
+    return [
+        f"Дата: {format_date(booking.show_date)}",
+        f"Время: {booking.session}",
+        f"Гостей: {booking.party_size}",
+        f"Сумма: {format_money(booking.total, currency)}",
+    ]
+
+
+def generic_booking_admin_message(booking: Booking, currency: str = "UZS") -> str:
+    """What the administrator receives for a request with no film attached.
+
+    The mini app books places, not a screening, so there is deliberately no
+    film line here: the administrator agrees the film in the callback.
+    """
+    name = " ".join(part for part in (booking.first_name, booking.last_name) if part) or "Без имени"
+    lines = ["Новая заявка на бронирование", *_summary(booking, currency), f"Клиент: {name}"]
+    lines.append(f"Телефон: {booking.phone}")
+    if booking.telegram_username:
+        lines.append(f"Telegram: @{booking.telegram_username}")
+    if booking.promo_code:
+        lines.append(f"Промокод: {booking.promo_code}")
+    if booking.comment:
+        lines.append(f"Комментарий: {booking.comment}")
+    lines.append(f"Заявка #{booking.id}")
+    return "\n".join(lines)
+
+
+def _admin_contacts(settings) -> list[str]:
+    lines = []
+    if settings.admin_phone:
+        lines.append(f"Телефон: {settings.admin_phone}")
+    if settings.admin_telegram:
+        lines.append(f"Telegram: {settings.admin_telegram}")
+    return lines
+
+
+def generic_booking_user_message(booking: Booking, settings) -> str:
+    """The acknowledgement the viewer sees the moment the request is filed.
+
+    It has to be honest about what was and was not reserved, or the viewer will
+    read "booked" as "my film at my seat is guaranteed".
+    """
+    return "\n".join(
+        [
+            f"Заявка №{booking.id} принята",
+            "",
+            *_summary(booking, settings.currency),
+            "",
+            "Вы бронируете количество мест без выбора конкретного ряда и кресла.",
+            "Фильм не закрепляется автоматически: его и оплату согласует администратор.",
+            "Мы свяжемся с вами для подтверждения.",
+            *(["", *_admin_contacts(settings)] if _admin_contacts(settings) else []),
+        ]
+    )
+
+
+def generic_booking_confirmed_message(booking: Booking, settings) -> str:
+    """The confirmation, with both contacts and no promise about the film."""
+    return "\n".join(
+        [
+            f"Бронирование №{booking.id} подтверждено",
+            "",
+            *_summary(booking, settings.currency),
+            "",
+            "Вы забронировали количество мест без выбора конкретного ряда и кресла.",
+            "Фильм не закрепляется автоматически. Выберите подходящий фильм в каталоге "
+            "и согласуйте детали и оплату с администратором.",
+            *(["", *_admin_contacts(settings)] if _admin_contacts(settings) else []),
+        ]
+    )

@@ -19,7 +19,7 @@ from backend.services.booking import (
     show_times_by_movie,
     upcoming_show_times,
 )
-from backend.services.catalog import matches_query, serialize_movie
+from backend.services.catalog import matches_query, serialize_movie, split_genres
 from backend.services.deep_link import share_link
 from backend.services.settings import get_settings
 
@@ -121,13 +121,27 @@ async def movie_detail(
         for review in movie.reviews
         if review.approved
     ]
-    similar = await session.scalars(
-        select(Movie)
-        .where(Movie.id != movie_id, Movie.is_published.is_(True))
-        .order_by(Movie.sort_order, Movie.id)
-        .limit(2)
+    # "Похожие" has to mean something: films are ranked by how many genres they
+    # share with this one, so a horror film is never followed by a cartoon.
+    # A film with several genres ("Фантастика, Боевик") matches on either.
+    wanted = set(split_genres(movie.genre))
+    candidates = list(
+        await session.scalars(
+            select(Movie)
+            .where(Movie.id != movie_id, Movie.is_published.is_(True))
+            .order_by(Movie.sort_order, Movie.id)
+        )
     )
-    similar_items = list(similar)
+    scored = [
+        (len(wanted & set(split_genres(item.genre))), index, item)
+        for index, item in enumerate(candidates)
+    ]
+    # Only films that genuinely share a genre. An empty block is honest; a
+    # cartoon recommended under a horror film is what the client complained
+    # about, and the UI already hides the section when there is nothing in it.
+    scored = [row for row in scored if row[0] > 0]
+    scored.sort(key=lambda row: (-row[0], row[1]))
+    similar_items = [item for _, _, item in scored[:2]]
     similar_times = await show_times_by_movie(session, [item.id for item in similar_items], upcoming_only=True)
     data["similar_movies"] = [
         serialize_movie(item, [], lang, similar_times.get(item.id, []), today) for item in similar_items

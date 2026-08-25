@@ -62,7 +62,7 @@ export default function ReviewsView({ reviews, onSaved }: ReviewsViewProps) {
       <div className="admin-table">
         {rows.map(review => (
           <article className="admin-row" key={review.id}>
-            <img src={review.poster} alt={review.movie} loading="lazy" />
+            {review.poster && <img src={review.poster} alt={review.movie ?? ''} loading="lazy" />}
             <div className="booking-admin-meta">
               <b>{review.movie} · <Icon name="star" /> {review.rating}/5</b>
               <span>

@@ -8,8 +8,8 @@ import Icon, { type IconName } from './Icon'
 type NavItem = { to: string; icon: IconName; labelKey: TranslationKey; match: (path: string) => boolean }
 
 const items: NavItem[] = [
-  { to: '/', icon: 'home', labelKey: 'navPoster', match: path => path === '/' || path.startsWith('/movies') || path.startsWith('/booking') },
-  { to: '/profile/bookings', icon: 'ticket', labelKey: 'navTickets', match: path => path.startsWith('/profile/bookings') },
+  { to: '/', icon: 'home', labelKey: 'navPoster', match: path => path === '/' || path.startsWith('/movies') },
+  { to: '/tickets', icon: 'ticket', labelKey: 'navTickets', match: path => path.startsWith('/tickets') },
   { to: '/about', icon: 'info', labelKey: 'navAbout', match: path => path.startsWith('/about') },
   { to: '/profile', icon: 'profile', labelKey: 'profile', match: path => path === '/profile' || path.startsWith('/profile/favorites') || path.startsWith('/profile/notifications') },
 ]

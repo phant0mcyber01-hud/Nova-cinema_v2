@@ -45,13 +45,13 @@ async def test_catalog_lists_published_movie(client, movie):
     assert movie.title in titles
 
 
-async def test_hall_geometry_is_three_by_five(client, movie):
+async def test_hall_geometry_is_three_by_four(client, movie):
     response = await client.get(
         f"/api/sessions/{movie.id}/seats", params={"show_date": SHOW_DATE, "session_time": SESSION}
     )
     assert response.status_code == 200
     hall = response.json()
-    assert (hall["rows"], hall["cols"], hall["seats_count"]) == (3, 5, 15)
+    assert (hall["rows"], hall["cols"], hall["seats_count"]) == (3, 4, 12)
     assert hall["max_seats"] == 4
     assert hall["price"] == 30000
     assert hall["currency"] == "UZS"

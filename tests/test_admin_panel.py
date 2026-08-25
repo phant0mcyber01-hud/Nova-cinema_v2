@@ -50,7 +50,9 @@ async def test_dashboard_counts_every_lifecycle_status(client, movie):
         assert status in data["statuses"], f"dashboard is missing {status}"
     assert data["statuses"]["watched"] == 1
     assert data["movies"] >= 1
-    assert data["active_sessions"] >= 1
+    # No `active_sessions`: it counted the legacy movie-bound schedule, which the
+    # booking flow no longer writes to, so the tile would sit at zero forever.
+    assert "active_sessions" not in data
 
 
 async def test_watched_status_stamps_completed_at(client, movie):
@@ -176,41 +178,7 @@ async def test_review_endpoints_reject_regular_users(client):
 # --- content sections --------------------------------------------------------
 
 
-async def test_melody_can_be_renamed_and_replaced(client):
-    admin = await login(client, ADMIN_ID, "admin")
-    created = await client.post(
-        "/api/admin/melodies",
-        json={"title": "Первая", "file_url": "/uploads/a.mp3", "sort_order": 0},
-        headers=auth_header(admin),
-    )
-    melody_id = created.json()["id"]
-
-    renamed = await client.patch(
-        f"/api/admin/melodies/{melody_id}", json={"title": "Вторая"}, headers=auth_header(admin)
-    )
-    assert renamed.status_code == 200
-
-    replaced = await client.patch(
-        f"/api/admin/melodies/{melody_id}", json={"file_url": "/uploads/b.mp3"}, headers=auth_header(admin)
-    )
-    assert replaced.status_code == 200
-
-    listed = (await client.get("/api/admin/melodies", headers=auth_header(admin))).json()
-    assert listed[0]["title"] == "Вторая"
-    assert listed[0]["file_url"] == "/uploads/b.mp3"
-
-
-async def test_melody_upload_rejects_a_non_audio_file(client):
-    admin = await login(client, ADMIN_ID, "admin")
-    response = await client.post(
-        "/api/admin/melodies/upload",
-        files={"file": ("song.mp3", b"this is definitely not audio", "audio/mpeg")},
-        headers=auth_header(admin),
-    )
-    assert response.status_code == 422
-
-
 async def test_admin_content_endpoints_reject_regular_users(client):
     token = await login(client, USER_ID)
-    for path in ("/api/admin/bonuses", "/api/admin/melodies", "/api/admin/gallery", "/api/admin/settings"):
+    for path in ("/api/admin/bonuses", "/api/admin/gallery", "/api/admin/settings"):
         assert (await client.get(path, headers=auth_header(token))).status_code == 403

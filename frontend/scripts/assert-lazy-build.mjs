@@ -9,12 +9,7 @@ const dist = new URL('../dist/', import.meta.url)
 const html = readFileSync(new URL('index.html', dist), 'utf8')
 const entryMatch = html.match(/<script[^>]+src="([^"]+\.js)"/)
 assert(entryMatch, 'production HTML must contain a JS entry')
-const melodyPreloadAt = html.indexOf('/api/melodies')
-const entryScriptAt = html.indexOf(entryMatch[0])
-assert(
-  melodyPreloadAt >= 0 && melodyPreloadAt < entryScriptAt,
-  'melody metadata must start from HTML before the large JS entry downloads',
-)
+assert(!html.includes('/api/melodies'), 'production HTML must not preload removed music')
 
 const entryName = basename(entryMatch[1])
 const assetsDir = new URL('assets/', dist)

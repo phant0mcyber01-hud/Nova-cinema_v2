@@ -67,11 +67,18 @@ DEFAULT_TELEGRAM_URL = "https://t.me/novasinema"
 DEFAULT_INSTAGRAM_URL = "https://www.instagram.com/nova_cinema__"
 DEFAULT_MAP_URL = "https://yandex.go.link/discovery?action=card&oid=97603506332&adj_campaign=Share-from-the-app"
 DEFAULT_WORK_HOURS = "10:00 - 23:00"
+#: Whoever the viewer talks to about the film and the transfer. Separate from
+#: the cinema switchboard and the public channel above: a request is settled
+#: in a private conversation, not on the channel.
+DEFAULT_ADMIN_PHONE = "91 326 20 65"
+DEFAULT_ADMIN_TELEGRAM = "@Hhkcjoj"
 DEFAULT_CURRENCY = "UZS"
 
-# Nova Cinema has exactly one auditorium: 3 rows of 5 seats.
+# Nova Cinema has exactly one auditorium: 3 rows of 4 seats, 12 in total.
+# It is the whole booking inventory -- a slot is a date plus a time, and the
+# film shown in it is never part of the reservation.
 DEFAULT_HALL_ROWS = 3
-DEFAULT_HALL_COLS = 5
+DEFAULT_HALL_COLS = 4
 DEFAULT_TICKET_PRICE = 30000
 DEFAULT_MAX_SEATS_PER_BOOKING = 4
 DEFAULT_HOLD_MINUTES = 10
@@ -79,6 +86,10 @@ DEFAULT_BOOKING_DAYS_AHEAD = 7
 #: The cinema's clock. The server runs in UTC; Uzbekistan is UTC+5 with no
 #: daylight saving, so a fixed offset is exact. Minutes, to allow half-hour zones.
 DEFAULT_TIMEZONE_OFFSET_MINUTES = 300
+#: The fixed times the cinema opens for booking. Admin-managed from the first
+#: run onwards -- these only seed `slot_templates`, and none of them belongs
+#: to a film.
+DEFAULT_SLOT_TIMES = ("12:00", "14:00", "16:00", "18:00", "20:00")
 
 # Hard ceilings the admin cannot exceed, so a typo cannot break the hall grid.
 MAX_HALL_ROWS = 26

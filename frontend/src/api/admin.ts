@@ -1,19 +1,17 @@
 import { call } from './client'
-import { invalidateMelodies } from './settings'
-import { audioChunkRanges, createAudioUploadId } from '../lib/audioUpload'
 import type {
   AdminBonus,
   AdminBonusPayload,
   AdminGalleryImage,
   AdminGalleryImagePayload,
   AdminBooking,
-  AdminMelody,
-  AdminNotification,
   AdminReview,
   AdminSession,
   AdminSessionPayload,
   AdminSettings,
   AdminSettingsPayload,
+  AdminSlot,
+  AdminSlotPayload,
   MovieDetail,
   MoviePayload,
 } from './types'
@@ -21,12 +19,9 @@ import type {
 export const getDashboard = () =>
   call<{
     movies: number
-    active_sessions: number
     bookings: number
-    potential_income: number
     statuses: Record<string, number>
     recent_bookings: Pick<AdminBooking, 'id' | 'name' | 'phone' | 'status' | 'total'>[]
-    notifications: AdminNotification[]
   }>('/admin/dashboard')
 
 export const getAdminBookings = () => call<AdminBooking[]>('/admin/bookings')
@@ -43,10 +38,6 @@ export const decideBooking = (
     body: JSON.stringify(payload),
   })
 
-export const getNotifications = () => call<AdminNotification[]>('/admin/notifications')
-
-export const readNotification = (id: number) =>
-  call<{ is_read: boolean }>(`/admin/notifications/${id}/read`, { method: 'PATCH' })
 
 export const setBasePrice = (base_ticket_price: number) =>
   call<{ base_ticket_price: number }>('/admin/settings/base-price', {
@@ -75,7 +66,6 @@ export const updateAdminMovie = (id: number, payload: MoviePayload) =>
 export const deleteAdminMovie = (id: number) => call<{ status: string }>(`/admin/movies/${id}`, { method: 'DELETE' })
 
 export const getAdminSessions = () => call<AdminSession[]>('/admin/sessions')
-
 export const createAdminSession = (payload: AdminSessionPayload) =>
   call<{ id: number }>('/admin/sessions', { method: 'POST', body: JSON.stringify(payload) })
 
@@ -84,6 +74,23 @@ export const updateAdminSession = (id: number, payload: AdminSessionPayload) =>
 
 export const deleteAdminSession = (id: number) =>
   call<{ status: string }>(`/admin/sessions/${id}`, { method: 'DELETE' })
+
+// --- generic slots -----------------------------------------------------------
+//
+// The times the hall opens. They belong to the cinema and to no film, and this
+// is what the booking flow reads. The movie-bound `/admin/sessions` endpoints
+// below are the legacy schedule and are not part of the ticket flow any more.
+
+export const getAdminSlots = () => call<AdminSlot[]>('/admin/slots')
+
+export const createAdminSlot = (payload: AdminSlotPayload) =>
+  call<AdminSlot>('/admin/slots', { method: 'POST', body: JSON.stringify(payload) })
+
+export const updateAdminSlot = (id: number, payload: AdminSlotPayload) =>
+  call<AdminSlot>(`/admin/slots/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
+
+export const deleteAdminSlot = (id: number) =>
+  call<{ status: string }>(`/admin/slots/${id}`, { method: 'DELETE' })
 
 export const uploadAdminImage = (file: File) => {
   const form = new FormData()
@@ -101,7 +108,6 @@ export const updateAdminSettings = (payload: AdminSettingsPayload) =>
 // --- schedule ----------------------------------------------------------------
 
 export const createAdminSessionsBulk = (payload: {
-  movie_id: number
   date_from: string
   date_to: string
   times: string[]
@@ -120,51 +126,6 @@ export const updateAdminBonus = (id: number, payload: AdminBonusPayload) =>
 
 export const deleteAdminBonus = (id: number) =>
   call<{ status: string }>(`/admin/bonuses/${id}`, { method: 'DELETE' })
-
-// --- melodies ----------------------------------------------------------------
-
-export const getAdminMelodies = () => call<AdminMelody[]>('/admin/melodies')
-
-const melodyMutation = async <T>(request: Promise<T>): Promise<T> => {
-  const result = await request
-  invalidateMelodies()
-  return result
-}
-
-export const createAdminMelody = (payload: { title: string; file_url: string; sort_order: number }) =>
-  melodyMutation(call<{ id: number }>('/admin/melodies', { method: 'POST', body: JSON.stringify(payload) }))
-
-export const updateAdminMelody = (id: number, payload: { title?: string; file_url?: string; sort_order?: number }) =>
-  melodyMutation(call<{ status: string }>(`/admin/melodies/${id}`, {
-    method: 'PATCH', body: JSON.stringify(payload),
-  }))
-
-export const deleteAdminMelody = (id: number) =>
-  melodyMutation(call<{ status: string }>(`/admin/melodies/${id}`, { method: 'DELETE' }))
-
-export const uploadMelodyFile = async (file: File, onProgress?: (percent: number) => void) => {
-  const ranges = audioChunkRanges(file.size)
-  const uploadId = createAudioUploadId()
-  let finalUrl = ''
-
-  for (const [index, range] of ranges.entries()) {
-    const form = new FormData()
-    form.append('upload_id', uploadId)
-    form.append('chunk_index', String(index))
-    form.append('total_chunks', String(ranges.length))
-    form.append('total_size', String(file.size))
-    form.append('filename', file.name)
-    form.append('file', file.slice(range.start, range.end), `chunk-${index}.bin`)
-    const result = await call<{ complete: boolean; url?: string }>('/admin/melodies/upload/chunk', {
-      method: 'POST', body: form,
-    })
-    if (result.complete) finalUrl = result.url ?? ''
-    onProgress?.(Math.round(((index + 1) / ranges.length) * 100))
-  }
-
-  if (!finalUrl) throw new Error('Audio upload did not complete')
-  return { url: finalUrl }
-}
 
 // --- review moderation -------------------------------------------------------
 

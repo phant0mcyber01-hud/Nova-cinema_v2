@@ -137,15 +137,15 @@ async def test_my_own_hold_is_mine_not_a_blocked_seat(client, movie):
 
 async def test_anonymous_viewer_sees_a_hold_as_awaiting(client, movie):
     user = await login(client, USER_ID)
-    await _hold(client, movie.id, ["2-5"], user)
+    await _hold(client, movie.id, ["2-4"], user)
     hall = await _seats(client, movie.id)
-    assert hall["awaiting"] == ["2-5"]
+    assert hall["awaiting"] == ["2-4"]
     assert hall["mine"] == []
 
 
 async def test_expired_hold_releases_the_seat(client, movie):
     user = await login(client, USER_ID)
-    await _hold(client, movie.id, ["1-5"], user)
+    await _hold(client, movie.id, ["1-4"], user)
     async with SessionLocal() as session:
         hold = await session.scalar(select(SeatHold))
         hold.expires_at = utcnow() - timedelta(minutes=1)

@@ -23,6 +23,7 @@ from backend.api.routers import (
     auth,
     booking,
     catalog,
+    generic_booking,
     profile,
     public,
 )
@@ -142,7 +143,17 @@ def create_app() -> FastAPI:
     )
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     application.mount("/uploads", ImmutableUploadFiles(directory=UPLOAD_DIR), name="uploads")
-    for module in (auth, public, catalog, booking, profile, admin, admin_catalog, admin_content):
+    for module in (
+        auth,
+        public,
+        catalog,
+        generic_booking,
+        booking,
+        profile,
+        admin,
+        admin_catalog,
+        admin_content,
+    ):
         application.include_router(module.router)
     serve_built_frontend(application)
     return application

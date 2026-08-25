@@ -12,6 +12,15 @@ import { haptic } from '../lib/haptic'
 const SEARCH_DEBOUNCE_MS = 300
 const PRIORITY_GENRES = ['Ужасы', "Qo'rqinchli", 'Мультфильм', 'Multfilm']
 
+/**
+ * A film carries its genres in one field, comma-separated ("Фантастика,
+ * Боевик"), so each one has to be read out separately. Treating the field as
+ * a single label made a filter nobody clicks and left the real "Боевик"
+ * section without the film.
+ */
+const splitGenres = (value: string) =>
+  (value ?? '').split(',').map(item => item.trim()).filter(Boolean)
+
 export default function Home() {
   const { language, t } = useI18n()
   const [movies, setMovies] = useState<Movie[]>([])
@@ -59,7 +68,7 @@ export default function Home() {
   }, [appliedQuery, language, onlyNew])
 
   const genres = useMemo(() => {
-    const unique = Array.from(new Set(movies.map(movie => movie.genre)))
+    const unique = Array.from(new Set(movies.flatMap(movie => splitGenres(movie.genre))))
     const priority = PRIORITY_GENRES.filter(item => unique.includes(item))
     const rest = unique
       .filter(item => !PRIORITY_GENRES.includes(item))
@@ -68,7 +77,7 @@ export default function Home() {
   }, [language, movies])
   // Genre stays a client-side facet over whatever the server returned.
   const visible = useMemo(
-    () => movies.filter(movie => !genre || movie.genre === genre),
+    () => movies.filter(movie => !genre || splitGenres(movie.genre).includes(genre)),
     [genre, movies],
   )
   const newReleases = useMemo(() => movies.filter(movie => movie.is_new), [movies])
@@ -112,6 +121,16 @@ export default function Home() {
         ))}
       </div>
 
+      <section>
+        <div className="strip-head"><h2>{t('allGenres')}</h2></div>
+        <div className="catalog">
+          {loading && [1, 2, 3, 4].map(item => <div className="skeleton-card" key={item}><div /><span /></div>)}
+          {!loading && visible.map(movie => <MovieCard movie={movie} key={movie.id} />)}
+          {!loading && !visible.length && !error && <p className="empty">{filtered ? t('nothingFound') : t('moviesNotFound')}{filtered && <button className="admin-ghost reset-filters" onClick={reset}>{t('resetFilters')}</button>}</p>}
+          {error && <p className="error">{error}</p>}
+        </div>
+      </section>
+
       {!onlyNew && !appliedQuery.trim() && newReleases.length > 0 && (
         <section className="new-strip">
           <div className="strip-head">
@@ -148,17 +167,7 @@ export default function Home() {
         </section>
       )}
 
-      <section className="catalog">
-        {loading && [1, 2, 3, 4].map(item => <div className="skeleton-card" key={item}><div /><span /></div>)}
-        {!loading && visible.map(movie => <MovieCard movie={movie} key={movie.id} />)}
-        {!loading && !visible.length && !error && (
-          <p className="empty">
-            {filtered ? t('nothingFound') : t('moviesNotFound')}
-            {filtered && <button className="admin-ghost reset-filters" onClick={reset}>{t('resetFilters')}</button>}
-          </p>
-        )}
-        {error && <p className="error">{error}</p>}
-      </section>
+      {!filtered && genres.map(item => <section key={item} className="genre-section"><div className="strip-head"><h2>{item}</h2></div><div className="catalog">{movies.filter(movie => splitGenres(movie.genre).includes(item)).map(movie => <MovieCard movie={movie} key={movie.id} />)}</div></section>)}
     </Shell>
   )
 }

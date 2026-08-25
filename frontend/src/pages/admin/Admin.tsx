@@ -6,23 +6,19 @@ import {
   getAdminBonuses,
   getAdminBookings,
   getAdminGallery,
-  getAdminMelodies,
   getAdminMovies,
   getAdminReviews,
-  getAdminSessions,
+  getAdminSlots,
   getAdminSettings,
   getDashboard,
-  getNotifications,
   isAdmin,
-  readNotification,
   setBasePrice,
   setBookingStatus,
   type AdminBonus,
   type AdminBooking,
   type AdminGalleryImage,
-  type AdminMelody,
   type AdminReview,
-  type AdminSession,
+  type AdminSlot,
   type AdminSettings,
   type MovieDetail,
 } from '../../api'
@@ -31,16 +27,15 @@ import { formatDateTime, formatMoney, translate, useI18n, type TranslationKey } 
 import BonusesView from './AdminBonuses'
 import CinemaSettingsView from './AdminCinemaSettings'
 import GalleryView from './AdminGallery'
-import MelodiesView from './AdminMelodies'
 import MoviesView from './AdminMovies'
 import NewReleasesView from './AdminNewReleases'
 import PriceView from './AdminPrice'
 import ReviewsView from './AdminReviews'
-import SessionsView from './AdminSessions'
+import SlotsView from './AdminSessions'
 
 type Tab =
   | 'dashboard' | 'bookings' | 'movies' | 'new' | 'sessions'
-  | 'price' | 'bonuses' | 'melodies' | 'gallery' | 'cinema' | 'reviews' | 'notifications'
+  | 'price' | 'bonuses' | 'gallery' | 'cinema' | 'reviews'
 type DashboardData = Awaited<ReturnType<typeof getDashboard>>
 type SortDir = 'asc' | 'desc'
 type DecisionPayload = {
@@ -48,7 +43,6 @@ type DecisionPayload = {
   reason?: string
   proposed_session?: string
 }
-
 const PAGE_SIZE = 8
 const REFRESH_INTERVAL_MS = 30_000
 
@@ -61,11 +55,9 @@ const tabs: { id: Tab; labelKey: TranslationKey }[] = [
   { id: 'sessions', labelKey: 'adminSessionsTab' },
   { id: 'price', labelKey: 'adminPriceTab' },
   { id: 'bonuses', labelKey: 'adminBonusesTab' },
-  { id: 'melodies', labelKey: 'adminMelodiesTab' },
   { id: 'gallery', labelKey: 'adminGalleryTab' },
   { id: 'cinema', labelKey: 'adminCinemaTab' },
   { id: 'reviews', labelKey: 'adminReviewsTab' },
-  { id: 'notifications', labelKey: 'adminNotificationsTab' },
 ]
 const statusTranslationKeys: Record<string, TranslationKey> = {
   pending: 'statusPending',
@@ -86,11 +78,9 @@ export default function Admin() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null)
   const [bookings, setBookings] = useState<AdminBooking[]>([])
   const [movies, setMovies] = useState<MovieDetail[]>([])
-  const [sessions, setSessions] = useState<AdminSession[]>([])
-  const [notices, setNotices] = useState<Awaited<ReturnType<typeof getNotifications>>>([])
+  const [slots, setSlots] = useState<AdminSlot[]>([])
   const [settings, setSettings] = useState<AdminSettings | null>(null)
   const [bonuses, setBonuses] = useState<AdminBonus[]>([])
-  const [melodies, setMelodies] = useState<AdminMelody[]>([])
   const [images, setImages] = useState<AdminGalleryImage[]>([])
   const [reviews, setReviews] = useState<AdminReview[]>([])
   const [loading, setLoading] = useState(true)
@@ -100,28 +90,24 @@ export default function Admin() {
   const load = useCallback(async () => {
     try {
       const [
-        dashboardData, bookingData, movieData, sessionData,
-        notificationData, settingsData, bonusData, melodyData, reviewData, galleryData,
+        dashboardData, bookingData, movieData, slotData,
+        settingsData, bonusData, reviewData, galleryData,
       ] = await Promise.all([
         getDashboard(),
         getAdminBookings(),
         getAdminMovies(language),
-        getAdminSessions(),
-        getNotifications(),
+        getAdminSlots(),
         getAdminSettings(),
         getAdminBonuses(),
-        getAdminMelodies(),
         getAdminReviews(),
         getAdminGallery(),
       ])
       setDashboard(dashboardData)
       setBookings(bookingData)
       setMovies(movieData)
-      setSessions(sessionData)
-      setNotices(notificationData)
+      setSlots(slotData)
       setSettings(settingsData)
       setBonuses(bonusData)
-      setMelodies(melodyData)
       setReviews(reviewData)
       setImages(galleryData)
       setError('')
@@ -185,7 +171,7 @@ export default function Admin() {
       )}
       {!loading && tab === 'movies' && <MoviesView movies={movies} onSaved={refresh} />}
       {!loading && tab === 'new' && <NewReleasesView movies={movies} onSaved={refresh} />}
-      {!loading && tab === 'sessions' && <SessionsView movies={movies} sessions={sessions} onSaved={refresh} />}
+      {!loading && tab === 'sessions' && <SlotsView slots={slots} onSaved={refresh} />}
       {!loading && tab === 'price' && settings && (
         <PriceView
           settings={settings}
@@ -193,16 +179,9 @@ export default function Admin() {
         />
       )}
       {!loading && tab === 'bonuses' && <BonusesView bonuses={bonuses} onSaved={refresh} />}
-      {!loading && tab === 'melodies' && <MelodiesView melodies={melodies} onSaved={refresh} />}
       {!loading && tab === 'gallery' && <GalleryView images={images} onSaved={refresh} />}
       {!loading && tab === 'cinema' && settings && <CinemaSettingsView settings={settings} onSaved={refresh} />}
       {!loading && tab === 'reviews' && <ReviewsView reviews={reviews} onSaved={refresh} />}
-      {!loading && tab === 'notifications' && (
-        <NotificationsView
-          notices={notices}
-          onRead={id => guard(() => readNotification(id), t('adminNotificationReadToast'))}
-        />
-      )}
       {/* The panel builds its own frame instead of using <Shell>, so it has to
           render the app-wide tab bar itself — without it the viewer tabs
           disappeared on entering the admin panel. The `admin-nav` above is a
@@ -214,18 +193,16 @@ export default function Admin() {
 
 function DashboardView({ data }: { data: DashboardData }) {
   const { language, t } = useI18n()
-  const unread = data.notifications.filter(item => !item.is_read).length
   const cards: [string, string | number][] = [
-    [t('newRequests'), unread],
+    [t('newRequests'), data.statuses.pending ?? 0],
     [t('statusPending'), data.statuses.pending ?? 0],
     [t('statusContacting'), data.statuses.contacting ?? 0],
     [t('statusConfirmed'), data.statuses.confirmed ?? 0],
     [t('statusCancelled'), data.statuses.cancelled ?? 0],
     [t('statusWatched'), data.statuses.watched ?? 0],
     [t('movies'), data.movies],
-    [t('sessions'), data.active_sessions],
+
     [t('bookingRequests'), data.bookings],
-    [t('potentialIncome'), formatMoney(data.potential_income, language)],
   ]
   return (
     <section>
@@ -243,20 +220,9 @@ function DashboardView({ data }: { data: DashboardData }) {
         ))}
         {!data.recent_bookings.length && <p className="empty">{t('noBookings')}</p>}
       </div>
-      <h2>{t('latestNotifications')}</h2>
-      <div className="admin-table compact">
-        {data.notifications.map(item => (
-          <article key={item.id}>
-            <b>{item.is_read ? t('read') : t('newNotice')}</b>
-            <span>{item.message}</span>
-          </article>
-        ))}
-        {!data.notifications.length && <p className="empty">{t('noNotifications')}</p>}
-      </div>
     </section>
   )
 }
-
 type BookingsViewProps = {
   bookings: AdminBooking[]
   onStatus: (id: number, status: string) => Promise<void>
@@ -343,18 +309,16 @@ function BookingsView({ bookings, onStatus, onDecision }: BookingsViewProps) {
       <div className="admin-table">
         {pageRows.map(item => (
           <article className="admin-row booking-admin-card" key={item.id}>
-            <img src={item.poster} alt={item.movie} loading="lazy" />
+            {item.poster && <img src={item.poster} alt={item.movie ?? ''} loading="lazy" />}
             <div className="booking-admin-meta">
-              <b>#{item.id} · {item.movie}</b>
+              <b>#{item.id}{item.movie ? ` · ${item.movie}` : ''}</b>
               <span className={`status-chip ${item.status === 'cancelled' ? 'muted' : 'live'}`}>
                 {statusLabel(item.status, t)}
               </span>
               <span>{item.name || t('client')} · {item.phone}</span>
               <span>{item.show_date} {item.session}</span>
               {item.proposed_session && <span>{t('proposedTime')}: {item.proposed_session}</span>}
-              <span>
-                {t('seats')} {item.seats} · {t('seatsCountLabel')}: {item.seats_count} · {formatMoney(item.total, language)}
-              </span>
+              <span>{language === 'ru' ? 'Гостей' : 'Mehmonlar'}: {item.party_size ?? item.seats_count ?? 0} · {formatMoney(item.total, language)}</span>
               <span>{t('currentBasePrice')}: {formatMoney(item.ticket_price, language)}</span>
               <span>Telegram: {item.telegram_username ? `@${item.telegram_username}` : t('notSet')}</span>
               <span>{t('telegramId')}: {item.telegram_id}</span>
@@ -390,43 +354,6 @@ function BookingsView({ bookings, onStatus, onDecision }: BookingsViewProps) {
         <button disabled={page <= 1} onClick={() => setPage(page - 1)}>{t('previousPage')}</button>
         <span>{page} / {pages}</span>
         <button disabled={page >= pages} onClick={() => setPage(page + 1)}>{t('nextPage')}</button>
-      </div>
-    </section>
-  )
-}
-
-type NotificationsViewProps = {
-  notices: Awaited<ReturnType<typeof getNotifications>>
-  onRead: (id: number) => Promise<void>
-}
-
-function NotificationsView({ notices, onRead }: NotificationsViewProps) {
-  const { language, t } = useI18n()
-  const [filter, setFilter] = useState('')
-  const rows = useMemo(
-    () => notices.filter(item => !filter || (filter === 'read' ? item.is_read : !item.is_read)),
-    [filter, notices],
-  )
-  return (
-    <section>
-      <h1>{t('notifications')}</h1>
-      <select className="admin-input" value={filter} onChange={event => setFilter(event.target.value)}>
-        <option value="">{t('all')}</option>
-        <option value="new">{t('unread')}</option>
-        <option value="read">{t('read')}</option>
-      </select>
-      <div className="admin-table">
-        {rows.map(item => (
-          <article key={item.id}>
-            <b>{item.is_read ? t('read') : t('bookingRequests')} · #{item.booking_id}</b>
-            <span>{item.message}</span>
-            <span>{formatDateTime(item.created_at, language)}</span>
-            {!item.is_read && (
-              <button className="book fit" onClick={() => { void onRead(item.id) }}>{t('markRead')}</button>
-            )}
-          </article>
-        ))}
-        {!rows.length && <p className="empty">{t('notificationsNone')}</p>}
       </div>
     </section>
   )

@@ -1,15 +1,13 @@
-"""Admin CRUD for bonuses, melodies and the gallery (spec 4.6, 4.7, 16)."""
+"""Admin CRUD for bonuses and the gallery (spec 4.6, 16)."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.deps import admin_required, get_db
-from backend.core.config import MAX_MELODIES
-from backend.models import Bonus, GalleryImage, Melody
-from backend.schemas.settings import BonusIn, GalleryImageIn, MelodyIn, MelodyPatchIn
-from backend.services.media import save_audio_upload, save_audio_upload_chunk
+from backend.models import Bonus, GalleryImage
+from backend.schemas.settings import BonusIn, GalleryImageIn
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(admin_required)])
 
@@ -25,9 +23,6 @@ def _bonus(item: Bonus) -> dict[str, object]:
         "sort_order": item.sort_order,
     }
 
-
-def _melody(item: Melody) -> dict[str, object]:
-    return {"id": item.id, "title": item.title, "file_url": item.file_url, "sort_order": item.sort_order}
 
 
 def _image(item: GalleryImage) -> dict[str, object]:
@@ -78,72 +73,10 @@ async def delete_bonus(bonus_id: int, session: AsyncSession = Depends(get_db)) -
     return {"status": "deleted"}
 
 
-# --- melodies ----------------------------------------------------------------
-
-
-@router.get("/melodies")
-async def list_melodies(session: AsyncSession = Depends(get_db)) -> list[dict[str, object]]:
-    rows = await session.scalars(select(Melody).order_by(Melody.sort_order, Melody.id))
-    return [_melody(item) for item in rows]
-
-
-@router.post("/melodies/upload")
-async def upload_melody(file: UploadFile = File(...)) -> dict[str, str]:
-    return {"url": await save_audio_upload(file)}
-
-
-@router.post("/melodies/upload/chunk")
-async def upload_melody_chunk(
-    upload_id: str = Form(...),
-    chunk_index: int = Form(...),
-    total_chunks: int = Form(...),
-    total_size: int = Form(...),
-    filename: str = Form(...),
-    file: UploadFile = File(...),
-) -> dict[str, object]:
-    return await save_audio_upload_chunk(
-        upload_id=upload_id,
-        chunk_index=chunk_index,
-        total_chunks=total_chunks,
-        total_size=total_size,
-        filename=filename,
-        file=file,
-    )
-
-
-@router.post("/melodies")
-async def create_melody(payload: MelodyIn, session: AsyncSession = Depends(get_db)) -> dict[str, object]:
-    count = await session.scalar(select(func.count()).select_from(Melody)) or 0
-    if count >= MAX_MELODIES:
-        raise HTTPException(409, f"At most {MAX_MELODIES} melodies are allowed")
-    item = Melody(**payload.model_dump())
-    session.add(item)
-    await session.commit()
-    return {"id": item.id}
-
-
-@router.patch("/melodies/{melody_id}")
-async def edit_melody(
-    melody_id: int, payload: MelodyPatchIn, session: AsyncSession = Depends(get_db)
-) -> dict[str, str]:
-    """Rename or replace the audio without deleting and re-adding the row."""
-    item = await session.get(Melody, melody_id)
-    if item is None:
-        raise HTTPException(404, "Melody not found")
-    for key, value in payload.model_dump(exclude_none=True).items():
-        setattr(item, key, value)
-    await session.commit()
-    return {"status": "updated"}
-
-
-@router.delete("/melodies/{melody_id}")
-async def delete_melody(melody_id: int, session: AsyncSession = Depends(get_db)) -> dict[str, str]:
-    item = await session.get(Melody, melody_id)
-    if item is None:
-        raise HTTPException(404, "Melody not found")
-    await session.delete(item)
-    await session.commit()
-    return {"status": "deleted"}
+# The melody endpoints were removed with the feature: the audio player loaded
+# the small box the cinema runs on, Telegram blocks autoplay anyway, and the
+# client dropped it. The `melodies` table and any uploaded file are left alone
+# on purpose -- this removes the API surface, not somebody's data.
 
 
 # --- gallery -----------------------------------------------------------------

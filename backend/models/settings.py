@@ -33,6 +33,9 @@ class CinemaSettings(Base):
     map_url: Mapped[str] = mapped_column(String(512), default=config.DEFAULT_MAP_URL)
     latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    #: The person a viewer settles the film and the manual transfer with.
+    admin_phone: Mapped[str] = mapped_column(String(32), default=config.DEFAULT_ADMIN_PHONE)
+    admin_telegram: Mapped[str] = mapped_column(String(64), default=config.DEFAULT_ADMIN_TELEGRAM)
     work_hours: Mapped[str] = mapped_column(String(120), default=config.DEFAULT_WORK_HOURS)
     work_hours_uz: Mapped[str] = mapped_column(String(120), default=config.DEFAULT_WORK_HOURS)
     about: Mapped[str] = mapped_column(Text, default="")

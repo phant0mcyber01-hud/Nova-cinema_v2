@@ -137,6 +137,7 @@ def main_keyboard() -> InlineKeyboardMarkup:
         inline_keyboard=[
             [InlineKeyboardButton(text=WEBAPP_BUTTON_TEXT, web_app=create_webapp_info())],
             [InlineKeyboardButton(text="🎬 Каталог фильмов", callback_data="movies")],
+            [InlineKeyboardButton(text="🎟 Забронировать", web_app=create_webapp_info("/tickets"))],
             [InlineKeyboardButton(text="🎫 Мои бронирования", web_app=create_webapp_info("/profile/bookings"))],
             [InlineKeyboardButton(text="ℹ️ О кинотеатре", callback_data="about")],
         ]
@@ -144,12 +145,12 @@ def main_keyboard() -> InlineKeyboardMarkup:
 
 
 def movie_keyboard(movie: dict[str, object]) -> InlineKeyboardMarkup:
-    movie_id = int(movie["id"])
     trailer_id = str(movie.get("trailer_id") or "")
     rows: list[list[InlineKeyboardButton]] = []
     if trailer_id:
         rows.append([InlineKeyboardButton(text="▶ Смотреть трейлер", url=f"https://youtu.be/{trailer_id}")])
-    rows.append([InlineKeyboardButton(text="🎟 Забронировать", web_app=create_webapp_info(f"/booking/{movie_id}/date"))])
+    # No "book this film" button: the hall is reserved for a date and a time,
+    # and which film is played is agreed with the administrator afterwards.
     rows.append([InlineKeyboardButton(text="◀ Назад", callback_data="movies")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
