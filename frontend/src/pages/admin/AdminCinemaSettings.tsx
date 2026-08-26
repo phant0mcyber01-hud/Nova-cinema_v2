@@ -41,19 +41,27 @@ const toPayload = (settings: AdminSettings): AdminSettingsPayload => ({
 
 const numberOrNull = (value: string) => (value.trim() === '' ? null : Number(value))
 
-/** Spec 4.9 / 16: the cinema profile the Mini App and the bot both read. */
-export default function CinemaSettingsView({ settings, onSaved }: CinemaSettingsViewProps) {
+type FaqContent = Pick<AdminSettingsPayload, 'important' | 'important_uz' | 'faq'>
+type FaqEditorModalProps = {
+  initial: FaqContent
+  busy: boolean
+  error: string
+  onClose: () => void
+  onSave: (value: FaqContent) => Promise<void>
+}
+
+const copyFaqContent = (value: FaqContent): FaqContent => ({
+  important: value.important,
+  important_uz: value.important_uz,
+  faq: value.faq.map(item => ({ ...item })),
+})
+
+/** A focused editor keeps every keystroke away from the much larger settings page. */
+function FaqEditorModal({ initial, busy, error, onClose, onSave }: FaqEditorModalProps) {
   const { t } = useI18n()
-  const [draft, setDraft] = useState<AdminSettingsPayload>(() => toPayload(settings))
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
+  const [draft, setDraft] = useState<FaqContent>(() => copyFaqContent(initial))
 
-  useEffect(() => setDraft(toPayload(settings)), [settings])
-
-  const set = <K extends keyof AdminSettingsPayload>(key: K, value: AdminSettingsPayload[K]) =>
-    setDraft(current => ({ ...current, [key]: value }))
-
-  const setFaqField = (index: number, field: keyof AdminSettingsPayload['faq'][number], value: string) =>
+  const setFaqField = (index: number, field: keyof FaqContent['faq'][number], value: string) =>
     setDraft(current => ({
       ...current,
       faq: current.faq.map((item, itemIndex) => (itemIndex === index ? { ...item, [field]: value } : item)),
@@ -68,21 +76,104 @@ export default function CinemaSettingsView({ settings, onSaved }: CinemaSettings
   const removeFaqItem = (index: number) =>
     setDraft(current => ({ ...current, faq: current.faq.filter((_, itemIndex) => itemIndex !== index) }))
 
-  const save = async () => {
-    if (!draft.name.trim()) {
+  return (
+    <div className="modal-backdrop faq-editor-backdrop" role="presentation">
+      <section className="modal faq-editor-modal" role="dialog" aria-modal="true" aria-label="FAQ и Важно знать">
+        <header className="faq-editor-head">
+          <div>
+            <span className="admin-eyebrow">Контент / Kontent</span>
+            <h2>FAQ и «Важно знать»</h2>
+            <p>Русская и узбекская версии редактируются в одном окне.</p>
+          </div>
+          <button type="button" className="admin-ghost cms-close" onClick={onClose} disabled={busy} aria-label={t('close')}>×</button>
+        </header>
+
+        <fieldset className="faq-editor-body" disabled={busy}>
+          <section className="faq-important-grid">
+            <label>
+              <b>Важно знать</b><small>{t('russianVersion')}</small>
+              <textarea value={draft.important} onChange={event => setDraft(current => ({ ...current, important: event.target.value }))} />
+            </label>
+            <label>
+              <b>Muhim maʼlumot</b><small>{t('uzbekVersion')}</small>
+              <textarea value={draft.important_uz} onChange={event => setDraft(current => ({ ...current, important_uz: event.target.value }))} />
+            </label>
+          </section>
+
+          <section className="faq-editor-list">
+            <header className="faq-list-head">
+              <div><h3>FAQ</h3><p>{draft.faq.length} / 20</p></div>
+              <button type="button" className="admin-ghost" onClick={addFaqItem} disabled={draft.faq.length >= 20}>{t('add')}</button>
+            </header>
+            {draft.faq.map((item, index) => (
+              <article className="faq-editor-item" key={index}>
+                <header><b>FAQ #{index + 1}</b><button type="button" className="admin-ghost danger" onClick={() => removeFaqItem(index)}>{t('remove')}</button></header>
+                <div className="faq-language-grid">
+                  <label>
+                    <span>RU</span><small>{t('russianVersion')}</small>
+                    <input value={item.question_ru} placeholder="Вопрос" onChange={event => setFaqField(index, 'question_ru', event.target.value)} />
+                    <textarea value={item.answer_ru} placeholder="Ответ" onChange={event => setFaqField(index, 'answer_ru', event.target.value)} />
+                  </label>
+                  <label>
+                    <span>UZ</span><small>{t('uzbekVersion')}</small>
+                    <input value={item.question_uz} placeholder="Savol" onChange={event => setFaqField(index, 'question_uz', event.target.value)} />
+                    <textarea value={item.answer_uz} placeholder="Javob" onChange={event => setFaqField(index, 'answer_uz', event.target.value)} />
+                  </label>
+                </div>
+              </article>
+            ))}
+            {!draft.faq.length && <p className="empty">{t('none')}</p>}
+          </section>
+        </fieldset>
+
+        <footer className="faq-editor-footer">
+          {error && <p className="error">{error}</p>}
+          <div>
+            <button type="button" className="admin-ghost" onClick={onClose} disabled={busy}>{t('close')}</button>
+            <button type="button" className="book fit" onClick={() => { void onSave(draft) }} disabled={busy}>{busy ? t('saving') : t('save')}</button>
+          </div>
+        </footer>
+      </section>
+    </div>
+  )
+}
+
+/** Spec 4.9 / 16: the cinema profile the Mini App and the bot both read. */
+export default function CinemaSettingsView({ settings, onSaved }: CinemaSettingsViewProps) {
+  const { t } = useI18n()
+  const [draft, setDraft] = useState<AdminSettingsPayload>(() => toPayload(settings))
+  const [faqOpen, setFaqOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => setDraft(toPayload(settings)), [settings])
+
+  const set = <K extends keyof AdminSettingsPayload>(key: K, value: AdminSettingsPayload[K]) =>
+    setDraft(current => ({ ...current, [key]: value }))
+
+  const save = async (payload: AdminSettingsPayload = draft): Promise<boolean> => {
+    if (!payload.name.trim()) {
       setError(t('bonusRequired'))
-      return
+      return false
     }
     setBusy(true)
     setError('')
     try {
-      await updateAdminSettings(draft)
+      await updateAdminSettings(payload)
+      setDraft(payload)
       await onSaved(t('settingsSaved'))
+      return true
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t('settingsSaveFailed'))
+      return false
     } finally {
       setBusy(false)
     }
+  }
+
+  const saveFaq = async (value: FaqContent) => {
+    const next = { ...draft, ...copyFaqContent(value) }
+    if (await save(next)) setFaqOpen(false)
   }
 
   return (
@@ -125,36 +216,16 @@ export default function CinemaSettingsView({ settings, onSaved }: CinemaSettings
         </div>
       </section>
 
-      <section className="session-builder">
+      <section className="session-builder faq-launcher">
         <header><span>FAQ</span><b>Важно / Muhim</b></header>
-        <div className="session-step-body session-options">
-          <label><b>Важно знать</b><small>{t('russianVersion')}</small><textarea value={draft.important} onChange={event => set('important', event.target.value)} /></label>
-          <label><b>Muhim maʼlumot</b><small>{t('uzbekVersion')}</small><textarea value={draft.important_uz} onChange={event => set('important_uz', event.target.value)} /></label>
+        <div className="faq-launcher-body">
+          <div className="faq-launcher-stats">
+            <article><strong>{draft.faq.length}</strong><span>FAQ</span></article>
+            <article><strong>{[draft.important, draft.important_uz].filter(value => value.trim()).length}/2</strong><span>Важно / Muhim</span></article>
+          </div>
+          <p>Откройте отдельное большое окно, чтобы спокойно редактировать оба языка.</p>
+          <button type="button" className="book fit" onClick={() => setFaqOpen(true)}>{t('edit')}</button>
         </div>
-        <div className="admin-table compact">
-          {draft.faq.map((item, index) => (
-            <article key={index} className="admin-row">
-              <div className="booking-admin-meta" style={{ width: '100%' }}>
-                <b>{`#${index + 1}`}</b>
-                <label><small>{t('russianVersion')}</small>
-                  <input value={item.question_ru} placeholder="Вопрос" onChange={event => setFaqField(index, 'question_ru', event.target.value)} />
-                  <textarea value={item.answer_ru} placeholder="Ответ" onChange={event => setFaqField(index, 'answer_ru', event.target.value)} />
-                </label>
-                <label><small>{t('uzbekVersion')}</small>
-                  <input value={item.question_uz} placeholder="Savol" onChange={event => setFaqField(index, 'question_uz', event.target.value)} />
-                  <textarea value={item.answer_uz} placeholder="Javob" onChange={event => setFaqField(index, 'answer_uz', event.target.value)} />
-                </label>
-              </div>
-              <div className="admin-actions">
-                <button type="button" className="admin-ghost danger" onClick={() => removeFaqItem(index)}>{t('remove')}</button>
-              </div>
-            </article>
-          ))}
-          {!draft.faq.length && <p className="empty">{t('none')}</p>}
-        </div>
-        <footer className="session-builder-actions">
-          <button type="button" className="admin-ghost" onClick={addFaqItem}>{t('add')}</button>
-        </footer>
       </section>
 
       <section className="session-builder">
@@ -315,6 +386,16 @@ export default function CinemaSettingsView({ settings, onSaved }: CinemaSettings
           </button>
         </footer>
       </section>
+
+      {faqOpen && (
+        <FaqEditorModal
+          initial={{ important: draft.important, important_uz: draft.important_uz, faq: draft.faq }}
+          busy={busy}
+          error={error}
+          onClose={() => setFaqOpen(false)}
+          onSave={saveFaq}
+        />
+      )}
     </section>
   )
 }

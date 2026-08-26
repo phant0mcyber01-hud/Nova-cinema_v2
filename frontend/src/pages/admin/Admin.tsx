@@ -111,11 +111,19 @@ export default function Admin() {
     }
   }, [language])
 
+  const refreshDashboard = useCallback(async () => {
+    try {
+      setDashboard(await getDashboard())
+    } catch {
+      // A background counter refresh must never interrupt an admin who is typing.
+    }
+  }, [])
+
   useEffect(() => {
     void load()
-    const intervalId = window.setInterval(() => { void load() }, REFRESH_INTERVAL_MS)
+    const intervalId = window.setInterval(() => { void refreshDashboard() }, REFRESH_INTERVAL_MS)
     return () => window.clearInterval(intervalId)
-  }, [load])
+  }, [load, refreshDashboard])
 
   const refresh = useCallback(async (message: string) => {
     await load()
