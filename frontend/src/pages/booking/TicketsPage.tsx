@@ -41,6 +41,7 @@ const text = {
     phone: 'Телефон',
     telegram: 'Telegram',
     comment: 'Комментарий (необязательно)',
+    promo: 'Промокод (необязательно)',
     perPerson: 'за одного человека',
     total: 'Итого',
     send: 'Отправить заявку',
@@ -66,6 +67,7 @@ const text = {
     phone: 'Telefon',
     telegram: 'Telegram',
     comment: 'Izoh (ixtiyoriy)',
+    promo: 'Promokod (ixtiyoriy)',
     perPerson: 'bir kishi uchun',
     total: 'Jami',
     send: 'Ariza yuborish',
@@ -149,6 +151,7 @@ export default function TicketsPage() {
     phone: '',
     telegram_username: WebApp.initDataUnsafe.user?.username ?? '',
     comment: '',
+    promo_code: '',
   })
 
   const loadSlots = useCallback(async (chosenDate: string, resumed = false) => {
@@ -343,6 +346,7 @@ export default function TicketsPage() {
             <input value={contact.last_name} onChange={event => setContact({ ...contact, last_name: event.target.value })} placeholder={copy.last} />
             <input value={contact.phone} onChange={event => setContact({ ...contact, phone: event.target.value })} placeholder={copy.phone} inputMode="tel" />
             <input value={contact.telegram_username} onChange={event => setContact({ ...contact, telegram_username: event.target.value })} placeholder={copy.telegram} />
+            <input value={contact.promo_code} onChange={event => setContact({ ...contact, promo_code: event.target.value })} placeholder={copy.promo} maxLength={64} autoCapitalize="characters" />
             <textarea value={contact.comment} onChange={event => setContact({ ...contact, comment: event.target.value })} placeholder={copy.comment} />
             <div className="summary-total">
               <span>{formatMoney(hold.ticket_price, language)} {copy.perPerson}</span>

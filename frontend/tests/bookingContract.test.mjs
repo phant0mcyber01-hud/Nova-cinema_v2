@@ -56,6 +56,14 @@ test('confirming sends the selection the backend validates the hold against', ()
   }
 })
 
+test('checkout lets the viewer enter a promo code and sends it with the request', () => {
+  assert.match(client, /promo_code:\s*string/, 'the request contract must carry the promo code')
+  assert.match(tickets, /promo_code:\s*['"]{2}/, 'checkout must initialize an editable promo code')
+  assert.match(tickets, /value=\{contact\.promo_code\}/, 'checkout must render the promo-code input')
+  assert.match(tickets, /placeholder=\{copy\.promo\}/, 'the input must have a localized label')
+  assert.match(tickets, /\.\.\.contact/, 'the submitted request must include the promo code')
+})
+
 test('the slot type only promises fields the backend sends', () => {
   const slotType = client.match(/export type BookingSlot = \{(?<body>[^}]*)\}/).groups.body
   const served = router.match(/slots\.append\(\s*\{(?<body>[\s\S]*?)\}\s*\)/).groups.body

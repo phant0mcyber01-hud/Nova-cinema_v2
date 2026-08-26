@@ -48,6 +48,7 @@ export type BookingContacts = {
   phone: string
   telegram_username: string
   comment: string
+  promo_code: string
 }
 
 export type BookingRequest = {
