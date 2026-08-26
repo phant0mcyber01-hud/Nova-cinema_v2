@@ -53,6 +53,21 @@ export default function CinemaSettingsView({ settings, onSaved }: CinemaSettings
   const set = <K extends keyof AdminSettingsPayload>(key: K, value: AdminSettingsPayload[K]) =>
     setDraft(current => ({ ...current, [key]: value }))
 
+  const setFaqField = (index: number, field: keyof AdminSettingsPayload['faq'][number], value: string) =>
+    setDraft(current => ({
+      ...current,
+      faq: current.faq.map((item, itemIndex) => (itemIndex === index ? { ...item, [field]: value } : item)),
+    }))
+
+  const addFaqItem = () =>
+    setDraft(current => ({
+      ...current,
+      faq: [...current.faq, { question_ru: '', answer_ru: '', question_uz: '', answer_uz: '' }],
+    }))
+
+  const removeFaqItem = (index: number) =>
+    setDraft(current => ({ ...current, faq: current.faq.filter((_, itemIndex) => itemIndex !== index) }))
+
   const save = async () => {
     if (!draft.name.trim()) {
       setError(t('bonusRequired'))
@@ -115,9 +130,31 @@ export default function CinemaSettingsView({ settings, onSaved }: CinemaSettings
         <div className="session-step-body session-options">
           <label><b>Важно знать</b><small>{t('russianVersion')}</small><textarea value={draft.important} onChange={event => set('important', event.target.value)} /></label>
           <label><b>Muhim maʼlumot</b><small>{t('uzbekVersion')}</small><textarea value={draft.important_uz} onChange={event => set('important_uz', event.target.value)} /></label>
-          <label><b>FAQ RU</b><textarea value={draft.faq[0]?.question_ru ?? ''} placeholder="Вопрос" onChange={event => set('faq', [{ question_ru: event.target.value, answer_ru: draft.faq[0]?.answer_ru ?? '', question_uz: draft.faq[0]?.question_uz ?? '', answer_uz: draft.faq[0]?.answer_uz ?? '' }])} /><textarea value={draft.faq[0]?.answer_ru ?? ''} placeholder="Ответ" onChange={event => set('faq', [{ question_ru: draft.faq[0]?.question_ru ?? '', answer_ru: event.target.value, question_uz: draft.faq[0]?.question_uz ?? '', answer_uz: draft.faq[0]?.answer_uz ?? '' }])} /></label>
-          <label><b>FAQ UZ</b><textarea value={draft.faq[0]?.question_uz ?? ''} placeholder="Savol" onChange={event => set('faq', [{ question_ru: draft.faq[0]?.question_ru ?? '', answer_ru: draft.faq[0]?.answer_ru ?? '', question_uz: event.target.value, answer_uz: draft.faq[0]?.answer_uz ?? '' }])} /><textarea value={draft.faq[0]?.answer_uz ?? ''} placeholder="Javob" onChange={event => set('faq', [{ question_ru: draft.faq[0]?.question_ru ?? '', answer_ru: draft.faq[0]?.answer_ru ?? '', question_uz: draft.faq[0]?.question_uz ?? '', answer_uz: event.target.value }])} /></label>
         </div>
+        <div className="admin-table compact">
+          {draft.faq.map((item, index) => (
+            <article key={index} className="admin-row">
+              <div className="booking-admin-meta" style={{ width: '100%' }}>
+                <b>{`#${index + 1}`}</b>
+                <label><small>{t('russianVersion')}</small>
+                  <input value={item.question_ru} placeholder="Вопрос" onChange={event => setFaqField(index, 'question_ru', event.target.value)} />
+                  <textarea value={item.answer_ru} placeholder="Ответ" onChange={event => setFaqField(index, 'answer_ru', event.target.value)} />
+                </label>
+                <label><small>{t('uzbekVersion')}</small>
+                  <input value={item.question_uz} placeholder="Savol" onChange={event => setFaqField(index, 'question_uz', event.target.value)} />
+                  <textarea value={item.answer_uz} placeholder="Javob" onChange={event => setFaqField(index, 'answer_uz', event.target.value)} />
+                </label>
+              </div>
+              <div className="admin-actions">
+                <button type="button" className="admin-ghost danger" onClick={() => removeFaqItem(index)}>{t('remove')}</button>
+              </div>
+            </article>
+          ))}
+          {!draft.faq.length && <p className="empty">{t('none')}</p>}
+        </div>
+        <footer className="session-builder-actions">
+          <button type="button" className="admin-ghost" onClick={addFaqItem}>{t('add')}</button>
+        </footer>
       </section>
 
       <section className="session-builder">

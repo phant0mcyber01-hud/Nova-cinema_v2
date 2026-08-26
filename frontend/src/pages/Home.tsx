@@ -5,6 +5,7 @@ import { getMovies, getPublicSettings, type Movie } from '../api'
 import MovieCard from '../components/MovieCard'
 import Icon from '../components/Icon'
 import Shell from '../components/Shell'
+import TakeBookingCta from '../components/TakeBookingCta'
 import { setCurrency, useI18n } from '../i18n'
 import { apiMessage } from '../lib/apiMessage'
 import { haptic } from '../lib/haptic'
@@ -168,6 +169,8 @@ export default function Home() {
       )}
 
       {!filtered && genres.map(item => <section key={item} className="genre-section"><div className="strip-head"><h2>{item}</h2></div><div className="catalog">{movies.filter(movie => splitGenres(movie.genre).includes(item)).map(movie => <MovieCard movie={movie} key={movie.id} />)}</div></section>)}
+
+      <TakeBookingCta />
     </Shell>
   )
 }

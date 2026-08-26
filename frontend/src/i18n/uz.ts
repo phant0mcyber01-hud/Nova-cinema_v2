@@ -367,6 +367,7 @@ export const uz: Record<TranslationKey, string> = {
   allDates: 'Barcha sanalar',
   navPoster: 'Afisha',
   navTickets: 'Chiptalar',
+  takeBooking: 'Bron olish',
   availableSessions: 'Mavjud seanslar',
   availableSessionsHint: 'Vaqtni tanlang — soʻng joylarni',
   noSessionsYet: 'Seanslar hali belgilanmagan',

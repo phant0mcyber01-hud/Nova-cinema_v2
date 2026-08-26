@@ -2,7 +2,14 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field, field_validator
 
-from backend.core.config import MAX_HALL_COLS, MAX_HALL_ROWS, PHONE_PATTERN
+from backend.core.config import MAX_FAQ_ITEMS, MAX_HALL_COLS, MAX_HALL_ROWS, PHONE_PATTERN
+
+
+class FaqItemIn(BaseModel):
+    question_ru: str = Field(default="", max_length=300)
+    answer_ru: str = Field(default="", max_length=2000)
+    question_uz: str = Field(default="", max_length=300)
+    answer_uz: str = Field(default="", max_length=2000)
 
 
 class BasePriceIn(BaseModel):
@@ -30,6 +37,9 @@ class SettingsIn(BaseModel):
     work_hours_uz: str = Field(default="", max_length=120)
     about: str = Field(default="", max_length=4000)
     about_uz: str = Field(default="", max_length=4000)
+    important: str = Field(default="", max_length=2000)
+    important_uz: str = Field(default="", max_length=2000)
+    faq: list[FaqItemIn] = Field(default_factory=list, max_length=MAX_FAQ_ITEMS)
 
     base_ticket_price: int = Field(ge=1, le=10_000_000)
     currency: str = Field(default="UZS", min_length=1, max_length=8)

@@ -79,6 +79,27 @@ html,body,#root{min-height:100%;overflow-x:hidden}.app{width:100%;max-width:760p
 .hall-numbers,.hall-row{display:grid;grid-template-columns:var(--row-label-size) repeat(var(--seat-count),minmax(0,1fr));gap:var(--seat-gap);align-items:center;width:100%;max-width:none}
 .hall-numbers span{display:block}
 
+/* Nova Cinema: the floating "take a booking" shortcut on the poster screen */
+.take-booking-cta{
+  position:fixed;
+  left:50%;
+  bottom:calc(78px + env(safe-area-inset-bottom));
+  z-index:19;
+  transform:translateX(-50%);
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:12px 22px;
+  border-radius:999px;
+  background:linear-gradient(135deg,#a11e30,#6c1522);
+  color:#fff;
+  font-weight:700;
+  text-decoration:none;
+  box-shadow:0 14px 30px #000a;
+  white-space:nowrap;
+}
+.take-booking-cta:active{transform:translateX(-50%) scale(.96)}
+
 /* Nova Cinema: the designed day picker (calendar strip) */
 .date-strip{display:flex;gap:10px;margin-top:4px;padding-bottom:4px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
 .date-strip::-webkit-scrollbar{display:none}

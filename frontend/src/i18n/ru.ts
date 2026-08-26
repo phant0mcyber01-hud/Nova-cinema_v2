@@ -365,6 +365,7 @@ export const ru = {
   allDates: 'Все даты',
   navPoster: 'Афиша',
   navTickets: 'Билеты',
+  takeBooking: 'Взять бронь',
   availableSessions: 'Доступные сеансы',
   availableSessionsHint: 'Выберите время — и сразу к выбору мест',
   noSessionsYet: 'Сеансы пока не назначены',

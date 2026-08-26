@@ -5,6 +5,8 @@ database row is authoritative, and `config.DEFAULT_*` only seeds it once.
 """
 from __future__ import annotations
 
+import json
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +39,14 @@ async def get_settings(session: AsyncSession) -> CinemaSettings:
     return await session.get(CinemaSettings, SETTINGS_ID)
 
 
+def _faq_rows(faq_json: str) -> list[dict[str, str]]:
+    try:
+        rows = json.loads(faq_json or "[]")
+    except (TypeError, ValueError):
+        return []
+    return rows if isinstance(rows, list) else []
+
+
 def serialize_settings(settings: CinemaSettings, language: str = "ru") -> dict[str, object]:
     """Public payload consumed by the Mini App and the bot."""
     uz = normalize_language(language) == "uz"
@@ -56,6 +66,14 @@ def serialize_settings(settings: CinemaSettings, language: str = "ru") -> dict[s
         "longitude": settings.longitude,
         "work_hours": (settings.work_hours_uz or settings.work_hours) if uz else settings.work_hours,
         "about": (settings.about_uz or settings.about) if uz else settings.about,
+        "important": (settings.important_uz or settings.important) if uz else settings.important,
+        "faq": [
+            {
+                "question": (row.get("question_uz") or row.get("question_ru", "")) if uz else row.get("question_ru", ""),
+                "answer": (row.get("answer_uz") or row.get("answer_ru", "")) if uz else row.get("answer_ru", ""),
+            }
+            for row in _faq_rows(settings.faq_json)
+        ],
         "base_ticket_price": settings.base_ticket_price,
         "currency": settings.currency,
         "hall_rows": settings.hall_rows,
@@ -86,6 +104,9 @@ def serialize_settings_admin(settings: CinemaSettings) -> dict[str, object]:
         "work_hours_uz": settings.work_hours_uz,
         "about": settings.about,
         "about_uz": settings.about_uz,
+        "important": settings.important,
+        "important_uz": settings.important_uz,
+        "faq": _faq_rows(settings.faq_json),
         "base_ticket_price": settings.base_ticket_price,
         "currency": settings.currency,
         "hall_rows": settings.hall_rows,

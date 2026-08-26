@@ -50,7 +50,7 @@ async def test_public_settings_expose_the_seeded_cinema_profile(client):
     assert data["telegram_url"] == "https://t.me/novasinema"
     assert (data["hall_rows"], data["hall_cols"], data["hall_seats"]) == (3, 4, 12)
     assert data["currency"] == "UZS"
-    assert len(data["booking_dates"]) == 7
+    assert len(data["booking_dates"]) == 8
 
 
 async def test_public_settings_localise_to_uzbek(client):

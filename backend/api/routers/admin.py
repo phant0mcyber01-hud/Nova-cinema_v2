@@ -1,6 +1,8 @@
 """Admin dashboard, booking processing, notifications, settings and uploads."""
 from __future__ import annotations
 
+import json
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -146,7 +148,13 @@ async def admin_settings(session: AsyncSession = Depends(get_db)) -> dict[str, o
 async def update_settings(payload: SettingsIn, session: AsyncSession = Depends(get_db)) -> dict[str, object]:
     settings = await get_settings(session)
     for key, value in payload.model_dump().items():
-        setattr(settings, key, value)
+        if key == "faq":
+            # The column is a plain JSON string, same pattern as a movie's
+            # cast/gallery: nothing here queries inside the FAQ list, so a
+            # dedicated table would only add joins nothing reads from.
+            settings.faq_json = json.dumps(value, ensure_ascii=False)
+        else:
+            setattr(settings, key, value)
     await session.commit()
     await session.refresh(settings)
     return serialize_settings_admin(settings)

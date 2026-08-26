@@ -92,5 +92,5 @@ async def test_catalog_exposes_the_new_release_flag_for_the_home_strip(client, m
 async def test_home_needs_one_settings_call_for_the_date_strip(client):
     """The date strip is driven by booking_dates, not by a constant in the client."""
     settings = (await client.get("/api/settings")).json()
-    assert settings["booking_days_ahead"] == len(settings["booking_dates"]) == 7
+    assert settings["booking_days_ahead"] == len(settings["booking_dates"]) == 8
     assert settings["booking_dates"][0] == TODAY

@@ -72,6 +72,8 @@ DEFAULT_WORK_HOURS = "10:00 - 23:00"
 #: in a private conversation, not on the channel.
 DEFAULT_ADMIN_PHONE = "91 326 20 65"
 DEFAULT_ADMIN_TELEGRAM = "@Hhkcjoj"
+#: A long list stops being an FAQ and starts being a wall of text nobody reads.
+MAX_FAQ_ITEMS = 20
 DEFAULT_CURRENCY = "UZS"
 
 # Nova Cinema has exactly one auditorium: 3 rows of 4 seats, 12 in total.
@@ -82,7 +84,11 @@ DEFAULT_HALL_COLS = 4
 DEFAULT_TICKET_PRICE = 30000
 DEFAULT_MAX_SEATS_PER_BOOKING = 4
 DEFAULT_HOLD_MINUTES = 10
-DEFAULT_BOOKING_DAYS_AHEAD = 7
+#: Today plus 7 more days = 8 selectable dates. The client's own example:
+#: today is Wed 25 Aug, the furthest bookable day is 1 Sep -- 8 calendar dates,
+#: not 7. This is a rolling window: nothing caches it or resets it on a timer,
+#: every request just reads the cinema's current date (see booking_window()).
+DEFAULT_BOOKING_DAYS_AHEAD = 8
 #: How long a request may wait for the administrator before it is cancelled and
 #: its places go back to the hall. 0 switches the timer off entirely.
 DEFAULT_PENDING_EXPIRE_HOURS = 24

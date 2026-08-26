@@ -40,6 +40,13 @@ class CinemaSettings(Base):
     work_hours_uz: Mapped[str] = mapped_column(String(120), default=config.DEFAULT_WORK_HOURS)
     about: Mapped[str] = mapped_column(Text, default="")
     about_uz: Mapped[str] = mapped_column(Text, default="")
+    #: A short admin-written notice shown above the FAQ on the About screen.
+    important: Mapped[str] = mapped_column(Text, default="")
+    important_uz: Mapped[str] = mapped_column(Text, default="")
+    #: [{question_ru, answer_ru, question_uz, answer_uz}, ...]. Capped at
+    #: MAX_FAQ_ITEMS by the request schema, not here -- the column itself
+    #: accepts whatever is already in the database.
+    faq_json: Mapped[str] = mapped_column(Text, default="[]")
 
     # Pricing
     base_ticket_price: Mapped[int] = mapped_column(Integer, default=config.DEFAULT_TICKET_PRICE)
@@ -50,7 +57,9 @@ class CinemaSettings(Base):
     hall_cols: Mapped[int] = mapped_column(Integer, default=config.DEFAULT_HALL_COLS)
     max_seats_per_booking: Mapped[int] = mapped_column(Integer, default=config.DEFAULT_MAX_SEATS_PER_BOOKING)
     hold_minutes: Mapped[int] = mapped_column(Integer, default=config.DEFAULT_HOLD_MINUTES)
-    booking_days_ahead: Mapped[int] = mapped_column(Integer, default=config.DEFAULT_BOOKING_DAYS_AHEAD)
+    booking_days_ahead: Mapped[int] = mapped_column(
+        Integer, default=config.DEFAULT_BOOKING_DAYS_AHEAD, server_default=str(config.DEFAULT_BOOKING_DAYS_AHEAD)
+    )
     #: Hours a `pending` request may wait for the administrator before it is
     #: cancelled and its places return to the hall. 0 turns the timer off.
     pending_expire_hours: Mapped[int] = mapped_column(

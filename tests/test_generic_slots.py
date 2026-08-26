@@ -126,7 +126,7 @@ async def test_the_dates_endpoint_covers_the_configured_window(client):
     response = await client.get("/api/booking/dates")
     assert response.status_code == 200, response.text
     body = response.json()
-    expected = [(cinema_today() + timedelta(days=offset)).isoformat() for offset in range(7)]
+    expected = [(cinema_today() + timedelta(days=offset)).isoformat() for offset in range(8)]
     assert [item["date"] for item in body["dates"]] == expected
     assert body["capacity"] == 12
     assert body["price"] == 30000
