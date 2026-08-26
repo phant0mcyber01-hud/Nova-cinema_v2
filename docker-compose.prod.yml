@@ -1,0 +1,89 @@
+# Боевой запуск на своём сервере.
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Отличия от docker-compose.yml, который остаётся для локальной разработки:
+#
+#   * Caddy на 80/443 сам получает сертификат Let's Encrypt и продлевает его.
+#     Telegram открывает Mini App только по настоящему HTTPS — самоподписанный
+#     сертификат он отвергает, поэтому без этого никак.
+#   * Бот работает как отдельная служба и перезапускается сам. На ноутбуке за
+#     ним присматривал server.ps1, здесь эту работу делает Docker.
+#   * Наружу торчит только Caddy. Postgres и API видны лишь внутри сети
+#     контейнеров: базу нельзя достать из интернета в принципе.
+#   * Миграции выполняются при каждом старте API, до приёма запросов.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nova_cinema}
+      POSTGRES_USER: ${POSTGRES_USER:-nova}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    restart: unless-stopped
+    environment: &backend_env
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-nova}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-nova_cinema}
+      BOT_TOKEN: ${BOT_TOKEN:?set BOT_TOKEN in .env}
+      WEBAPP_URL: ${WEBAPP_URL:?set WEBAPP_URL in .env}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      ADMIN_TELEGRAM_IDS: ${ADMIN_TELEGRAM_IDS:?set ADMIN_TELEGRAM_IDS in .env}
+      CORS_ORIGINS: ${WEBAPP_URL}
+      AUTO_CREATE_SCHEMA: "false"
+      TELEGRAM_AUTH_MAX_AGE_SECONDS: ${TELEGRAM_AUTH_MAX_AGE_SECONDS:-86400}
+      UPLOAD_DIR: /app/uploads
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+      OMDB_API_KEY: ${OMDB_API_KEY:-}
+      TRANSLATION_API_URL: ${TRANSLATION_API_URL:-https://libretranslate.com/translate}
+    depends_on:
+      postgres: { condition: service_healthy }
+    volumes: [uploads:/app/uploads]
+    expose: ["8000"]
+
+  bot:
+    build: .
+    restart: unless-stopped
+    # Тот же образ и то же окружение, другая команда. Бот читает контакты и
+    # расписание из той же базы, что и Mini App.
+    command: ["python", "bot.py"]
+    environment: *backend_env
+    depends_on:
+      api: { condition: service_started }
+      postgres: { condition: service_healthy }
+    volumes: [uploads:/app/uploads]
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on: [api]
+    expose: ["80"]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      NOVA_DOMAIN: ${NOVA_DOMAIN:?set NOVA_DOMAIN in .env}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:-}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [frontend, api]
+
+volumes:
+  postgres_data:
+  uploads:
+  caddy_data:
+  caddy_config:

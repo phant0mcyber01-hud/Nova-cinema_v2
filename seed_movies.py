@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 from pathlib import Path
-from datetime import date, timedelta
+from datetime import timedelta
 from typing import Any
 
 from dotenv import load_dotenv
@@ -11,9 +11,10 @@ from sqlalchemy import select
 
 load_dotenv(Path(__file__).resolve().with_name(".env"), override=False)
 
-from backend.core.config import DEFAULT_BOOKING_DAYS_AHEAD
+from backend.core.config import DEFAULT_BOOKING_DAYS_AHEAD, DEFAULT_TIMEZONE_OFFSET_MINUTES
 from backend.core.db import SessionLocal
 from backend.models import CinemaSettings, Movie, Show
+from backend.services.booking import cinema_now
 
 
 def movie(
@@ -550,8 +551,10 @@ DEMO_MOVIES: list[dict[str, Any]] = [
 async def seed_demo_movies() -> None:
     created = 0
     skipped = 0
+    # The window follows the cinema's calendar, like every other date in the app.
+    first_day = cinema_now(DEFAULT_TIMEZONE_OFFSET_MINUTES).date()
     window = [
-        (date.today() + timedelta(days=offset)).isoformat()
+        (first_day + timedelta(days=offset)).isoformat()
         for offset in range(DEFAULT_BOOKING_DAYS_AHEAD)
     ]
     async with SessionLocal() as session:

@@ -64,7 +64,7 @@ const saveLanguage = (language: Language) => {
   }
 }
 
-export const getCurrentLanguage = () => readStoredLanguage() ?? normalizeLanguage(detectTelegramLanguage())
+const getCurrentLanguage = () => readStoredLanguage() ?? normalizeLanguage(detectTelegramLanguage())
 
 export const translate = (key: TranslationKey) => copy[getCurrentLanguage()][key]
 
@@ -95,14 +95,63 @@ export function useI18n() {
   return context
 }
 
+/** Currency is an admin setting; the dictionary value is only a fallback
+ * for screens rendered before GET /api/settings answers. */
+let activeCurrency = ''
+
+export const setCurrency = (value: string) => {
+  activeCurrency = value.trim()
+}
+
 export const formatMoney = (value: number, language: Language) => (
-  `${value.toLocaleString(localeByLanguage[language])} ${copy[language].currency}`
+  `${value.toLocaleString(localeByLanguage[language])} ${activeCurrency || copy[language].currency}`
 )
 
-export const formatDateShort = (date: string, language: Language) => (
-  new Intl.DateTimeFormat(localeByLanguage[language], { weekday: 'short', day: 'numeric', month: 'short' })
-    .format(new Date(`${date}T12:00:00`))
-)
+// Chrome has no short month or weekday names for Latin Uzbek -- Intl renders
+// "M08 22, Sat" -- so they are spelled out instead of formatted.
+const uzWeekdays = ['Yak', 'Dush', 'Sesh', 'Chor', 'Pay', 'Jum', 'Shan']
+const uzMonths = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyn', 'Iyl', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek']
+
+const ruSessionForms = ['сеанс', 'сеанса', 'сеансов']
+const ruPlural = new Intl.PluralRules('ru-RU')
+
+/** Russian needs three forms: 1 сеанс, 4 сеанса, 5 сеансов. Uzbek needs one. */
+export const formatSessionCount = (count: number, language: Language) => {
+  if (language === 'uz') return `${count} seans`
+  const forms: Partial<Record<Intl.LDMLPluralRule, number>> = { one: 0, few: 1, many: 2 }
+  const index = forms[ruPlural.select(count)] ?? 2
+  return `${count} ${ruSessionForms[index]}`
+}
+
+export const formatDateShort = (date: string, language: Language) => {
+  const value = new Date(`${date}T12:00:00`)
+  if (language === 'uz') {
+    return `${uzWeekdays[value.getDay()]}, ${value.getDate()} ${uzMonths[value.getMonth()]}`
+  }
+  return new Intl.DateTimeFormat(localeByLanguage[language], { weekday: 'short', day: 'numeric', month: 'short' })
+    .format(value)
+}
+
+/**
+ * The day chip needs each part on its own line -- weekday, day number, month
+ * -- rather than one formatted sentence, so this is `formatDateShort` split
+ * into its pieces instead of a second date computation to keep in sync.
+ *
+ * Anchored at noon like `formatDateShort`: a plain `new Date(dateOnlyString)`
+ * parses as UTC midnight, and in a negative-UTC-offset browser timezone that
+ * reads back as the previous day.
+ */
+export const formatDateParts = (date: string, language: Language) => {
+  const value = new Date(`${date}T12:00:00`)
+  if (language === 'uz') {
+    return { weekday: uzWeekdays[value.getDay()], day: value.getDate(), month: uzMonths[value.getMonth()] }
+  }
+  return {
+    weekday: new Intl.DateTimeFormat(localeByLanguage[language], { weekday: 'short' }).format(value),
+    day: value.getDate(),
+    month: new Intl.DateTimeFormat(localeByLanguage[language], { month: 'short' }).format(value),
+  }
+}
 
 export const formatDateTime = (value: string, language: Language) => (
   new Date(value).toLocaleString(localeByLanguage[language])

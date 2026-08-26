@@ -28,6 +28,44 @@ class BookingConfirmIn(HoldIn):
     phone: str = Field(pattern=f"^{PHONE_PATTERN}$")
     telegram_username: str = Field(default="", max_length=80, pattern=USERNAME_PATTERN)
     comment: str = Field(default="", max_length=1000)
+    promo_code: str = Field(default="", max_length=64)
+
+
+class CapacityHoldIn(BaseModel):
+    """The whole generic booking selection: a date, a fixed time, how many people.
+
+    No `movie_id` and no seat list. The film is agreed with the administrator
+    afterwards, and the hall is filled automatically.
+    """
+
+    date: str = Field(pattern=DATE_PATTERN)
+    time: str = Field(pattern=TIME_PATTERN)
+    # The real ceiling is the hall; this only stops an absurd payload before it
+    # reaches the database.
+    party_size: int = Field(ge=1, le=50)
+
+
+class BookingRequestIn(CapacityHoldIn):
+    """A request the administrator will phone back about.
+
+    Deliberately carries no price: the total is `base_ticket_price * party_size`
+    and is computed on the server, so a client cannot name its own.
+    """
+
+    first_name: str = Field(min_length=2, max_length=80)
+    last_name: str = Field(min_length=2, max_length=80)
+    phone: str = Field(pattern=f"^{PHONE_PATTERN}$")
+    telegram_username: str = Field(default="", max_length=80, pattern=USERNAME_PATTERN)
+    comment: str = Field(default="", max_length=1000)
+    promo_code: str = Field(default="", max_length=64)
+
+
+class SlotTemplateIn(BaseModel):
+    """One admin-managed time of day. No film is involved."""
+
+    start_time: str = Field(pattern=TIME_PATTERN)
+    is_active: bool = True
+    sort_order: int = Field(default=0, ge=0, le=1000)
 
 
 class BookingStatusIn(BaseModel):

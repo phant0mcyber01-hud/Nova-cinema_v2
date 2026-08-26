@@ -11,7 +11,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 # Docker supplies its own environment.  For a direct local `uvicorn app:app`
 # launch, load this project's .env before reading any configuration values.
 # `override=False` deliberately keeps Docker/Windows environment variables authoritative.
-load_dotenv(PROJECT_ROOT / ".env", override=False)
+# `utf-8-sig` снимает BOM: Блокнот и PowerShell сохраняют файл с ним, а он
+# прилипает к первому ключу — BOT_TOKEN читается как "﻿BOT_TOKEN" и
+# выглядит как незаполненный.
+load_dotenv(PROJECT_ROOT / ".env", override=False, encoding="utf-8-sig")
 
 
 def _clean(value: str | None, fallback: str = "") -> str:
@@ -62,16 +65,40 @@ DEFAULT_ADDRESS_UZ = "Yuksalish 97A"
 DEFAULT_PHONE = "+998 91 326 20 65"
 DEFAULT_TELEGRAM_URL = "https://t.me/novasinema"
 DEFAULT_INSTAGRAM_URL = "https://www.instagram.com/nova_cinema__"
+DEFAULT_MAP_URL = "https://yandex.go.link/discovery?action=card&oid=97603506332&adj_campaign=Share-from-the-app"
 DEFAULT_WORK_HOURS = "10:00 - 23:00"
+#: Whoever the viewer talks to about the film and the transfer. Separate from
+#: the cinema switchboard and the public channel above: a request is settled
+#: in a private conversation, not on the channel.
+DEFAULT_ADMIN_PHONE = "91 326 20 65"
+DEFAULT_ADMIN_TELEGRAM = "@Hhkcjoj"
+#: A long list stops being an FAQ and starts being a wall of text nobody reads.
+MAX_FAQ_ITEMS = 20
 DEFAULT_CURRENCY = "UZS"
 
-# Nova Cinema has exactly one auditorium: 3 rows of 5 seats.
+# Nova Cinema has exactly one auditorium: 3 rows of 4 seats, 12 in total.
+# It is the whole booking inventory -- a slot is a date plus a time, and the
+# film shown in it is never part of the reservation.
 DEFAULT_HALL_ROWS = 3
-DEFAULT_HALL_COLS = 5
+DEFAULT_HALL_COLS = 4
 DEFAULT_TICKET_PRICE = 30000
 DEFAULT_MAX_SEATS_PER_BOOKING = 4
 DEFAULT_HOLD_MINUTES = 10
-DEFAULT_BOOKING_DAYS_AHEAD = 7
+#: Today plus 7 more days = 8 selectable dates. The client's own example:
+#: today is Wed 25 Aug, the furthest bookable day is 1 Sep -- 8 calendar dates,
+#: not 7. This is a rolling window: nothing caches it or resets it on a timer,
+#: every request just reads the cinema's current date (see booking_window()).
+DEFAULT_BOOKING_DAYS_AHEAD = 8
+#: How long a request may wait for the administrator before it is cancelled and
+#: its places go back to the hall. 0 switches the timer off entirely.
+DEFAULT_PENDING_EXPIRE_HOURS = 24
+#: The cinema's clock. The server runs in UTC; Uzbekistan is UTC+5 with no
+#: daylight saving, so a fixed offset is exact. Minutes, to allow half-hour zones.
+DEFAULT_TIMEZONE_OFFSET_MINUTES = 300
+#: The fixed times the cinema opens for booking. Admin-managed from the first
+#: run onwards -- these only seed `slot_templates`, and none of them belongs
+#: to a film.
+DEFAULT_SLOT_TIMES = ("12:00", "14:00", "16:00", "18:00", "20:00")
 
 # Hard ceilings the admin cannot exceed, so a typo cannot break the hall grid.
 MAX_HALL_ROWS = 26
@@ -79,12 +106,18 @@ MAX_HALL_COLS = 20
 MAX_MELODIES = 3
 
 UPLOAD_MAX_BYTES = 5_000_000
-AUDIO_MAX_BYTES = 10_000_000
+AUDIO_MAX_BYTES = 50_000_000
+AUDIO_CHUNK_BYTES = 1_000_000
+AUDIO_TRANSCODE_THRESHOLD_BYTES = 10_000_000
 
 # Booking lifecycle (stage 12 of the spec).
 BOOKING_STATUSES = ("pending", "contacting", "confirmed", "cancelled", "watched")
+#: The seat is taken but the admin has not confirmed it yet.
+AWAITING_STATUSES = ("pending", "contacting")
+#: The seat is finally the viewer's.
+CONFIRMED_STATUSES = ("confirmed", "watched")
 #: Statuses that keep a seat occupied.  "cancelled" releases it.
-BLOCKING_STATUSES = ("pending", "contacting", "confirmed", "watched")
+BLOCKING_STATUSES = AWAITING_STATUSES + CONFIRMED_STATUSES
 #: Statuses whose ticket QR is valid at the door.
 QR_VALID_STATUSES = ("confirmed", "watched")
 BOOKING_STATUS_PATTERN = "^(" + "|".join(BOOKING_STATUSES) + ")$"

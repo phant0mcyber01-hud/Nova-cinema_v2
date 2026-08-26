@@ -6,10 +6,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from backend.api.deps import current_user, get_db
-from backend.models import AdminNotification, Booking, Favorite, Movie, User, UserNotification
+from backend.models import Booking, Favorite, Movie, User, UserNotification
 from backend.schemas.booking import BookingProposalIn
 from backend.schemas.profile import ProfileIn
+from backend.services.booking_decisions import (
+    BookingNotFound,
+    HallIsFull,
+    ProposalNotFound,
+    SeatsAlreadyTaken,
+    answer_proposal,
+)
 from backend.services.catalog import serialize_booking, serialize_movie
+from backend.services.telegram import notify_admins
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
 
@@ -49,7 +57,9 @@ async def profile_bookings(
 ) -> list[dict[str, object]]:
     rows = await session.execute(
         select(Booking, Movie)
-        .join(Movie, Booking.movie_id == Movie.id)
+        # Outer: a generic request carries no film, and an inner join would drop
+        # every new booking out of the viewer's own history.
+        .outerjoin(Movie, Booking.movie_id == Movie.id)
         .where(Booking.user_id == user.id)
         .order_by(Booking.id.desc())
     )
@@ -65,7 +75,7 @@ async def profile_booking(
 ) -> dict[str, object]:
     rows = await session.execute(
         select(Booking, Movie)
-        .join(Movie, Booking.movie_id == Movie.id)
+        .outerjoin(Movie, Booking.movie_id == Movie.id)
         .where(Booking.id == booking_id, Booking.user_id == user.id)
     )
     item = rows.first()
@@ -82,25 +92,22 @@ async def answer_booking_proposal(
     user: User = Depends(current_user),
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, object]:
-    booking = await session.scalar(
-        select(Booking).where(Booking.id == booking_id, Booking.user_id == user.id)
-    )
-    if booking is None:
+    """Shares `answer_proposal` with the bot's own Accept/Decline buttons, so
+    the viewer gets the identical outcome whichever surface they answer from.
+    """
+    action = "accept" if payload.action == "accept" else "decline"
+    try:
+        result = await answer_proposal(session, booking_id, user.telegram_id, action)
+    except (BookingNotFound, ProposalNotFound):
         raise HTTPException(404, "Booking not found")
-    if not booking.proposed_session:
-        raise HTTPException(409, "No proposed time")
-    if payload.action == "accept":
-        booking.session = booking.proposed_session
-        booking.proposed_session = ""
-        booking.admin_note = ""
-        message = f"Клиент согласился на новое время заявки #{booking.id}: {booking.session}"
-    else:
-        booking.status = "cancelled"
-        booking.admin_note = "Клиент отказался от предложенного времени"
-        message = f"Клиент отказался от нового времени заявки #{booking.id}"
-    session.add(AdminNotification(booking_id=booking.id, message=message))
-    await session.commit()
-    return {"status": booking.status, "session": booking.session}
+    except HallIsFull:
+        raise HTTPException(409, "The hall is full at that time")
+    except SeatsAlreadyTaken as error:
+        raise HTTPException(409, str(error))
+    # Same rule as on a new booking: the panel keeps the row, Telegram gets a
+    # live copy, and a failure to deliver it never touches the answer above.
+    await notify_admins(result.admin_message)
+    return {"status": result.status, "session": result.session_time}
 
 
 @router.get("/favorites")

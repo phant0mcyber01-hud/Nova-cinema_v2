@@ -4,7 +4,18 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from backend.core.db import SessionLocal
-from tests.conftest import ADMIN_ID, SESSION, SHOW_DATE, USER_ID, auth_header, login, movie_row
+from tests.conftest import (
+    ADMIN_ID,
+    SESSION,
+    SHOW_DATE,
+    TODAY,
+    USER_ID,
+    YESTERDAY,
+    auth_header,
+    cinema_today,
+    login,
+    movie_row,
+)
 
 CONTACT = {
     "first_name": "Иван",
@@ -36,9 +47,9 @@ async def test_public_settings_expose_the_seeded_cinema_profile(client):
     assert data["address"] == "Юксалиш 97А"
     assert data["phone"] == "+998 91 326 20 65"
     assert data["telegram_url"] == "https://t.me/novasinema"
-    assert (data["hall_rows"], data["hall_cols"], data["hall_seats"]) == (3, 5, 15)
+    assert (data["hall_rows"], data["hall_cols"], data["hall_seats"]) == (3, 4, 12)
     assert data["currency"] == "UZS"
-    assert len(data["booking_dates"]) == 7
+    assert len(data["booking_dates"]) == 8
 
 
 async def test_public_settings_localise_to_uzbek(client):
@@ -124,20 +135,31 @@ async def test_price_change_applies_forward_and_freezes_existing_bookings(client
 # --- schedule ----------------------------------------------------------------
 
 
-async def test_only_scheduled_times_are_bookable(client, movie):
-    """The old code accepted any well-formed HH:MM; the schedule is real now."""
+async def test_the_schedule_gates_the_date_and_the_viewer_names_the_time(client, movie):
+    """The viewer sets the hour; `shows` still decides which days are open.
+
+    Freeform time replaced the old rule that only an exact `shows` slot could
+    be booked, so 03:45 on a day the movie plays is now a real request -- while
+    a day with no active screening is refused as before.
+    """
     user = await login(client, USER_ID)
     response = await client.post(
         "/api/holds",
         json={"movie_id": movie.id, "show_date": SHOW_DATE, "session": "03:45", "seats": ["1-1"]},
         headers=auth_header(user),
     )
-    assert response.status_code == 404
+    assert response.status_code == 200, response.text
 
     seats = await client.get(
         f"/api/sessions/{movie.id}/seats", params={"show_date": SHOW_DATE, "session_time": "03:45"}
     )
-    assert seats.status_code == 404
+    assert seats.status_code == 200
+
+    quiet_day = (date.fromisoformat(SHOW_DATE) + timedelta(days=1)).isoformat()
+    closed = await client.get(
+        f"/api/sessions/{movie.id}/seats", params={"show_date": quiet_day, "session_time": "03:45"}
+    )
+    assert closed.status_code == 404, "a day the movie does not play stays shut"
 
 
 async def test_admin_creates_a_screening_that_becomes_bookable(client, movie):
@@ -161,20 +183,20 @@ async def test_admin_creates_a_screening_that_becomes_bookable(client, movie):
     assert response.status_code == 200
 
 
-async def test_bulk_schedule_fills_a_date_range(client, movie):
+async def test_bulk_schedule_fills_a_date_range(client, movie, cinema_clock):
     admin = await login(client, ADMIN_ID, "admin")
-    start = date.today().isoformat()
-    end = (date.today() + timedelta(days=2)).isoformat()
+    start = TODAY
+    end = (cinema_today() + timedelta(days=2)).isoformat()
     response = await client.post(
         "/api/admin/sessions/bulk",
-        json={"movie_id": movie.id, "date_from": start, "date_to": end, "times": ["10:00", "14:00"]},
+        json={"movie_id": movie.id, "date_from": start, "date_to": end, "times": ["14:00", "20:00"]},
         headers=auth_header(admin),
     )
     assert response.status_code == 200
     assert response.json()["created"] == 6
 
     listed = (await client.get(f"/api/movies/{movie.id}/sessions?show_date={start}")).json()
-    assert listed["sessions"] == ["10:00", "14:00"]
+    assert listed["sessions"] == ["14:00", "20:00"]
 
 
 async def test_screening_with_bookings_cannot_be_deleted(client, movie):
@@ -230,30 +252,19 @@ async def test_contacting_status_keeps_the_seat(client, movie):
     assert seats.json()["taken"] == ["2-2"]
 
 
-async def test_watched_status_unlocks_the_review(client, movie):
+async def test_marking_watched_has_no_bearing_on_review_eligibility(client, movie):
+    """Historical note: this used to require watched + finished screening.
+    Signed in is now the whole rule, so a booking (watched or not) changes
+    nothing about whether the viewer may review."""
     user = await login(client, USER_ID)
     await _book(client, movie.id, ["3-1"], user)
-    admin = await login(client, ADMIN_ID, "admin")
-    booking_id = (await client.get("/api/admin/bookings", headers=auth_header(admin))).json()[0]["id"]
 
-    blocked = await client.post(
+    before = await client.post(
         f"/api/movies/{movie.id}/reviews",
-        json={"rating": 5, "text": "Отличный фильм"},
+        json={"rating": 8, "text": "Отличный фильм"},
         headers=auth_header(user),
     )
-    assert blocked.status_code == 403
-
-    await client.patch(
-        f"/api/admin/bookings/{booking_id}/status",
-        json={"status": "watched"},
-        headers=auth_header(admin),
-    )
-    allowed = await client.post(
-        f"/api/movies/{movie.id}/reviews",
-        json={"rating": 5, "text": "Отличный фильм"},
-        headers=auth_header(user),
-    )
-    assert allowed.status_code == 200
+    assert before.status_code == 200, before.text
 
 
 async def test_admin_booking_row_carries_everything_the_spec_asks_for(client, movie):
@@ -274,8 +285,8 @@ async def test_admin_booking_row_carries_everything_the_spec_asks_for(client, mo
 
 
 async def test_new_release_flag_expires(client):
-    yesterday = (date.today() - timedelta(days=1)).isoformat()
-    tomorrow = (date.today() + timedelta(days=1)).isoformat()
+    yesterday = YESTERDAY
+    tomorrow = SHOW_DATE
     async with SessionLocal() as session:
         active = movie_row("Новинка активная")
         active.is_new, active.new_until = True, tomorrow
@@ -317,25 +328,6 @@ async def test_bonuses_are_managed_by_the_admin(client):
     assert (await client.get("/api/bonuses")).json() == []
 
 
-async def test_melodies_are_capped_at_three(client):
-    admin = await login(client, ADMIN_ID, "admin")
-    for index in range(3):
-        response = await client.post(
-            "/api/admin/melodies",
-            json={"title": f"Мелодия {index + 1}", "file_url": f"/uploads/m{index}.mp3"},
-            headers=auth_header(admin),
-        )
-        assert response.status_code == 200
-
-    overflow = await client.post(
-        "/api/admin/melodies",
-        json={"title": "Четвёртая", "file_url": "/uploads/m4.mp3"},
-        headers=auth_header(admin),
-    )
-    assert overflow.status_code == 409
-    assert len((await client.get("/api/melodies")).json()) == 3
-
-
 async def test_gallery_images_are_managed_by_the_admin(client):
     admin = await login(client, ADMIN_ID, "admin")
     created = await client.post(
@@ -365,3 +357,11 @@ async def test_legacy_session_field_is_still_accepted(client, movie):
     assert response.status_code == 200, response.text
     listed = (await client.get(f"/api/movies/{movie.id}/sessions?show_date={SHOW_DATE}")).json()
     assert "16:45" in listed["sessions"]
+
+
+async def test_sessions_endpoint_returns_empty_list_for_a_date_without_shows(client, movie):
+    """Contract behind the Mini App's "no screenings on this date" state."""
+    empty_day = (cinema_today() + timedelta(days=30)).isoformat()
+    response = await client.get(f"/api/movies/{movie.id}/sessions?show_date={empty_day}")
+    assert response.status_code == 200
+    assert response.json()["sessions"] == []

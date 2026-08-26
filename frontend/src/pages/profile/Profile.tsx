@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, Route, Routes, useParams } from 'react-router-dom'
 import {
+  ApiError,
   getAuthState,
   getFavorites,
   getProfile,
@@ -17,25 +18,43 @@ import {
   type Profile,
   type ProfileBooking,
 } from '../../api'
-import { formatDateTime, formatMoney, translate, useI18n, type TranslationKey } from '../../i18n'
+import { formatDateShort, formatDateTime, formatMoney, translate, useI18n, type TranslationKey } from '../../i18n'
+import { apiMessage } from '../../lib/apiMessage'
+import BottomNav from '../../components/BottomNav'
+import Icon from '../../components/Icon'
+import NotFound from '../../components/NotFound'
 import LanguageSwitcher from '../../components/LanguageSwitcher'
 
-const statuses = ['pending', 'confirmed', 'cancelled', 'completed']
+const statuses = ['pending', 'contacting', 'confirmed', 'cancelled', 'watched'] as const
+const activeStatuses = new Set<string>(['pending', 'contacting', 'confirmed'])
 
 const statusTranslationKeys: Record<string, TranslationKey> = {
   pending: 'statusPending',
+  contacting: 'statusContacting',
   confirmed: 'statusConfirmed',
   cancelled: 'statusCancelled',
-  completed: 'statusCompleted',
+  watched: 'statusWatched',
 }
 
 const statusLabel = (status: string, translate: (key: TranslationKey) => string) => (
   statusTranslationKeys[status] ? translate(statusTranslationKeys[status]) : status
 )
 
+const ticketMeta = (booking: ProfileBooking) => {
+  const detailed = booking as ProfileBooking & { seats_count?: number; ticket_price?: number }
+  const seatsCount = booking.party_size ?? detailed.seats_count ?? booking.seats?.split(',').filter(Boolean).length ?? 0
+  return {
+    seatsCount,
+    ticketPrice: detailed.ticket_price ?? (seatsCount ? booking.total / seatsCount : booking.total),
+  }
+}
+
 const resolveProfileError = (reason: unknown) => {
-  if (reason instanceof Error && reason.message) return reason.message
-  return getAuthState().authenticated ? translate('failedLoadProfile') : translate('profileTelegramAuthError')
+  // The server answers 401 in English. Telling a Russian- or Uzbek-speaking
+  // viewer "Authentication required" explains nothing and tells them nothing
+  // to do; the dictionary has the sentence that does.
+  if (reason instanceof ApiError && reason.status === 401) return translate('profileTelegramAuthError')
+  return apiMessage(reason, getAuthState().authenticated ? 'failedLoadProfile' : 'profileTelegramAuthError')
 }
 
 function Box({ children }: { children: ReactNode }) {
@@ -54,6 +73,7 @@ function Box({ children }: { children: ReactNode }) {
         </div>
       </header>
       {children}
+      <BottomNav />
     </main>
   )
 }
@@ -66,6 +86,7 @@ export default function ProfileRoutes() {
       <Route path="/bookings/:id" element={<BookingDetail />} />
       <Route path="/favorites" element={<Favorites />} />
       <Route path="/notifications" element={<Notifications />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   )
 }
@@ -133,7 +154,7 @@ function ProfileHome() {
           <Link className="choice" to="/profile/notifications"><b>{t('notifications')}</b><span>{t('statuses')}</span></Link>
           {isAdmin() && (
             <Link className="choice admin-management-card" to="/admin">
-              <span className="admin-menu-icon">⚙</span>
+              <span className="admin-menu-icon"><Icon name="settings" /></span>
               <div><b>{t('adminPanel')}</b><span>{t('adminPanelHint')}</span></div>
               <strong>→</strong>
             </Link>
@@ -174,6 +195,9 @@ function Bookings() {
     })
   }, [language, list, query, sort, status])
 
+  const activeRows = useMemo(() => rows.filter(item => activeStatuses.has(item.status)), [rows])
+  const historyRows = useMemo(() => rows.filter(item => !activeStatuses.has(item.status)), [rows])
+
   return (
     <Box>
       <Link className="back" to="/profile">← {t('profile')}</Link>
@@ -191,21 +215,41 @@ function Bookings() {
         </select>
       </div>
       {error && <p className="error">{error}</p>}
-      <div className="admin-table">
-        {rows.map(item => (
-          <Link className="booking-card" to={`/profile/bookings/${item.id}`} key={item.id}>
-            <img src={item.poster} alt="" loading="lazy" />
-            <div>
-              <b>{item.movie}</b>
-              <span>{item.show_date} · {item.session} · {item.seats}</span>
-              <span>{formatMoney(item.total, language)} · {statusLabel(item.status, t)}</span>
-              {item.comment && <span>{item.comment}</span>}
-            </div>
-          </Link>
-        ))}
+      <div className="admin-table tickets-list">
+        <TicketSection title={t('activeTickets')} rows={activeRows} />
+        <TicketSection title={t('ticketsHistory')} rows={historyRows} />
         {!rows.length && !error && <p className="empty">{t('noBookings')}</p>}
       </div>
     </Box>
+  )
+}
+
+function TicketSection({ title, rows }: { title: string; rows: ProfileBooking[] }) {
+  if (!rows.length) return null
+  return (
+    <section className="ticket-section">
+      <h2>{title}</h2>
+      {rows.map(item => <TicketCard booking={item} key={item.id} />)}
+    </section>
+  )
+}
+
+function TicketCard({ booking }: { booking: ProfileBooking }) {
+  const { language, t } = useI18n()
+  const { seatsCount, ticketPrice } = ticketMeta(booking)
+  return (
+    <Link className="booking-card ticket-card" to={`/profile/bookings/${booking.id}`}>
+      {booking.poster && <img src={booking.poster} alt="" loading="lazy" />}
+      <div>
+        {booking.movie && <b>{booking.movie}</b>}
+        <span>{formatDateShort(booking.show_date, language)} · {booking.session}</span>
+        {booking.seats && <span>{t('seats')}: {booking.seats}</span>}
+        <span>{language === 'ru' ? 'Гостей' : 'Mehmonlar'}: {seatsCount} · {t('pricePerTicket')}: {formatMoney(ticketPrice, language)}</span>
+        <span>{t('amount')}: {formatMoney(booking.total, language)}</span>
+        <span>{t('statusLabel')}: {statusLabel(booking.status, t)}</span>
+        {booking.comment && <span>{t('comment')}: {booking.comment}</span>}
+      </div>
+    </Link>
   )
 }
 
@@ -244,17 +288,21 @@ function BookingDetail() {
   if (error) return <Box><p className="error">{error}</p></Box>
   if (!booking) return <Box><div className="hall-skeleton compact" /></Box>
 
+  const { seatsCount, ticketPrice } = ticketMeta(booking)
+
   return (
     <Box>
       <Link className="back" to="/profile/bookings">← {t('bookings')}</Link>
-      <img className="detail-poster" src={booking.poster} alt={booking.movie} loading="lazy" />
-      <h1>{booking.movie}</h1>
+      {booking.poster && <img className="detail-poster" src={booking.poster} alt={booking.movie ?? ''} loading="lazy" />}
+      {booking.movie && <h1>{booking.movie}</h1>}
       <p>{booking.description}</p>
       <div className="detail-stats">
-        <span>{booking.show_date} · {booking.session}</span>
+        <span>{formatDateShort(booking.show_date, language)} · {booking.session}</span>
         {booking.proposed_session && <span>{t('proposedTime')}: {booking.proposed_session}</span>}
-        <span>{t('seats')} {booking.seats}</span>
-        <span>{formatMoney(booking.total, language)}</span>
+        {booking.seats && <span>{t('seats')} {booking.seats}</span>}
+        <span>{language === 'ru' ? 'Гостей' : 'Mehmonlar'}: {seatsCount}</span>
+        <span>{t('pricePerTicket')}: {formatMoney(ticketPrice, language)}</span>
+        <span>{t('amount')}: {formatMoney(booking.total, language)}</span>
         <span>{statusLabel(booking.status, t)}</span>
       </div>
       {booking.proposed_session && (

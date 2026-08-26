@@ -1,6 +1,17 @@
 import { translate } from '../i18n'
 import type { AuthState } from './types'
 
+/** Carries the HTTP status so callers can react to 404 specifically. */
+export class ApiError extends Error {
+  readonly status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
 const authStorageKey = 'nova-cinema-auth-v1'
 
 type StoredAuth = {
@@ -30,6 +41,11 @@ const applyAuth = (data: StoredAuth) => {
   role = data.role
 }
 
+const deactivateAuth = () => {
+  accessToken = null
+  role = ''
+}
+
 const saveAuth = (data: StoredAuth) => {
   applyAuth(data)
   try {
@@ -41,8 +57,7 @@ const saveAuth = (data: StoredAuth) => {
 }
 
 const clearAuth = () => {
-  accessToken = null
-  role = ''
+  deactivateAuth()
   try {
     window.localStorage.removeItem(authStorageKey)
     window.sessionStorage.removeItem(authStorageKey)
@@ -77,23 +92,26 @@ export const call = async <T>(path: string, options: RequestInit = {}): Promise<
   if (!response.ok) {
     if (response.status === 401 && path !== '/auth/telegram') clearAuth()
     const detail = typeof data === 'object' && data !== null && 'detail' in data ? String(data.detail) : translate('serverError')
-    throw new Error(detail)
+    throw new ApiError(detail, response.status)
   }
   return data as T
 }
 
-export async function authenticateTelegram(initData: string): Promise<void> {
+export async function authenticateTelegram(initData: string | Promise<string>): Promise<void> {
   authReady = false
+  const cached = readStoredAuth()
+  // Do not expose a previous Telegram user's token while a new identity is pending.
+  deactivateAuth()
   authPromise = (async () => {
-    const cached = readStoredAuth()
-    if (cached) applyAuth(cached)
-    if (!initData) {
+    const resolvedInitData = await initData
+    if (!resolvedInitData) {
+      if (cached) applyAuth(cached)
       return
     }
     clearAuth()
     const data = await call<{ access_token: string; user: { role: string } }>('/auth/telegram', {
       method: 'POST',
-      body: JSON.stringify({ init_data: initData }),
+      body: JSON.stringify({ init_data: resolvedInitData }),
     })
     saveAuth({ accessToken: data.access_token, role: data.user.role })
   })().finally(() => {

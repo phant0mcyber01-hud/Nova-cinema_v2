@@ -8,7 +8,9 @@ from backend.services.media import youtube_video_id
 
 
 class ReviewIn(BaseModel):
-    rating: int = Field(ge=1, le=5)
+    #: 1-10, per the client's explicit ask -- not the 1-5 stars a ticketing
+    #: app defaults to.
+    rating: int = Field(ge=1, le=10)
     text: str = Field(min_length=3, max_length=1000)
 
 
@@ -32,6 +34,7 @@ class MovieIn(BaseModel):
     is_published: bool = True
     is_new: bool = False
     new_until: str = Field(default="", pattern=f"^$|{DATE_PATTERN[1:-1]}")
+    is_hit: bool = False
     sort_order: int = 0
 
     @field_validator("trailer_id")
@@ -42,3 +45,7 @@ class MovieIn(BaseModel):
 
 class MovieLookupIn(BaseModel):
     title: str = Field(min_length=1, max_length=255)
+
+
+class ReviewModerationIn(BaseModel):
+    approved: bool

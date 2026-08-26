@@ -2,8 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: var(--tg-theme-text-color, #f7f3f3); background: var(--tg-theme-bg-color, #0b090a); font-synthesis: none; }
-* { box-sizing: border-box; } body { margin: 0; min-width: 320px; background: radial-gradient(circle at 85% -10%, #481622, transparent 38%), var(--tg-theme-bg-color, #0b090a); } button, input { font: inherit; } button { cursor: pointer; }
+:root { font-family: 'Inter Variable', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif; color: var(--tg-theme-text-color, #f7f3f3); background: var(--tg-theme-bg-color, #0b090a); font-synthesis: weight style; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+* { box-sizing: border-box; } body { margin: 0; min-width: 0; background: radial-gradient(circle at 85% -10%, #481622, transparent 38%), var(--tg-theme-bg-color, #0b090a); } button, input, select, textarea { font: inherit; } button { cursor: pointer; }
+.nova-icon { display: inline-block; width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -.14em; }
+button .nova-icon, a .nova-icon { margin-right: .35em; }
+.sound-toggle .nova-icon, .bottom-nav .nova-icon { margin-right: 0; }
+@media (max-width: 640px) { input, select, textarea { font-size: 16px !important; } }
 .app { width: min(100%, 760px); margin: 0 auto; padding: max(18px, env(safe-area-inset-top)) 18px calc(94px + env(safe-area-inset-bottom)); }
 .topbar { display: flex; align-items: center; justify-content: space-between; }.logo { color: inherit; text-decoration: none; font-weight: 900; letter-spacing: .08em; font-size: 15px; }.logo span { display: inline-grid; place-items: center; margin-right: 6px; width: 27px; height: 27px; border-radius: 8px; color: white; background: linear-gradient(145deg, #8d1d34, #4c0d1a); }.logo i { color: #a13246; font-style: normal; }.header-actions { display: flex; gap: 9px; }.language { border: 1px solid #482830; border-radius: 11px; color: inherit; background: #191315; height: 35px; min-width: 39px; }.language { font-size: 11px; font-weight: 800; }
 .hero { padding: 35px 0 18px; }.hero p { margin: 0; color: #b27480; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; }.hero h1 { margin: 7px 0 4px; font-size: clamp(33px, 9vw, 49px); letter-spacing: -.055em; }.hero span { color: #95898b; font-size: 14px; }
@@ -20,7 +25,15 @@
 .hero-home{padding:54px 0 28px}.hero-home p{color:#a11212;letter-spacing:.22em;font-size:11px;font-weight:800}.hero-home h1{max-width:500px;margin:0;font-size:clamp(38px,9vw,72px);line-height:.98;letter-spacing:-.07em}.movie{position:relative;isolation:isolate;transition:transform .25s ease,box-shadow .25s ease}.movie:hover{transform:translateY(-5px);box-shadow:0 24px 50px #0008}.movie>a:first-child{display:block;color:inherit;text-decoration:none}.movie .movie-shade{position:absolute;inset:0 0 50px;background:linear-gradient(0deg,#0b0b0b 2%,transparent 65%);pointer-events:none}.movie .movie-body{position:absolute;right:0;bottom:44px;left:0;z-index:1}.rating-chip{display:inline-block;padding:4px 7px;border-radius:6px;color:#f8d67b;background:#131313cc;font-size:10px;font-weight:800}.movie-hero{display:grid;grid-template-columns:minmax(130px,28%) 1fr;gap:20px;align-items:end;min-height:450px;padding:24px;border-radius:24px;background-position:center;background-size:cover}.movie-hero>img{width:100%;border-radius:14px}.movie-hero h1{font-size:clamp(33px,7vw,64px);line-height:.98;margin:8px 0}.movie-hero p{color:#c3adb2}.movie-hero .book{display:inline-block;width:auto;margin:18px 0 0;text-decoration:none}.movie-hero .back{grid-column:1/-1}.gallery{margin-top:24px}.trailer{margin-top:24px}.app{max-width:960px}.book{transition:filter .2s ease,transform .2s ease}.book:hover{filter:brightness(1.16);transform:translateY(-1px)}
 .profile-hero{padding:38px 0 14px}.profile-hero p{color:#a11212;letter-spacing:.14em}.profile-hero h1{margin:5px 0;font-size:38px}.booking-card{display:grid;gap:6px;padding:12px;border:1px solid #44272e;border-radius:13px;color:inherit;text-decoration:none;background:#181315}.booking-card img{width:74px;height:74px;object-fit:cover;border-radius:9px}.booking-card span{color:#ad989c}.qr{display:grid;gap:8px;margin:20px 0;padding:18px;border:1px dashed #8d263a;border-radius:14px;background:#181315}.qr code{word-break:break-all;color:#d8c1c6}.profile .catalog{margin-top:16px}
 .admin h1{margin:22px 0 14px;font-size:34px}.admin h2{margin:26px 0 12px;font-size:20px}.admin-topbar b{color:#d2c2c5;font-size:13px}.section-head{display:flex;gap:12px;align-items:center;justify-content:space-between}.admin-toolbar{display:grid;grid-template-columns:1fr;gap:10px;margin:12px 0}.admin-toolbar .admin-input{margin:0}.admin-ghost{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:9px 11px;border:1px solid #48282f;border-radius:9px;color:#d9c7cb;text-decoration:none;background:#211719}.admin-ghost.danger{color:#ffb8c6;border-color:#743140}.book.fit{width:auto;padding-inline:16px}.admin-table.compact article{grid-template-columns:1fr}.admin-row{grid-template-columns:84px 1fr;align-items:center}.admin-row>img{width:72px;height:92px;border-radius:10px;object-fit:cover}.admin-row b{line-height:1.25}.admin-actions{display:flex;flex-wrap:wrap;gap:8px}.admin-actions select,.admin-form select,.admin-form input,.admin-form textarea,.admin-setting input{padding:10px;border:1px solid #48282f;border-radius:9px;color:inherit;background:#211719;outline:0}.admin-form{display:grid;gap:10px}.admin-form.inline{grid-template-columns:1fr;align-items:end;margin:12px 0 18px}.admin-form textarea{min-height:86px;resize:vertical}.admin-check{display:flex;gap:9px;align-items:center;padding:10px;color:#d9c7cb}.modal-backdrop{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:18px;background:#050404cc;backdrop-filter:blur(12px)}.modal{width:min(100%,720px);max-height:88vh;overflow:auto;padding:18px;border:1px solid #512b34;border-radius:16px;background:#120f10;box-shadow:0 24px 70px #000}.pagination{display:flex;gap:10px;align-items:center;justify-content:center;margin:18px 0}.pagination button{padding:9px 12px;border:1px solid #48282f;border-radius:9px;color:inherit;background:#191315}.pagination button:disabled{opacity:.45}.admin-setting{display:grid;gap:12px;max-width:420px;padding:18px;border:1px solid #44272e;border-radius:14px;background:#181315}.admin-setting small{color:#ad989c}.admin-setting b{font-size:28px;color:#f1c677}@media(min-width:760px){.admin-toolbar{grid-template-columns:1fr 170px 150px 46px}.admin-row{grid-template-columns:84px 1fr auto}.admin-form.inline{grid-template-columns:1.2fr 150px 100px 130px 90px 120px 120px}}
-:root{--nova-red:#8f1f35;--nova-red-2:#5b111f;--glass:#181315cc;--stroke:#44272e;--soft:#b9a8ad}body{background:radial-gradient(circle at 15% -10%,#65192b99,transparent 32%),radial-gradient(circle at 95% 8%,#2b1016,transparent 28%),#080707}.app{animation:page-in .28s ease-out}.topbar{position:sticky;top:0;z-index:5;margin:-18px -18px 16px;padding:18px;background:linear-gradient(180deg,#0b090aec,#0b090a88 70%,transparent);backdrop-filter:blur(18px)}.admin-ghost,.choice,.admin-cards article,.admin-table article,.contact-form input,.contact-form textarea,.search,.summary,.modal,.admin-setting{backdrop-filter:blur(16px);box-shadow:0 18px 45px #0004}.admin-ghost,.choice,.admin-cards article,.admin-table article,.booking-card,.contact-form input,.contact-form textarea,.search,.modal,.admin-setting{border-color:#ffffff12;background:linear-gradient(180deg,#21181bdd,#141011dd)}.hero-home{min-height:260px;display:grid;align-content:end;margin:0 -18px;padding:80px 18px 34px;background:linear-gradient(0deg,#0b090a 0%,#0b090a99 58%,transparent),radial-gradient(circle at 70% 10%,#8f1f3577,transparent 34%)}.hero-home h1,.movie-hero h1,.profile-hero h1{letter-spacing:-.04em}.search{height:56px;margin-top:8px}.filters button,.book,.admin-ghost,.choice,.seat,.movie{transition:transform .18s ease,border-color .18s ease,filter .18s ease,background .18s ease,box-shadow .18s ease}.filters button:hover,.choice:hover,.admin-ghost:hover{border-color:#8f1f35;transform:translateY(-1px)}.book{min-height:42px;border-radius:12px;background:linear-gradient(135deg,var(--nova-red),var(--nova-red-2));box-shadow:0 12px 30px #8f1f3533}.book:disabled{cursor:not-allowed;opacity:.45;filter:grayscale(.35)}.movie{border-radius:14px;background:#120f10}.movie>a:first-child img{transition:transform .35s ease}.movie:hover img{transform:scale(1.04)}.movie .movie-shade{background:linear-gradient(0deg,#070606 0%,#070606cc 18%,transparent 70%)}.rating-chip{border:1px solid #f3ca7622;backdrop-filter:blur(10px)}.movie-hero{overflow:hidden;position:relative;border:1px solid #ffffff14;border-radius:20px;box-shadow:0 30px 80px #0008}.movie-hero::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#0b090add 0%,#0b090a55 55%,transparent);pointer-events:none}.movie-hero>*{position:relative;z-index:1}.gallery{padding-bottom:8px}.gallery img,.trailer{border:1px solid #ffffff12;box-shadow:0 18px 50px #0005}.screen{box-shadow:0 0 50px #8f1f3544}.seat:not(:disabled):hover{transform:translateY(-2px);background:#51464a}.seat.selected{box-shadow:0 0 0 3px #9a294044}.profile-hero{margin:0 -18px;padding:54px 18px 20px;background:linear-gradient(0deg,#0b090a,transparent),radial-gradient(circle at 85% 0,#8f1f3566,transparent 38%)}.modal-backdrop{animation:fade-in .18s ease}.modal{animation:modal-in .2s ease}.admin-row{overflow:hidden}.admin-row:hover{border-color:#8f1f35}.toast{animation:toast-in .2s ease}.error{border:1px solid #ff819844}.loading{color:var(--soft)}@keyframes fade-in{from{opacity:0}to{opacity:1}}@keyframes modal-in{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}@keyframes toast-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}@media(max-width:640px){.movie-hero{display:block;min-height:0;padding:18px;background-position:center}.movie-hero>img{width:42%;margin:10px 0 16px}.movie-hero .book{width:100%}.catalog{gap:12px}.section-head{align-items:flex-start;flex-direction:column}.admin-actions{width:100%}.admin-actions>*{flex:1 1 auto}.topbar{margin-top:calc(-1 * max(18px,env(safe-area-inset-top)));padding-top:max(18px,env(safe-area-inset-top))}}
+:root{--nova-red:#8f1f35;--nova-red-2:#5b111f;--glass:#181315cc;--stroke:#44272e;--soft:#b9a8ad}body{background:radial-gradient(circle at 15% -10%,#65192b99,transparent 32%),radial-gradient(circle at 95% 8%,#2b1016,transparent 28%),#080707}.app{animation:page-in .28s ease-out}.topbar{position:sticky;top:0;z-index:5;margin:-18px -18px 16px;padding:18px;background:linear-gradient(180deg,#0b090aec,#0b090a88 70%,transparent);backdrop-filter:blur(18px)}.admin-ghost,.choice,.admin-cards article,.admin-table article,.contact-form input,.contact-form textarea,.search,.summary,.modal,.admin-setting{backdrop-filter:blur(16px);box-shadow:0 18px 45px #0004}.admin-ghost,.choice,.admin-cards article,.admin-table article,.booking-card,.contact-form input,.contact-form textarea,.search,.modal,.admin-setting{border-color:#ffffff12;background:linear-gradient(180deg,#21181bdd,#141011dd)}
+
+/* Nova Cinema: the ticket-request contact form -- one column, always. The
+   legacy .booking-form 2-col grid (a fixed-seat layout with a magic
+   :nth-child(3) rule) does not fit a 5-field generic-booking form: it put
+   the heading next to the hold-timer note and the summary rubbed against the
+   submit button on real devices. */
+.request-form{display:grid;gap:9px}
+.request-form h2{margin:2px 0 0}.hero-home{min-height:260px;display:grid;align-content:end;margin:0 -18px;padding:80px 18px 34px;background:linear-gradient(0deg,#0b090a 0%,#0b090a99 58%,transparent),radial-gradient(circle at 70% 10%,#8f1f3577,transparent 34%)}.hero-home h1,.movie-hero h1,.profile-hero h1{letter-spacing:-.04em}.search{height:56px;margin-top:8px}.filters button,.book,.admin-ghost,.choice,.seat,.movie{transition:transform .18s ease,border-color .18s ease,filter .18s ease,background .18s ease,box-shadow .18s ease}.filters button:hover,.choice:hover,.admin-ghost:hover{border-color:#8f1f35;transform:translateY(-1px)}.book{min-height:42px;border-radius:12px;background:linear-gradient(135deg,var(--nova-red),var(--nova-red-2));box-shadow:0 12px 30px #8f1f3533}.book:disabled{cursor:not-allowed;opacity:.45;filter:grayscale(.35)}.movie{border-radius:14px;background:#120f10}.movie>a:first-child img{transition:transform .35s ease}.movie:hover img{transform:scale(1.04)}.movie .movie-shade{background:linear-gradient(0deg,#070606 0%,#070606cc 18%,transparent 70%)}.rating-chip{border:1px solid #f3ca7622;backdrop-filter:blur(10px)}.movie-hero{overflow:hidden;position:relative;border:1px solid #ffffff14;border-radius:20px;box-shadow:0 30px 80px #0008}.movie-hero::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#0b090add 0%,#0b090a55 55%,transparent);pointer-events:none}.movie-hero>*{position:relative;z-index:1}.gallery{padding-bottom:8px}.gallery img,.trailer{border:1px solid #ffffff12;box-shadow:0 18px 50px #0005}.screen{box-shadow:0 0 50px #8f1f3544}.seat:not(:disabled):hover{transform:translateY(-2px);background:#51464a}.seat.selected{box-shadow:0 0 0 3px #9a294044}.profile-hero{margin:0 -18px;padding:54px 18px 20px;background:linear-gradient(0deg,#0b090a,transparent),radial-gradient(circle at 85% 0,#8f1f3566,transparent 38%)}.modal-backdrop{animation:fade-in .18s ease}.modal{animation:modal-in .2s ease}.admin-row{overflow:hidden}.admin-row:hover{border-color:#8f1f35}.toast{animation:toast-in .2s ease}.error{border:1px solid #ff819844}.loading{color:var(--soft)}@keyframes fade-in{from{opacity:0}to{opacity:1}}@keyframes modal-in{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}@keyframes toast-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}@media(max-width:640px){.movie-hero{display:block;min-height:0;padding:18px;background-position:center}.movie-hero>img{width:42%;margin:10px 0 16px}.movie-hero .book{width:100%}.catalog{gap:12px}.section-head{align-items:flex-start;flex-direction:column}.admin-actions{width:100%}.admin-actions>*{flex:1 1 auto}.topbar{margin-top:calc(-1 * max(18px,env(safe-area-inset-top)));padding-top:max(18px,env(safe-area-inset-top))}}
 
 /* Final Telegram Mini App polish */
 html,body,#root{min-height:100%;overflow-x:hidden}.app{width:100%;max-width:760px;padding-inline:clamp(12px,4vw,18px);padding-bottom:calc(104px + env(safe-area-inset-bottom));}.topbar{min-width:0}.logo,.admin-ghost{min-width:0}.admin-ghost{white-space:nowrap}.hero-home{min-height:210px;margin-inline:calc(-1 * clamp(12px,4vw,18px));padding:64px clamp(12px,4vw,18px) 26px}.hero-home h1{font-size:clamp(34px,11vw,56px)}
@@ -73,6 +86,45 @@ html,body,#root{min-height:100%;overflow-x:hidden}.app{width:100%;max-width:760p
 .hall{--row-label-size:clamp(20px,7vw,32px);--seat-gap:clamp(7px,2.4vw,13px);display:grid;grid-template-columns:1fr;gap:12px;width:100%;max-width:460px;overflow:hidden;margin:0 auto 18px;padding:16px clamp(8px,3vw,16px) 18px;border-radius:24px;background:radial-gradient(circle at 50% 0,#451923 0,#181315 48%,#0d0b0c 100%)}
 .hall-numbers,.hall-row{display:grid;grid-template-columns:var(--row-label-size) repeat(var(--seat-count),minmax(0,1fr));gap:var(--seat-gap);align-items:center;width:100%;max-width:none}
 .hall-numbers span{display:block}
+
+/* Nova Cinema: the floating "take a booking" shortcut on the poster screen */
+.take-booking-cta{
+  position:fixed;
+  left:50%;
+  bottom:calc(78px + env(safe-area-inset-bottom));
+  z-index:19;
+  transform:translateX(-50%);
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:12px 22px;
+  border-radius:999px;
+  background:linear-gradient(135deg,#a11e30,#6c1522);
+  color:#fff;
+  font-weight:700;
+  text-decoration:none;
+  box-shadow:0 14px 30px #000a;
+  white-space:nowrap;
+}
+.take-booking-cta:active{transform:translateX(-50%) scale(.96)}
+
+/* Nova Cinema: the designed day picker (calendar strip) */
+.date-strip{display:flex;gap:10px;margin-top:4px;padding-bottom:4px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+.date-strip::-webkit-scrollbar{display:none}
+.date-chip{display:grid;flex:0 0 auto;gap:2px;width:74px;padding:14px 8px 12px;border:1px solid #3b252a;border-radius:16px;color:inherit;text-align:center;background:linear-gradient(180deg,#1b1517,#120f10);scroll-snap-align:start;transition:transform .18s ease,border-color .18s ease,background .18s ease}
+.date-chip-weekday{color:#b8afb1;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.date-chip-day{font-size:24px;font-weight:900;line-height:1.05}
+.date-chip-month{color:#97898c;font-size:11px}
+.date-chip-meter{display:block;overflow:hidden;width:100%;height:4px;margin:6px 0 4px;border-radius:999px;background:#2c2023}
+.date-chip-meter i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#2ab768,#158146);transition:width .25s ease}
+.date-chip small{color:#8e8184;font-size:9px;line-height:1.25}
+.date-chip:not(:disabled):hover{border-color:#8f2339;transform:translateY(-2px)}
+.date-chip.active{border-color:#a12f45;background:linear-gradient(180deg,#3a1721,#22121a);box-shadow:0 12px 28px #8f1f3533}
+.date-chip.active .date-chip-meter i{background:linear-gradient(90deg,#f0c743,#bd8618)}
+.date-chip.full{opacity:.4}
+.date-chip.full .date-chip-meter i{background:#5b2530}
+.date-chip:disabled{cursor:not-allowed}
+@media(min-width:600px){.date-chip{width:82px}}
 .hall-numbers b{display:grid;place-items:center;min-width:0;color:#ccb9be;font-size:clamp(11px,3vw,13px);font-weight:900;text-align:center}
 .row-label{display:grid;place-items:center;min-width:0;color:#ffdce4;font-size:clamp(15px,4vw,18px);font-weight:900;text-align:center}
 .seat{justify-self:center;width:min(100%,58px);min-width:0;height:auto;aspect-ratio:1;border-radius:50%;font-size:clamp(13px,4.1vw,18px)}
@@ -135,7 +187,7 @@ input,textarea,select,button{max-width:100%}
 .legend i.selected{background:#f2cd49}
 .hall{contain:layout paint;box-shadow:0 24px 70px #0007}
 .hall-row,.hall-numbers{contain:layout}
-.summary{position:fixed;right:max(12px,calc((100vw - 760px) / 2 + 18px));bottom:calc(12px + env(safe-area-inset-bottom));left:max(12px,calc((100vw - 760px) / 2 + 18px));z-index:6;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 12px;margin:0;border-color:#ffffff18;border-radius:22px;background:linear-gradient(180deg,#22181cf2,#120f10f2);box-shadow:0 22px 70px #000b}
+.summary{position:fixed;right:max(12px,calc((100vw - 760px) / 2 + 18px));bottom:calc(78px + env(safe-area-inset-bottom));left:max(12px,calc((100vw - 760px) / 2 + 18px));z-index:25;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 12px;margin:0;border-color:#ffffff18;border-radius:22px;background:linear-gradient(180deg,#22181cf2,#120f10f2);box-shadow:0 22px 70px #000b}
 .summary small{display:block;margin-bottom:3px;color:#aa989d;font-size:11px}
 .summary b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .summary strong{justify-self:end;white-space:nowrap}
@@ -160,6 +212,7 @@ input,textarea,select,button{max-width:100%}
 .booking-card{grid-template-columns:82px minmax(0,1fr);align-items:center}
 .booking-card div{display:grid;gap:4px;min-width:0}
 .booking-card b,.booking-card span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tickets-list{gap:14px}.ticket-section{display:grid;gap:10px}.ticket-section h2{margin:6px 0 2px;font-size:18px;letter-spacing:-.02em}.ticket-card{align-items:start}.ticket-card b,.ticket-card span{overflow:visible;text-overflow:clip;white-space:normal}.ticket-card span{line-height:1.35}.ticket-card img{align-self:start}.ticket-card div{gap:5px}
 .profile-filters{display:grid;grid-template-columns:1fr 150px 150px;gap:8px;margin-bottom:12px}
 .profile-filters .admin-input{margin:0}
 .qr code{display:block;overflow-wrap:anywhere}
@@ -212,6 +265,10 @@ input,textarea,select,button{max-width:100%}
 .review-form select { min-height: 44px; padding: 0 12px; }
 .review-form textarea { min-height: 96px; padding: 12px; resize: vertical; }
 .review-form .book { width: 100%; margin: 0; }
+.review-rating-label { gap: 8px; }
+.review-rating-scale { display: flex; flex-wrap: wrap; gap: 6px; }
+.review-rating-scale button { min-width: 34px; height: 34px; padding: 0 4px; border: 1px solid #4a2a31; border-radius: 9px; color: #d8c5c9; background: #100d0e; font: inherit; font-weight: 700; }
+.review-rating-scale button.active { color: #fff; border-color: #c73f55; background: #8d263a; }
 .similar { display: block; }
 .similar > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .similar a { display: block; overflow: hidden; border: 1px solid #352126; border-radius: 14px; color: inherit; text-decoration: none; background: #171214; transition: transform .2s ease, border-color .2s ease; }
@@ -331,6 +388,35 @@ body{
   color-scheme:dark;
 }
 
+.time-select-row{
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:center;
+  gap:8px;
+}
+
+.time-select-row select{
+  width:100%;
+  min-height:54px;
+  padding:12px 14px;
+  border:1px solid #ffffff12;
+  border-radius:16px;
+  color:inherit;
+  background:#0d0b0c;
+  font-size:20px;
+  font-weight:800;
+  text-align:center;
+  outline:0;
+  appearance:none;
+  color-scheme:dark;
+}
+
+.time-select-colon{
+  font-size:22px;
+  font-weight:900;
+  color:#b9a8ad;
+}
+
 .disabled-link{
   pointer-events:none;
   opacity:.48;
@@ -430,3 +516,215 @@ body{
     grid-template-columns:1fr;
   }
 }
+
+/* --- stage 5: mobile-first home + tab bar ------------------------------- */
+.bottom-nav { position: fixed; left: 50%; bottom: 0; z-index: 20; display: flex; gap: 4px; width: min(100%, 760px); padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); background: #120e0fee; border-top: 1px solid #2f2023; transform: translateX(-50%); backdrop-filter: blur(12px); }
+.bottom-nav a { flex: 1; display: grid; gap: 3px; justify-items: center; padding: 7px 0; border-radius: 13px; color: #8e8184; text-decoration: none; transition: background .15s, color .15s; }
+.bottom-nav a.active { color: #fff; background: #241519; }
+.bottom-nav a:active { transform: scale(.96); }
+.bottom-nav b { font-size: 19px; font-weight: 400; line-height: 1; }
+.bottom-nav small { font-size: 10px; font-weight: 700; letter-spacing: .02em; }
+.strip-title { margin: 22px 0 0; color: #b27480; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.date-strip .dates { margin-top: 10px; }
+.new-strip { margin-top: 26px; }
+.strip-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.strip-head h2 { margin: 0; font-size: 17px; letter-spacing: -.02em; }
+.strip-head p { margin: 0; color: #8e8184; font-size: 12px; }
+.new-rail { display: flex; gap: 12px; margin-top: 12px; padding-bottom: 4px; overflow-x: auto; scrollbar-width: none; }
+.new-rail::-webkit-scrollbar { display: none; }
+.new-card { flex: 0 0 126px; display: grid; gap: 4px; color: inherit; text-decoration: none; }
+.new-card img { width: 100%; aspect-ratio: 2/3; border: 1px solid #2f2023; border-radius: 14px; object-fit: cover; }
+.new-card b { overflow: hidden; font-size: 13px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.new-card span { color: #8e8184; font-size: 11px; }
+.movie { position: relative; }
+.new-badge { position: absolute; top: 10px; left: 10px; z-index: 2; padding: 4px 9px; border-radius: 999px; color: #fff; background: #7d1e31; font-size: 10px; font-weight: 800; letter-spacing: .04em; }
+
+/* --- stage 6: schedule inside the movie card ---------------------------- */
+.schedule-block { margin-top: 26px; }
+.schedule-day { display: grid; gap: 8px; padding: 13px 0; border-bottom: 1px solid #241a1d; }
+.schedule-day:last-child { border-bottom: 0; }
+.schedule-day > b { color: #b27480; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.schedule-times { display: flex; flex-wrap: wrap; gap: 8px; }
+.schedule-time { padding: 9px 15px; border: 1px solid #3b252a; border-radius: 12px; color: #f0e7e9; background: #171214; font-size: 14px; font-weight: 700; text-decoration: none; }
+.schedule-time:active { transform: scale(.96); border-color: #8f2339; background: #241519; }
+
+/* --- stage 7: search + filter reset ------------------------------------- */
+.search-clear { display: grid; place-items: center; width: 26px; height: 26px; border: 0; border-radius: 50%; color: #d3c6c9; background: #2c2024; font-size: 17px; line-height: 1; }
+.search-clear:active { transform: scale(.92); }
+.reset-filters { display: inline-block; margin-top: 14px; }
+
+/* --- stage 8: unreachable movie from a shared link ---------------------- */
+.unavailable { display: grid; gap: 10px; justify-items: center; padding: 64px 20px; text-align: center; }
+.unavailable span { font-size: 46px; }
+.unavailable h1 { margin: 0; font-size: 22px; letter-spacing: -.02em; }
+.unavailable p { margin: 0; max-width: 320px; color: #8e8184; font-size: 14px; }
+.unavailable .book { margin-top: 8px; }
+
+/* --- stage 9: the price is visible before any seat is picked ------------ */
+.price-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 16px; padding: 12px 15px; border: 1px solid #362126; border-radius: 15px; background: #1b1618; }
+.price-banner small { display: block; color: #a08d91; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.price-banner b { font-size: 19px; letter-spacing: -.02em; }
+.price-banner span { color: #97898c; font-size: 12px; }
+.summary-total small { display: block; color: #a08d91; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+
+/* --- stage 10: four seat states + hold countdown ------------------------ */
+/* Booked keeps the old "taken" look; awaiting is visibly different, because
+   the viewer must be able to tell "gone" from "being taken right now". */
+.seat.booked { color: #ffdce0; background: radial-gradient(circle at 35% 28%, #b84650, #8d2b36 48%, #541a24 100%); box-shadow: inset 0 2px 6px #ffffff20, 0 8px 18px #0006; opacity: .8; cursor: not-allowed; }
+.seat.awaiting { color: #2a1c05; background: radial-gradient(circle at 35% 28%, #f0b563, #d68f2c 48%, #9c6414 100%); box-shadow: inset 0 2px 6px #ffffff33, 0 8px 18px #0006; opacity: .9; cursor: not-allowed; }
+.seat.booked:hover, .seat.awaiting:hover { transform: none; }
+.legend i.awaiting { background: #d68f2c; }
+.legend i.booked { background: #98313b; }
+.hold-timer { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 12px; padding: 8px 13px; border: 1px solid #4a3a1c; border-radius: 999px; color: #f0c743; background: #241d10; font-size: 12px; font-weight: 700; }
+
+/* --- stage 16: the cinema's own page ------------------------------------ */
+.about-hero { margin: 0 -18px; padding: 46px 18px 18px; background: linear-gradient(0deg, #0b090a, transparent), radial-gradient(circle at 80% 0, #8f1f3555, transparent 40%); }
+.about-kicker { margin: 0; color: #b27480; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.about-hero h1 { margin: 6px 0 0; font-size: clamp(28px, 8vw, 40px); letter-spacing: -.04em; }
+.about-text { margin: 12px 0 0; color: #b9a8ad; font-size: 14px; line-height: 1.6; }
+.about-bullets { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
+.about-bullets li { position: relative; padding-left: 18px; color: #b9a8ad; font-size: 14px; line-height: 1.45; }
+.about-bullets li::before { position: absolute; top: 0; left: 0; color: #b27480; content: '•'; font-weight: 800; }
+.about-block { margin-top: 26px; }
+.about-block h2 { margin: 0 0 12px; font-size: 17px; letter-spacing: -.02em; }
+.about-facts { display: grid; gap: 10px; margin-bottom: 14px; }
+.about-facts div { padding: 12px 15px; border: 1px solid #362126; border-radius: 15px; background: #1b1618; }
+.about-facts small { display: block; color: #a08d91; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.about-facts b { display: block; margin-top: 3px; font-size: 15px; }
+.about-actions { display: grid; gap: 8px; }
+.about-actions .book { display: grid; place-items: center; text-decoration: none; }
+.about-bonuses { display: grid; gap: 10px; }
+.about-bonuses article { padding: 14px 15px; border: 1px solid #362126; border-radius: 15px; background: linear-gradient(135deg, #241a1d, #1b1618); }
+.about-bonuses b { font-size: 15px; letter-spacing: -.01em; }
+.about-bonuses p { margin: 6px 0 0; color: #bcaaad; font-size: 13px; line-height: 1.5; }
+.about-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.about-gallery figure { margin: 0; }
+.about-gallery img { width: 100%; aspect-ratio: 4/3; border: 1px solid #2f2023; border-radius: 16px; object-fit: cover; }
+.about-gallery figcaption { margin-top: 6px; color: #97898c; font-size: 12px; }
+.admin-image-preview { width: 100%; max-width: 320px; margin-top: 12px; border: 1px solid #2f2023; border-radius: 16px; object-fit: cover; }
+
+/* --- stage 17: Telegram theme integration ------------------------------- */
+/* The palette stays dark deliberately: a cinema app turning white because the
+   phone is in light mode fights the brand. What does follow Telegram is the
+   chrome — header and background are reported from lib/telegramTheme.ts — and
+   the link accent below. `data-color-scheme` is written to <html>, so a light
+   palette can be added here later without touching a single component. */
+:root {
+  --nova-bg: #0b090a;
+  --nova-surface: #171214;
+  --nova-stroke: #362126;
+  --nova-text: var(--tg-theme-text-color, #f7f3f3);
+  --nova-muted: #97898c;
+  --nova-link: var(--tg-theme-link-color, #d98a9a);
+}
+body { background-color: var(--nova-bg); color: var(--nova-text); }
+.about-text a, .description a { color: var(--nova-link); }
+
+/* --- admin panel on a narrow screen -------------------------------------- */
+/* Two layouts assumed a leading element that half the screens do not have.
+   `.admin-row` reserves a column for a poster, and some admin lists
+   have no poster — so their text was squeezed into the 64px meant for the
+   image, and the buttons landed on top of it. `.session-step` reserves a
+   column for the step number, and the cinema settings and the gallery have no
+   numbers — so every field in them was 61px wide. Both now start as a single
+   column and only split when the element they were built around is present.
+   A browser without `:has` gets the single column, which is plain but whole. */
+.admin-row { grid-template-columns: minmax(0, 1fr); }
+.admin-row:has(> img) { grid-template-columns: 64px minmax(0, 1fr); }
+.session-step { grid-template-columns: minmax(0, 1fr); }
+.session-step:has(> .session-step-number) { grid-template-columns: 32px minmax(0, 1fr); }
+.booking-admin-meta, .session-step-body, .session-step-body label { min-width: 0; }
+.booking-admin-meta b, .booking-admin-meta span { overflow-wrap: anywhere; }
+
+/* A button label longer than its cell used to be cut off mid-word — "Сделать
+   новинкой" arrived as "ать новинкой". Labels wrap now, and every control in
+   a row keeps the same height whether it wrapped or not. */
+.admin-ghost { white-space: normal; overflow-wrap: anywhere; text-align: center; line-height: 1.2; }
+.admin-actions { align-items: stretch; }
+.admin-actions > * { min-height: 44px; }
+
+/* Same label, the other half of the bug: a row with a poster, a text block and
+   an action block has three children in a two-column grid, so the buttons flow
+   onto an implicit row inside the 64px poster column and "Сделать новинкой"
+   wrapped one letter per line. The bookings list already solved this with
+   `.booking-admin-actions`; every `.admin-row` list gets it now. */
+.admin-row > .admin-actions { grid-column: 1 / -1; }
+
+/* Headings were fixed at desktop sizes: "Настройки кинотеатра" took three
+   lines of a 400px screen before the first field appeared. */
+.admin h1 { font-size: clamp(23px, 6.5vw, 34px); line-height: 1.08; }
+.admin h2 { font-size: clamp(17px, 4.6vw, 20px); line-height: 1.15; }
+.admin-cards b { font-size: clamp(18px, 5.4vw, 22px); }
+.admin-setting b { font-size: clamp(21px, 6.4vw, 28px); }
+.session-builder > header b { font-size: clamp(17px, 4.8vw, 20px); }
+
+/* Controls with an intrinsic width of their own must shrink on narrow screens. */
+.admin-setting input, .admin-setting select, .admin-inline-field, .admin-inline-field input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+.admin input[type="file"] { max-width: 100%; }
+
+/* Full-bleed headers pulled themselves out by a flat 18px while the page
+   padding shrinks to 12px on a small screen, so on a 320px phone the About
+   and profile headers stuck 6px past both edges. The home hero already
+   measured the real padding; these two now do the same. */
+.about-hero, .profile-hero {
+  margin-inline: calc(-1 * clamp(12px, 4vw, 18px));
+  padding-inline: clamp(12px, 4vw, 18px);
+}
+
+/* The RU/UZ pill was 36px tall while a later accessibility rule made every
+   button in it 44px, so the active half bled 4px out of the rounded frame at
+   the top and bottom. The frame keeps the 44px touch height and the halves
+   sit inside it. */
+.language-switch { height: auto; min-height: 44px; min-width: 78px; }
+.language-switch button { height: 38px; min-height: 38px; }
+
+
+/* Native date/number pickers used the light OS theme inside the dark admin
+   panel, so typed or selected values were unreadable (white text on white
+   picker chrome). */
+.admin input, .admin select, .admin textarea { color-scheme: dark; }
+
+/* A two-column profile metric clips long Russian labels on 320 px WebViews. */
+@media (max-width: 380px) {
+  .profile-hero.compact-profile { grid-template-columns: minmax(0, 1fr); align-items: start; }
+  .compact-profile > div { min-width: 0; }
+  .compact-profile h1 { font-size: clamp(24px, 9vw, 30px); word-break: break-word; overflow-wrap: anywhere; }
+  .compact-profile > b { grid-row: auto; grid-column: 1; margin-top: 8px; font-size: 28px; }
+  .compact-profile > small { grid-column: 1; text-align: left; }
+}
+
+/* Safari 12 and old Android WebViews ignore these newer sizing primitives.
+   Keep the interface usable; modern engines continue using the fluid rules. */
+@supports not (font-size: clamp(1rem, 2vw, 2rem)) {
+  .app { padding-left: 18px; padding-right: 18px; }
+  .hero h1, .hero-home h1 { font-size: 44px; }
+  .detail-page h1, .movie-hero h1 { font-size: 38px; }
+  .profile-hero h1, .about-hero h1 { font-size: 32px; }
+  .hall-head h1 { font-size: 38px; }
+  .admin h1 { font-size: 30px; }
+  .admin h2, .session-builder > header b { font-size: 20px; }
+  .admin-cards b { font-size: 22px; }
+  .admin-setting b { font-size: 26px; }
+  .hall { --row-label-size: 24px; --seat-gap: 10px; padding-left: 12px; padding-right: 12px; }
+  .hall-numbers b { font-size: 12px; }
+  .row-label { font-size: 16px; }
+  .seat { font-size: 15px; }
+  .movie { min-height: 354px; }
+  @media (max-width: 380px) {
+    .hero h1, .hero-home h1 { font-size: 34px; }
+    .compact-profile h1 { font-size: 28px; }
+    .movie { min-height: 334px; }
+  }
+}
+
+@supports not (aspect-ratio: 1 / 1) {
+  .seat { height: 50px; }
+  .trailer { height: 220px; }
+  @media (max-width: 380px) { .trailer { height: 170px; } }
+}
+
+.tickets-flow{display:grid;gap:16px;padding-bottom:calc(88px + env(safe-area-inset-bottom))}.tickets-flow h1,.tickets-flow h2{margin:0}.tickets-flow h2{font-size:17px}.ticket-honesty{margin:0;padding:14px;border:1px solid #6b4930;border-radius:14px;color:#e2c89a;background:#241b12;line-height:1.5}.ticket-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.ticket-options button{display:grid;gap:4px;min-height:58px;padding:11px;border:1px solid #44272e;border-radius:13px;color:inherit;background:#181315;text-align:left}.ticket-options button.active{border-color:#a12f45;background:#351821}.ticket-options button:disabled{opacity:.45}.ticket-options small{color:#aa989d}.party-card{display:grid;gap:14px;padding:16px;border:1px solid #44272e;border-radius:18px;background:#181315}.party-selector{display:grid;grid-template-columns:48px 1fr 48px;align-items:center;text-align:center}.party-selector button{height:44px;border:1px solid #58313a;border-radius:12px;color:#fff;background:#28191d;font-size:24px}.party-selector b{font-size:28px}.availability-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;max-width:260px;margin:auto}.availability-grid i{width:44px;height:34px;border-radius:8px 8px 4px 4px;background:#393034;box-shadow:inset 0 -5px #282124}.availability-grid i.filled{background:#9a2940;box-shadow:inset 0 -5px #6f1b2d}.availability-grid i.unavailable{opacity:.25}.ticket-contact{text-align:center;color:#d8c1c6}.tickets-flow .booking-form{display:grid;gap:10px;padding:16px;border:1px solid #44272e;border-radius:18px;background:#181315}.tickets-flow .summary-total{display:flex;justify-content:space-between;align-items:center}@media(min-width:600px){.ticket-options{grid-template-columns:repeat(5,minmax(0,1fr))}}

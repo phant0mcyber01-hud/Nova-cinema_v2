@@ -1,0 +1,44 @@
+# Единственная дверь снаружи.
+#
+# Caddy сам выпускает сертификат Let's Encrypt на {$NOVA_DOMAIN} и продлевает
+# его — Telegram открывает Mini App только по настоящему HTTPS.
+#
+# Один origin на всё: статика Mini App, API и загруженные файлы отдаются с
+# одного адреса, поэтому CORS в этой схеме вообще не участвует.
+
+{
+	email {$LETSENCRYPT_EMAIL}
+}
+
+{$NOVA_DOMAIN} {
+	encode zstd gzip
+
+	# Загруженные постеры, фото зала и мелодии лежат у API.
+	handle /uploads/* {
+		reverse_proxy api:8000
+	}
+
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+
+	# Всё остальное — собранный Mini App. Своим маршрутам React отдаёт index.html.
+	handle {
+		reverse_proxy frontend:80
+	}
+
+	header {
+		# Mini App живёт внутри Telegram и должен открываться в его окне,
+		# поэтому запрет на встраивание здесь не ставится намеренно.
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Content-Type-Options nosniff
+		-Server
+	}
+
+	log {
+		output file /data/access.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}

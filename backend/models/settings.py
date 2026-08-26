@@ -28,13 +28,25 @@ class CinemaSettings(Base):
     phone: Mapped[str] = mapped_column(String(32), default=config.DEFAULT_PHONE)
     telegram_url: Mapped[str] = mapped_column(String(255), default=config.DEFAULT_TELEGRAM_URL)
     instagram_url: Mapped[str] = mapped_column(String(255), default=config.DEFAULT_INSTAGRAM_URL)
-    map_url: Mapped[str] = mapped_column(String(512), default="")
+    #: Bot handle without @, used to build share deep links (t.me/<bot>?startapp=…).
+    bot_username: Mapped[str] = mapped_column(String(64), default="")
+    map_url: Mapped[str] = mapped_column(String(512), default=config.DEFAULT_MAP_URL)
     latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    #: The person a viewer settles the film and the manual transfer with.
+    admin_phone: Mapped[str] = mapped_column(String(32), default=config.DEFAULT_ADMIN_PHONE)
+    admin_telegram: Mapped[str] = mapped_column(String(64), default=config.DEFAULT_ADMIN_TELEGRAM)
     work_hours: Mapped[str] = mapped_column(String(120), default=config.DEFAULT_WORK_HOURS)
     work_hours_uz: Mapped[str] = mapped_column(String(120), default=config.DEFAULT_WORK_HOURS)
     about: Mapped[str] = mapped_column(Text, default="")
     about_uz: Mapped[str] = mapped_column(Text, default="")
+    #: A short admin-written notice shown above the FAQ on the About screen.
+    important: Mapped[str] = mapped_column(Text, default="")
+    important_uz: Mapped[str] = mapped_column(Text, default="")
+    #: [{question_ru, answer_ru, question_uz, answer_uz}, ...]. Capped at
+    #: MAX_FAQ_ITEMS by the request schema, not here -- the column itself
+    #: accepts whatever is already in the database.
+    faq_json: Mapped[str] = mapped_column(Text, default="[]")
 
     # Pricing
     base_ticket_price: Mapped[int] = mapped_column(Integer, default=config.DEFAULT_TICKET_PRICE)
@@ -45,7 +57,18 @@ class CinemaSettings(Base):
     hall_cols: Mapped[int] = mapped_column(Integer, default=config.DEFAULT_HALL_COLS)
     max_seats_per_booking: Mapped[int] = mapped_column(Integer, default=config.DEFAULT_MAX_SEATS_PER_BOOKING)
     hold_minutes: Mapped[int] = mapped_column(Integer, default=config.DEFAULT_HOLD_MINUTES)
-    booking_days_ahead: Mapped[int] = mapped_column(Integer, default=config.DEFAULT_BOOKING_DAYS_AHEAD)
+    booking_days_ahead: Mapped[int] = mapped_column(
+        Integer, default=config.DEFAULT_BOOKING_DAYS_AHEAD, server_default=str(config.DEFAULT_BOOKING_DAYS_AHEAD)
+    )
+    #: Hours a `pending` request may wait for the administrator before it is
+    #: cancelled and its places return to the hall. 0 turns the timer off.
+    pending_expire_hours: Mapped[int] = mapped_column(
+        Integer, default=config.DEFAULT_PENDING_EXPIRE_HOURS, server_default=str(config.DEFAULT_PENDING_EXPIRE_HOURS)
+    )
+    #: Offset from UTC in minutes; decides when a screening counts as finished.
+    timezone_offset_minutes: Mapped[int] = mapped_column(
+        Integer, default=config.DEFAULT_TIMEZONE_OFFSET_MINUTES
+    )
 
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 

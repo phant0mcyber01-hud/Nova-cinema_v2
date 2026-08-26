@@ -45,13 +45,13 @@ async def test_catalog_lists_published_movie(client, movie):
     assert movie.title in titles
 
 
-async def test_hall_geometry_is_three_by_five(client, movie):
+async def test_hall_geometry_is_three_by_four(client, movie):
     response = await client.get(
         f"/api/sessions/{movie.id}/seats", params={"show_date": SHOW_DATE, "session_time": SESSION}
     )
     assert response.status_code == 200
     hall = response.json()
-    assert (hall["rows"], hall["cols"], hall["seats_count"]) == (3, 5, 15)
+    assert (hall["rows"], hall["cols"], hall["seats_count"]) == (3, 4, 12)
     assert hall["max_seats"] == 4
     assert hall["price"] == 30000
     assert hall["currency"] == "UZS"
@@ -145,11 +145,13 @@ async def test_user_cannot_read_someone_elses_booking(client, movie):
     assert response.status_code == 404
 
 
-async def test_review_requires_a_completed_booking(client, movie):
+async def test_a_signed_in_viewer_can_review_without_a_booking(client, movie):
+    """Since the gate moved off "watched booking naming this film" -- which a
+    generic hall booking can never satisfy -- signed in is enough on its own."""
     token = await login(client, USER_ID)
     response = await client.post(
         f"/api/movies/{movie.id}/reviews",
-        json={"rating": 5, "text": "Отличный фильм"},
+        json={"rating": 8, "text": "Отличный фильм"},
         headers=auth_header(token),
     )
-    assert response.status_code == 403
+    assert response.status_code == 200, response.text

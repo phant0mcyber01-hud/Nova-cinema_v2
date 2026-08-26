@@ -7,50 +7,11 @@ import {
   type MoviePayload,
 } from '../../api'
 import AdminMovieForm from './AdminMovieForm'
+import { emptyMoviePayload, toMoviePayload } from './moviePayload'
+import Icon from '../../components/Icon'
 import { formatMoney, useI18n } from '../../i18n'
 
-const emptyMovie = (): MoviePayload => ({
-  title: '',
-  genre: '',
-  description: '',
-  poster: '',
-  trailer_id: '',
-  duration: 90,
-  age: 12,
-  year: new Date().getFullYear(),
-  country: '',
-  director: '',
-  cast: [],
-  gallery: [],
-  imdb: 0,
-  kinopoisk: 0,
-  internal_rating: null,
-  ticket_price: null,
-  is_published: true,
-  sort_order: 0,
-})
-
 const includes = (source: string, query: string) => source.toLowerCase().includes(query.trim().toLowerCase())
-const toMoviePayload = (movie: MovieDetail): MoviePayload => ({
-  title: movie.title,
-  genre: movie.genre,
-  description: movie.description,
-  poster: movie.poster,
-  trailer_id: movie.trailer_id,
-  duration: movie.duration,
-  age: movie.age,
-  year: movie.year,
-  country: movie.country,
-  director: movie.director,
-  cast: movie.cast,
-  gallery: movie.gallery,
-  imdb: movie.imdb,
-  kinopoisk: movie.kinopoisk,
-  internal_rating: movie.internal_rating,
-  ticket_price: movie.ticket_price,
-  is_published: movie.is_published,
-  sort_order: movie.sort_order,
-})
 
 type MoviesViewProps = {
   movies: MovieDetail[]
@@ -60,7 +21,7 @@ type MoviesViewProps = {
 export default function MoviesView({ movies, onSaved }: MoviesViewProps) {
   const { language, t } = useI18n()
   const [query, setQuery] = useState('')
-  const [draft, setDraft] = useState<MoviePayload>(emptyMovie)
+  const [draft, setDraft] = useState<MoviePayload>(emptyMoviePayload)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -71,7 +32,7 @@ export default function MoviesView({ movies, onSaved }: MoviesViewProps) {
   )
 
   const startCreate = () => {
-    setDraft(emptyMovie())
+    setDraft(emptyMoviePayload())
     setEditingId(null)
     setError('')
     setOpen(true)
@@ -128,7 +89,7 @@ export default function MoviesView({ movies, onSaved }: MoviesViewProps) {
         <button className="book fit admin-primary" onClick={startCreate}>＋ {t('addMovie')}</button>
       </div>
       <label className="admin-search">
-        <span>⌕</span>
+        <span><Icon name="search" /></span>
         <input value={query} onChange={event => setQuery(event.target.value)} placeholder={t('movieSearchAdminPlaceholder')} />
       </label>
       <div className="admin-movie-grid">
@@ -147,7 +108,7 @@ export default function MoviesView({ movies, onSaved }: MoviesViewProps) {
               <small>{movie.country} · {movie.year} · {movie.duration} {t('minutes')} · {t('photo')}: {movie.gallery.length}{movie.ticket_price ? ` · ${formatMoney(movie.ticket_price, language)}` : ''}</small>
             </div>
             <div className="admin-card-actions">
-              <button className="admin-ghost" onClick={() => startEdit(movie)}>✎ {t('editMovie')}</button>
+              <button className="admin-ghost" onClick={() => startEdit(movie)}><Icon name="pencil" /> {t('editMovie')}</button>
               <button className="admin-ghost" onClick={() => { void togglePublish(movie) }}>{movie.is_published ? t('hide') : t('publish')}</button>
               <button className="admin-ghost danger" onClick={() => { void remove(movie) }}>{t('remove')}</button>
             </div>

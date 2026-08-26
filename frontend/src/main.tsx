@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom/client'
 import WebApp from '@twa-dev/sdk'
 import App from './App'
 import { authenticateTelegram } from './api'
+import { initTelegramTheme } from './lib/telegramTheme'
+import '@fontsource-variable/inter/wght.css'
 import './styles.css'
 
 type TelegramWindow = Window & {
@@ -45,6 +47,8 @@ const waitForTelegramInitData = async () => {
 }
 
 const bootstrapTelegram = async () => {
+  // Start auth first: it synchronously deactivates any previous user's token.
+  const authentication = authenticateTelegram(waitForTelegramInitData())
   const telegramWebApp = (window as TelegramWindow).Telegram?.WebApp
   telegramWebApp?.ready?.()
   telegramWebApp?.expand?.()
@@ -52,9 +56,9 @@ const bootstrapTelegram = async () => {
   WebApp.ready()
   WebApp.expand()
   WebApp.disableVerticalSwipes()
-  await authenticateTelegram(await waitForTelegramInitData())
+  initTelegramTheme()
+  await authentication
 }
 
-void bootstrapTelegram().catch(() => undefined).finally(() => {
-  ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><App /></React.StrictMode>)
-})
+void bootstrapTelegram().catch(() => undefined)
+ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><App /></React.StrictMode>)

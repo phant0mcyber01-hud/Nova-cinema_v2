@@ -5,14 +5,15 @@ carrying hardcoded contacts.
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import timedelta
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.deps import get_db
-from backend.models import Bonus, GalleryImage, Melody
+from backend.models import Bonus, GalleryImage
+from backend.services.booking import cinema_now
 from backend.services.i18n import normalize_language
 from backend.services.settings import get_settings, serialize_settings
 
@@ -23,7 +24,7 @@ router = APIRouter(prefix="/api", tags=["public"])
 async def public_settings(lang: str = "ru", session: AsyncSession = Depends(get_db)) -> dict[str, object]:
     settings = await get_settings(session)
     data = serialize_settings(settings, lang)
-    today = date.today()
+    today = cinema_now(settings.timezone_offset_minutes).date()
     data["booking_dates"] = [
         (today + timedelta(days=offset)).isoformat() for offset in range(settings.booking_days_ahead)
     ]
@@ -44,12 +45,6 @@ async def public_bonuses(lang: str = "ru", session: AsyncSession = Depends(get_d
         }
         for item in rows
     ]
-
-
-@router.get("/melodies")
-async def public_melodies(session: AsyncSession = Depends(get_db)) -> list[dict[str, object]]:
-    rows = await session.scalars(select(Melody).order_by(Melody.sort_order, Melody.id))
-    return [{"id": item.id, "title": item.title, "file_url": item.file_url} for item in rows]
 
 
 @router.get("/gallery")

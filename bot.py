@@ -3,39 +3,34 @@ from __future__ import annotations
 import asyncio
 import html
 import logging
-import os
-from pathlib import Path
 from urllib.parse import urlparse
 
 from aiogram import Bot, Dispatcher, F, types
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, MenuButtonWebApp, WebAppInfo
-from dotenv import load_dotenv
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-ENV_PATH = Path(__file__).resolve().with_name(".env")
-load_dotenv(dotenv_path=ENV_PATH, override=True)
-
+from backend.core import config
 from backend.core.db import SessionLocal
 from backend.models import Movie
+from backend.services.bot_actions import handle_booking_callback, handle_proposal_callback
 from backend.services.catalog import serialize_movie
+from backend.services.deep_link import movie_id_from_payload
+from backend.services.settings import get_settings
 
-_bot_token = os.getenv("BOT_TOKEN")
-if _bot_token is None:
-    raise RuntimeError("BOT_TOKEN is not set")
-BOT_TOKEN: str = _bot_token.strip('"')
-WEBAPP_URL = os.getenv("WEBAPP_URL", "")
+# The environment is read and normalised in one place for the whole project;
+# the bot parsing it a second time is how the two drift apart.
+BOT_TOKEN: str = config.bot_token()
+if not BOT_TOKEN:
+    raise RuntimeError("BOT_TOKEN is empty: put the BotFather token in .env")
+WEBAPP_URL = config.WEBAPP_URL
 WEBAPP_BUTTON_TEXT = "🚀 Открыть Nova Cinema"
 WEBAPP_MENU_TEXT = "Nova Cinema"
-ADMIN_TELEGRAM_IDS = {
-    int(value.strip())
-    for value in os.getenv("ADMIN_TELEGRAM_IDS", "").split(",")
-    if value.strip().isdigit()
-}
+ADMIN_TELEGRAM_IDS = config.ADMIN_TELEGRAM_IDS
 
 dp = Dispatcher()
 logging.basicConfig(level=logging.INFO)
@@ -76,14 +71,30 @@ def create_webapp_info(path: str = "") -> WebAppInfo:
     return WebAppInfo(url=url)
 
 
-async def configure_menu_button(bot: Bot) -> None:
-    logger.info("Registering Telegram MenuButtonWebApp with URL=%s", WEBAPP_URL)
-    await bot.set_chat_menu_button(menu_button=MenuButtonWebApp(text=WEBAPP_MENU_TEXT, web_app=create_webapp_info()))
-    current_button = await bot.get_chat_menu_button()
-    current_url = getattr(getattr(current_button, "web_app", None), "url", None)
-    logger.info("Telegram Bot API menu button URL=%s", current_url)
-    if normalize_webapp_url(current_url) != normalize_webapp_url(WEBAPP_URL):
-        raise RuntimeError(f"Telegram menu button URL mismatch: {current_url!r}")
+async def configure_menu_button(bot: Bot, attempts: int = 3) -> None:
+    """Point the menu button at this instance and prove Telegram accepted it.
+
+    The read-back is retried: when the address changes, the previous instance
+    may still be alive for a moment and set the button back to its own URL.
+    Reading that straggler's value once and refusing to start turns a race into
+    a crash loop, and the bot never comes up at all.
+    """
+    for attempt in range(1, attempts + 1):
+        logger.info("Registering Telegram MenuButtonWebApp with URL=%s", WEBAPP_URL)
+        await bot.set_chat_menu_button(
+            menu_button=MenuButtonWebApp(text=WEBAPP_MENU_TEXT, web_app=create_webapp_info())
+        )
+        current_button = await bot.get_chat_menu_button()
+        current_url = getattr(getattr(current_button, "web_app", None), "url", None)
+        logger.info("Telegram Bot API menu button URL=%s", current_url)
+        if normalize_webapp_url(current_url) == normalize_webapp_url(WEBAPP_URL):
+            return
+        logger.warning(
+            "Menu button says %r, expected %r — attempt %d of %d",
+            current_url, WEBAPP_URL, attempt, attempts,
+        )
+        await asyncio.sleep(2)
+    raise RuntimeError(f"Telegram menu button URL mismatch: {current_url!r}")
 
 
 async def fetch_published_movies() -> list[dict[str, object]]:
@@ -107,11 +118,27 @@ async def fetch_published_movie(movie_id: int) -> dict[str, object] | None:
         return serialize_movie(movie) if movie else None
 
 
+async def fetch_settings() -> dict[str, object]:
+    async with SessionLocal() as session:
+        settings = await get_settings(session)
+        return {
+            "name": settings.name,
+            "address": settings.address,
+            "phone": settings.phone,
+            "telegram_url": settings.telegram_url,
+            "instagram_url": settings.instagram_url,
+            "map_url": settings.map_url,
+            "work_hours": settings.work_hours,
+            "about": settings.about,
+        }
+
+
 def main_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text=WEBAPP_BUTTON_TEXT, web_app=create_webapp_info())],
             [InlineKeyboardButton(text="🎬 Каталог фильмов", callback_data="movies")],
+            [InlineKeyboardButton(text="🎟 Забронировать", web_app=create_webapp_info("/tickets"))],
             [InlineKeyboardButton(text="🎫 Мои бронирования", web_app=create_webapp_info("/profile/bookings"))],
             [InlineKeyboardButton(text="ℹ️ О кинотеатре", callback_data="about")],
         ]
@@ -119,12 +146,12 @@ def main_keyboard() -> InlineKeyboardMarkup:
 
 
 def movie_keyboard(movie: dict[str, object]) -> InlineKeyboardMarkup:
-    movie_id = int(movie["id"])
     trailer_id = str(movie.get("trailer_id") or "")
     rows: list[list[InlineKeyboardButton]] = []
     if trailer_id:
         rows.append([InlineKeyboardButton(text="▶ Смотреть трейлер", url=f"https://youtu.be/{trailer_id}")])
-    rows.append([InlineKeyboardButton(text="🎟 Забронировать", web_app=create_webapp_info(f"/booking/{movie_id}/date"))])
+    # No "book this film" button: the hall is reserved for a date and a time,
+    # and which film is played is agreed with the administrator afterwards.
     rows.append([InlineKeyboardButton(text="◀ Назад", callback_data="movies")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -162,6 +189,43 @@ async def replace_callback_message(call: CallbackQuery, text: str, keyboard: Inl
         except TelegramBadRequest:
             pass
         await call.message.answer(text, reply_markup=keyboard, parse_mode=ParseMode.HTML)
+
+
+async def send_movie_card(message: types.Message, movie: dict[str, object]) -> None:
+    """Poster with caption, falling back to plain text if Telegram rejects the image."""
+    poster = public_asset_url(str(movie.get("poster") or ""))
+    try:
+        await message.answer_photo(
+            photo=poster,
+            caption=movie_caption(movie),
+            reply_markup=movie_keyboard(movie),
+            parse_mode=ParseMode.HTML,
+        )
+    except TelegramBadRequest:
+        await message.answer(movie_caption(movie), reply_markup=movie_keyboard(movie), parse_mode=ParseMode.HTML)
+
+
+# Registered before the plain /start so a shared link is not swallowed by it.
+@dp.message(CommandStart(deep_link=True))
+async def cmd_start_shared_movie(message: types.Message, command: CommandObject) -> None:
+    """Handles t.me/<bot>?start=movie_<id> — the `startapp` form opens the Mini App directly."""
+    movie_id = movie_id_from_payload(command.args)
+    if movie_id is None:
+        await show_text(
+            message,
+            "<b>Ссылка не распознана</b>\n\nОткройте каталог и выберите фильм.",
+            main_keyboard(),
+        )
+        return
+    movie = await fetch_published_movie(movie_id)
+    if movie is None:
+        await show_text(
+            message,
+            "<b>Фильм недоступен</b>\n\nВозможно, он снят с показа или ссылка устарела.",
+            main_keyboard(),
+        )
+        return
+    await send_movie_card(message, movie)
 
 
 @dp.message(CommandStart())
@@ -217,32 +281,31 @@ async def cb_movie_detail(call: CallbackQuery) -> None:
         await call.message.delete()
     except TelegramBadRequest:
         pass
-    poster = public_asset_url(str(movie.get("poster") or ""))
-    try:
-        await call.message.answer_photo(
-            photo=poster,
-            caption=movie_caption(movie),
-            reply_markup=movie_keyboard(movie),
-            parse_mode=ParseMode.HTML,
-        )
-    except TelegramBadRequest:
-        await call.message.answer(movie_caption(movie), reply_markup=movie_keyboard(movie), parse_mode=ParseMode.HTML)
+    await send_movie_card(call.message, movie)
     await call.answer()
 
 
 @dp.callback_query(F.data == "about")
 async def cb_about(call: CallbackQuery) -> None:
-    text = (
-        "<b>ℹ️ О кинотеатре Nova Cinema</b>\n\n"
-        "📍 <b>Адрес:</b> Юксалиш 97\n"
-        "☎️ <b>Телефон:</b> +998 91 326 20 65\n"
-        "💬 <b>Telegram:</b> https://t.me/novasinema\n"
-        "📸 <b>Instagram:</b> https://www.instagram.com/nova_cinema__\n\n"
-        "Кино, которое остаётся с вами."
-    )
+    settings = await fetch_settings()
+    lines = [f"<b>ℹ️ О кинотеатре {html.escape(str(settings['name']))}</b>", ""]
+    if settings["address"]:
+        lines.append(f"📍 <b>Адрес:</b> {html.escape(str(settings['address']))}")
+    if settings["phone"]:
+        lines.append(f"☎️ <b>Телефон:</b> {html.escape(str(settings['phone']))}")
+    if settings["work_hours"]:
+        lines.append(f"🕒 <b>Время работы:</b> {html.escape(str(settings['work_hours']))}")
+    if settings["telegram_url"]:
+        lines.append(f"💬 <b>Telegram:</b> {html.escape(str(settings['telegram_url']))}")
+    if settings["instagram_url"]:
+        lines.append(f"📸 <b>Instagram:</b> {html.escape(str(settings['instagram_url']))}")
+    if settings["map_url"]:
+        lines.append(f"📍 <b>Карта:</b> {html.escape(str(settings['map_url']))}")
+    if settings["about"]:
+        lines.extend(["", html.escape(str(settings["about"]))])
     await replace_callback_message(
         call,
-        text,
+        "\n".join(lines),
         InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="◀ Главное меню", callback_data="main")]]),
     )
     await call.answer()
@@ -261,9 +324,95 @@ async def cmd_admin(message: types.Message) -> None:
     await message.answer("<b>Админ-раздел Nova Cinema</b>\n\nУправление контентом доступно внутри Mini App.", reply_markup=keyboard)
 
 
+def _to_aiogram_markup(keyboard: dict[str, object] | None) -> InlineKeyboardMarkup | None:
+    """`backend.services.telegram.admin_action_keyboard`'s plain dict -> aiogram markup."""
+    if keyboard is None:
+        return None
+    rows = keyboard.get("inline_keyboard", [])
+    if not rows:
+        # aiogram refuses an empty keyboard outright, and a settled request
+        # legitimately offers none -- clearing the markup is done by editing
+        # with `reply_markup=None` instead of an empty `InlineKeyboardMarkup`.
+        return None
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(**button) for button in row]
+            for row in rows
+        ]
+    )
+
+
+# Every request notification's keyboard calls back here: `bk:<action>:<id>`,
+# `bk:proposetime:<id>:<time>` and `bk:cancelpropose:<id>`. This is the entire
+# admin workflow the client asked to live in the bot's own DM -- the panel in
+# the Mini App keeps working, but day to day nothing has to be opened for it.
+@dp.callback_query(F.data.startswith("bk:"))
+async def cb_booking_action(call: CallbackQuery) -> None:
+    if call.from_user is None or call.from_user.id not in ADMIN_TELEGRAM_IDS:
+        await call.answer("Недоступно", show_alert=True)
+        return
+    async with SessionLocal() as session:
+        outcome = await handle_booking_callback(session, str(call.data))
+
+    if outcome.show_alert:
+        await call.answer(outcome.alert or "Не удалось выполнить", show_alert=True)
+        return
+
+    if call.message is not None and (outcome.edit_text is not None or outcome.edit_keyboard is not None):
+        try:
+            if outcome.edit_text is not None:
+                await call.message.edit_text(
+                    outcome.edit_text, reply_markup=_to_aiogram_markup(outcome.edit_keyboard)
+                )
+            else:
+                await call.message.edit_reply_markup(reply_markup=_to_aiogram_markup(outcome.edit_keyboard))
+        except TelegramBadRequest:
+            # The card was already in this exact state (a double tap racing
+            # itself) -- Telegram's "message is not modified" is not an error.
+            pass
+
+    if outcome.viewer_telegram_id and outcome.viewer_message:
+        try:
+            await call.bot.send_message(
+                outcome.viewer_telegram_id,
+                outcome.viewer_message,
+                reply_markup=_to_aiogram_markup(outcome.viewer_keyboard),
+            )
+        except TelegramBadRequest:
+            logger.warning("Could not message viewer %s after a bot decision", outcome.viewer_telegram_id)
+
+    await call.answer()
+
+
+# The viewer's own answer to a proposed time: `pr:accept:<id>` / `pr:decline:<id>`.
+# No admin check here -- ownership is enforced inside `answer_proposal` itself
+# by matching the caller's own telegram id against the booking's user.
+@dp.callback_query(F.data.startswith("pr:"))
+async def cb_proposal_answer(call: CallbackQuery) -> None:
+    if call.from_user is None:
+        await call.answer("Недоступно", show_alert=True)
+        return
+    async with SessionLocal() as session:
+        outcome = await handle_proposal_callback(session, call.from_user.id, str(call.data))
+
+    if outcome.show_alert:
+        await call.answer(outcome.alert or "Не удалось выполнить", show_alert=True)
+        return
+
+    if call.message is not None:
+        try:
+            await call.message.edit_text(
+                outcome.edit_text or "", reply_markup=_to_aiogram_markup(outcome.edit_keyboard)
+            )
+        except TelegramBadRequest:
+            pass
+
+    await call.answer()
+
+
 async def main() -> None:
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-    logger.info("Loaded .env from %s", ENV_PATH)
+    logger.info("Loaded .env from %s", config.PROJECT_ROOT / ".env")
     logger.info("Runtime WEBAPP_URL=%s", WEBAPP_URL)
     await configure_menu_button(bot)
     logger.info("Nova Cinema bot started")
