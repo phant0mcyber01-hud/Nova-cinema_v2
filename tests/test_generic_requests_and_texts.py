@@ -11,15 +11,7 @@ from sqlalchemy import select
 
 from backend.core.db import SessionLocal
 from backend.models import Booking
-from tests.conftest import (
-    ADMIN_ID,
-    SESSION,
-    SHOW_DATE,
-    USER_ID,
-    auth_header,
-    login,
-    watched_booking_in_the_past,
-)
+from tests.conftest import ADMIN_ID, SESSION, SHOW_DATE, USER_ID, auth_header, login
 from tests.test_generic_booking import CONTACT, SLOT, book, hold
 
 ADMIN_PHONE = "91 326 20 65"
@@ -138,8 +130,24 @@ async def test_the_status_history_still_round_trips(client):
 # --- reviews -----------------------------------------------------------------
 
 
-async def test_a_request_with_no_agreed_film_opens_no_film_review(client, movie):
-    """Honest by construction: there is no film to review."""
+async def test_a_signed_in_viewer_can_review_without_any_booking_at_all(client, movie):
+    """The old movie-bound gate is gone: signed in is the whole requirement,
+    exactly because a generic request never names a film to begin with."""
+    user = await login(client, USER_ID)
+
+    card = await client.get(f"/api/movies/{movie.id}", headers=auth_header(user))
+    assert card.json()["can_review"] is True
+    posted = await client.post(
+        f"/api/movies/{movie.id}/reviews",
+        json={"rating": 9, "text": "Отлично"},
+        headers=auth_header(user),
+    )
+    assert posted.status_code == 200
+
+
+async def test_a_generic_request_marked_watched_does_not_change_review_eligibility(client, movie):
+    """Marking a hall request `watched` has no film attached to unlock -- it
+    simply has no effect on review eligibility either way."""
     user = await login(client, USER_ID)
     created = await book(client, user, 2)
     admin = await login(client, ADMIN_ID, "admin")
@@ -148,26 +156,6 @@ async def test_a_request_with_no_agreed_film_opens_no_film_review(client, movie)
         json={"status": "watched"},
         headers=auth_header(admin),
     )
-
-    card = await client.get(f"/api/movies/{movie.id}", headers=auth_header(user))
-    assert card.json()["can_review"] is False
-    posted = await client.post(
-        f"/api/movies/{movie.id}/reviews",
-        json={"rating": 5, "text": "Отлично"},
-        headers=auth_header(user),
-    )
-    assert posted.status_code == 403
-
-
-async def test_a_watched_movie_bound_booking_still_opens_a_review(client, movie):
-    """The legacy rule is untouched: a finished screening still earns a review."""
-    user = await login(client, USER_ID)
-    async with SessionLocal() as session:
-        from backend.models import User
-
-        row = await session.scalar(select(User).where(User.telegram_id == USER_ID))
-        user_id = row.id
-    await watched_booking_in_the_past(movie.id, user_id)
 
     card = await client.get(f"/api/movies/{movie.id}", headers=auth_header(user))
     assert card.json()["can_review"] is True

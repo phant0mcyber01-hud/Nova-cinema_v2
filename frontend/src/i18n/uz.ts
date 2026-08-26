@@ -399,7 +399,7 @@ export const uz: Record<TranslationKey, string> = {
   alreadyReviewedThisMovie: 'Siz bu filmga allaqachon fikr qoldirgansiz',
   bookingNotFound: 'Ariza topilmadi',
   tooManySeats: 'Bitta arizada oʻrinlar juda koʻp',
-  reviewAfterViewing: 'Sharhni seans tugagach qoldirish mumkin',
+  reviewSignInFirst: 'Sharh qoldirish uchun Telegram orqali kiring',
   reviewAlreadyLeft: 'Siz bu filmga sharh qoldirgansiz',
   timezoneOffset: 'Vaqt mintaqasi, UTC dan daqiqa',
   timezoneOffsetHint: 'Oʻzbekiston — 300 (UTC+5). Seans tugaganini shu belgilaydi.',

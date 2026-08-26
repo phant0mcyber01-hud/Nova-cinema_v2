@@ -64,7 +64,7 @@ export default function ReviewsView({ reviews, onSaved }: ReviewsViewProps) {
           <article className="admin-row" key={review.id}>
             {review.poster && <img src={review.poster} alt={review.movie ?? ''} loading="lazy" />}
             <div className="booking-admin-meta">
-              <b>{review.movie} · <Icon name="star" /> {review.rating}/5</b>
+              <b>{review.movie} · <Icon name="star" /> {review.rating}/10</b>
               <span>
                 {review.user_name}
                 {review.telegram_username ? ` · @${review.telegram_username}` : ''}

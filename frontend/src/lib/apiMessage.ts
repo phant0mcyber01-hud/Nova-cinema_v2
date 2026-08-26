@@ -24,7 +24,6 @@ const EXACT: Record<string, TranslationKey> = {
   'Hold expired': 'holdExpired',
   'Invalid seats': 'invalidSeats',
   'Invalid phone number': 'invalidPhoneNumber',
-  'Review is available after viewing': 'reviewAfterViewing',
   'You have already reviewed this movie': 'alreadyReviewedThisMovie',
   'Booking not found': 'bookingNotFound',
 }

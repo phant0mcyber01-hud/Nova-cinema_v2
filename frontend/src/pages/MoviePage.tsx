@@ -15,7 +15,7 @@ export default function MoviePage() {
   const [movie, setMovie] = useState<MovieDetail | null>(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  const [reviewRating, setReviewRating] = useState(5)
+  const [reviewRating, setReviewRating] = useState(8)
   const [reviewText, setReviewText] = useState('')
   const [reviewBusy, setReviewBusy] = useState(false)
   const [missing, setMissing] = useState(false)
@@ -149,13 +149,27 @@ export default function MoviePage() {
       {movie.gallery.length > 0 && <div className="gallery">{movie.gallery.map(image => <img key={image} src={image} alt={t('galleryFrame')} loading="lazy" />)}</div>}
       <section className="reviews">
         <h2>{t('reviews')}</h2>
-        {movie.reviews.map(review => <article className="review" key={`${review.user_name}-${review.created_at}`}><div><b>{review.user_name}</b><span><Icon name="star" /> {review.rating}/5</span></div><p>{review.text}</p><small>{new Date(review.created_at).toLocaleDateString()}</small></article>)}
+        {movie.reviews.map(review => <article className="review" key={`${review.user_name}-${review.created_at}`}><div><b>{review.user_name}</b><span><Icon name="star" /> {review.rating}/10</span></div><p>{review.text}</p><small>{new Date(review.created_at).toLocaleDateString()}</small></article>)}
         {!movie.reviews.length && <p className="empty">{t('noReviews')}</p>}
         {movie.has_reviewed && <p className="empty">{t('reviewAlreadyLeft')}</p>}
-        {!movie.has_reviewed && !movie.can_review && <p className="empty">{t('reviewAfterViewing')}</p>}
+        {!movie.has_reviewed && !movie.can_review && <p className="empty">{t('reviewSignInFirst')}</p>}
         {movie.can_review && !movie.has_reviewed && (
           <div className="review-form">
-            <label>{t('reviewRating')}<select value={reviewRating} onChange={event => setReviewRating(Number(event.target.value))}>{[5, 4, 3, 2, 1].map(value => <option value={value} key={value}>{value}/5</option>)}</select></label>
+            <label className="review-rating-label">{t('reviewRating')}
+              <div className="review-rating-scale" role="group" aria-label={t('reviewRating')}>
+                {Array.from({ length: 10 }, (_, index) => index + 1).map(value => (
+                  <button
+                    type="button"
+                    key={value}
+                    className={value === reviewRating ? 'active' : ''}
+                    onClick={() => setReviewRating(value)}
+                    aria-pressed={value === reviewRating}
+                  >
+                    {value}
+                  </button>
+                ))}
+              </div>
+            </label>
             <textarea value={reviewText} onChange={event => setReviewText(event.target.value)} placeholder={t('reviewPlaceholder')} maxLength={1000} />
             <button className="book fit" onClick={() => { void submitReview() }} disabled={reviewBusy || reviewText.trim().length < 3}><Icon name="star" /> {t('sendReview')}</button>
           </div>

@@ -334,7 +334,7 @@ export default function TicketsPage() {
         )}
 
         {hold && (
-          <section className="contact-form booking-form">
+          <section className="contact-form request-form">
             <h2>{copy.contacts}</h2>
             <p className="ticket-note">
               {hold.time} · {hold.party_size} · {copy.holdNote.replace('{n}', String(hold.expires_in_minutes))}

@@ -397,7 +397,7 @@ export const ru = {
   alreadyReviewedThisMovie: 'Вы уже оставили отзыв на этот фильм',
   bookingNotFound: 'Заявка не найдена',
   tooManySeats: 'Слишком много мест в одной заявке',
-  reviewAfterViewing: 'Отзыв можно оставить после того, как сеанс завершится',
+  reviewSignInFirst: 'Войдите через Telegram, чтобы оставить отзыв',
   reviewAlreadyLeft: 'Вы уже оставили отзыв на этот фильм',
   timezoneOffset: 'Часовой пояс, минут от UTC',
   timezoneOffsetHint: 'Узбекистан — 300 (UTC+5). Определяет, когда сеанс считается завершённым.',

@@ -145,11 +145,13 @@ async def test_user_cannot_read_someone_elses_booking(client, movie):
     assert response.status_code == 404
 
 
-async def test_review_requires_a_completed_booking(client, movie):
+async def test_a_signed_in_viewer_can_review_without_a_booking(client, movie):
+    """Since the gate moved off "watched booking naming this film" -- which a
+    generic hall booking can never satisfy -- signed in is enough on its own."""
     token = await login(client, USER_ID)
     response = await client.post(
         f"/api/movies/{movie.id}/reviews",
-        json={"rating": 5, "text": "Отличный фильм"},
+        json={"rating": 8, "text": "Отличный фильм"},
         headers=auth_header(token),
     )
-    assert response.status_code == 403
+    assert response.status_code == 200, response.text

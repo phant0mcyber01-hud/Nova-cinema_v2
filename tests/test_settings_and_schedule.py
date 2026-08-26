@@ -15,7 +15,6 @@ from tests.conftest import (
     cinema_today,
     login,
     movie_row,
-    watched_booking_in_the_past,
 )
 
 CONTACT = {
@@ -253,25 +252,19 @@ async def test_contacting_status_keeps_the_seat(client, movie):
     assert seats.json()["taken"] == ["2-2"]
 
 
-async def test_watched_status_unlocks_the_review(client, movie):
-    """Since stage 14 the screening must also be over, not just marked watched."""
+async def test_marking_watched_has_no_bearing_on_review_eligibility(client, movie):
+    """Historical note: this used to require watched + finished screening.
+    Signed in is now the whole rule, so a booking (watched or not) changes
+    nothing about whether the viewer may review."""
     user = await login(client, USER_ID)
     await _book(client, movie.id, ["3-1"], user)
 
-    blocked = await client.post(
+    before = await client.post(
         f"/api/movies/{movie.id}/reviews",
-        json={"rating": 5, "text": "Отличный фильм"},
+        json={"rating": 8, "text": "Отличный фильм"},
         headers=auth_header(user),
     )
-    assert blocked.status_code == 403
-
-    await watched_booking_in_the_past(movie.id, 1, "3-2")
-    allowed = await client.post(
-        f"/api/movies/{movie.id}/reviews",
-        json={"rating": 5, "text": "Отличный фильм"},
-        headers=auth_header(user),
-    )
-    assert allowed.status_code == 200
+    assert before.status_code == 200, before.text
 
 
 async def test_admin_booking_row_carries_everything_the_spec_asks_for(client, movie):

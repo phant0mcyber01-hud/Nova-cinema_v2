@@ -8,7 +8,9 @@ from backend.services.media import youtube_video_id
 
 
 class ReviewIn(BaseModel):
-    rating: int = Field(ge=1, le=5)
+    #: 1-10, per the client's explicit ask -- not the 1-5 stars a ticketing
+    #: app defaults to.
+    rating: int = Field(ge=1, le=10)
     text: str = Field(min_length=3, max_length=1000)
 
 
