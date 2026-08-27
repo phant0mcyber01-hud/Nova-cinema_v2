@@ -265,10 +265,16 @@ input,textarea,select,button{max-width:100%}
 .review-form select { min-height: 44px; padding: 0 12px; }
 .review-form textarea { min-height: 96px; padding: 12px; resize: vertical; }
 .review-form .book { width: 100%; margin: 0; }
-.review-rating-label { gap: 8px; }
-.review-rating-scale { display: flex; flex-wrap: wrap; gap: 6px; }
-.review-rating-scale button { min-width: 34px; height: 34px; padding: 0 4px; border: 1px solid #4a2a31; border-radius: 9px; color: #d8c5c9; background: #100d0e; font: inherit; font-weight: 700; }
-.review-rating-scale button.active { color: #fff; border-color: #c73f55; background: #8d263a; }
+.review-rating-label { display: grid; gap: 8px; }
+.review-rating-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-weight: 700; }
+.review-rating-head output { color: #f3ca76; font-size: 12px; font-weight: 900; }
+.review-rating-scale { display: grid; grid-template-columns: repeat(10,minmax(0,1fr)); gap: 3px; width: 100%; }
+.review-rating-scale button { display: grid; place-items: center; min-width: 0; width: 100%; height: 32px; padding: 0; border: 0; border-radius: 8px; color: #5f494e; background: transparent; transition: color .16s ease, transform .16s ease, background .16s ease; }
+.review-rating-scale button .nova-icon { width: clamp(18px,5.5vw,23px); height: clamp(18px,5.5vw,23px); margin: 0; }
+.review-rating-scale button.filled { color: #f3ca76; }
+.review-rating-scale button.filled .nova-icon { fill: currentColor; }
+.review-rating-scale button.selected { color: #ffe39a; background: #6d24324d; transform: scale(1.08); }
+.review-rating-scale button:focus-visible { outline: 2px solid #c73f55; outline-offset: 1px; }
 .similar { display: block; }
 .similar > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .similar a { display: block; overflow: hidden; border: 1px solid #352126; border-radius: 14px; color: inherit; text-decoration: none; background: #171214; transition: transform .2s ease, border-color .2s ease; }

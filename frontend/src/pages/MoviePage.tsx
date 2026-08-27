@@ -155,21 +155,24 @@ export default function MoviePage() {
         {!movie.has_reviewed && !movie.can_review && <p className="empty">{t('reviewSignInFirst')}</p>}
         {movie.can_review && !movie.has_reviewed && (
           <div className="review-form">
-            <label className="review-rating-label">{t('reviewRating')}
+            <div className="review-rating-label">
+              <div className="review-rating-head"><span>{t('reviewRating')}</span><output>{reviewRating}/10</output></div>
               <div className="review-rating-scale" role="group" aria-label={t('reviewRating')}>
                 {Array.from({ length: 10 }, (_, index) => index + 1).map(value => (
                   <button
                     type="button"
                     key={value}
-                    className={value === reviewRating ? 'active' : ''}
+                    className={`${value <= reviewRating ? 'filled' : ''}${value === reviewRating ? ' selected' : ''}`.trim()}
                     onClick={() => setReviewRating(value)}
+                    aria-label={`${value}/10`}
                     aria-pressed={value === reviewRating}
+                    title={`${value}/10`}
                   >
-                    {value}
+                    <Icon name="star" />
                   </button>
                 ))}
               </div>
-            </label>
+            </div>
             <textarea value={reviewText} onChange={event => setReviewText(event.target.value)} placeholder={t('reviewPlaceholder')} maxLength={1000} />
             <button className="book fit" onClick={() => { void submitReview() }} disabled={reviewBusy || reviewText.trim().length < 3}><Icon name="star" /> {t('sendReview')}</button>
           </div>
