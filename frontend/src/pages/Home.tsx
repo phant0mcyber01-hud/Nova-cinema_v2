@@ -19,8 +19,13 @@ const PRIORITY_GENRES = ['Ужасы', "Qo'rqinchli", 'Мультфильм', 'M
  * a single label made a filter nobody clicks and left the real "Боевик"
  * section without the film.
  */
+const canonicalGenre = (value: string) => {
+  const trimmed = value.trim()
+  return trimmed ? `${trimmed.charAt(0).toLocaleUpperCase()}${trimmed.slice(1)}` : ''
+}
+
 const splitGenres = (value: string) =>
-  (value ?? '').split(',').map(item => item.trim()).filter(Boolean)
+  (value ?? '').split(',').map(canonicalGenre).filter(Boolean)
 
 export default function Home() {
   const { language, t } = useI18n()
