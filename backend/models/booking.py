@@ -14,6 +14,8 @@ class Booking(Base):
     __tablename__ = "bookings"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    # Optimistic locking works on SQLite too, unlike SELECT FOR UPDATE.
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     #: Nullable since the generic booking flow: the mini app reserves places in
     #: the hall, and which film is played is agreed with the administrator
@@ -49,8 +51,12 @@ class Booking(Base):
     uuid: Mapped[str] = mapped_column(String(36), default=lambda: str(uuid.uuid4()), unique=True, index=True)
     qr_token: Mapped[str] = mapped_column(String(64), default=lambda: uuid.uuid4().hex, unique=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
-    #: Set when the admin moves the booking to `watched`.
+    #: Set when a booking becomes terminal (`cancelled` or `watched`).
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    #: Viewer-side cleanup hides terminal history but preserves the admin audit row.
+    viewer_hidden_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+
+    __mapper_args__ = {"version_id_col": version}
 
 
 class AdminNotification(Base):

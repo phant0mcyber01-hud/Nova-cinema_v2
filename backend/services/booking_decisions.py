@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.exc import StaleDataError
 
 from backend.core.config import BLOCKING_STATUSES
 from backend.core.db import utcnow
@@ -24,6 +25,7 @@ from backend.services.telegram import generic_booking_confirmed_message, user_bo
 
 __all__ = [
     "BookingNotFound",
+    "BookingTransitionConflict",
     "DecisionResult",
     "HallIsFull",
     "ProposalNotFound",
@@ -37,6 +39,18 @@ __all__ = [
 
 class BookingNotFound(Exception):
     """No booking exists with the given id."""
+
+
+class BookingTransitionConflict(Exception):
+    """Another request changed this booking after it was read."""
+
+
+async def _commit_transition(session: AsyncSession) -> None:
+    try:
+        await session.commit()
+    except StaleDataError as error:
+        await session.rollback()
+        raise BookingTransitionConflict from error
 
 
 class HallIsFull(Exception):
@@ -129,20 +143,30 @@ async def apply_decision(
         raise BookingNotFound(f"Booking #{booking_id} not found")
     booking, user, movie = item
 
+    if action == "propose" and booking.status not in ("pending", "contacting"):
+        raise BookingTransitionConflict("A terminal booking cannot receive a proposal")
+
     next_status = _ACTION_TO_STATUS.get(action)
     if next_status is not None:
         await _refuse_if_the_hall_cannot_take_it(session, booking, next_status)
+    confirm_settings = (
+        await get_settings(session) if action == "confirm" and movie is None else None
+    )
 
     if action == "contact":
         booking.status = "contacting"
+        booking.completed_at = None
+        booking.viewer_hidden_at = None
         booking.admin_note = reason.strip()
         message = f"Мы получили заявку #{booking.id} и свяжемся с вами для подтверждения."
     elif action == "confirm":
         booking.status = "confirmed"
+        booking.completed_at = None
+        booking.viewer_hidden_at = None
         booking.proposed_session = ""
         booking.admin_note = ""
         if movie is None:
-            message = generic_booking_confirmed_message(booking, await get_settings(session))
+            message = generic_booking_confirmed_message(booking, confirm_settings)
         else:
             message = (
                 f"Ваша бронь #{booking.id} подтверждена: {movie.title}, "
@@ -150,6 +174,7 @@ async def apply_decision(
             )
     elif action == "decline":
         booking.status = "cancelled"
+        booking.completed_at = utcnow()
         booking.admin_note = reason.strip()
         message = f"Заявка #{booking.id} отклонена. Причина: {booking.admin_note or 'не указана'}."
     elif action == "propose":
@@ -165,7 +190,7 @@ async def apply_decision(
         raise ValueError(f"Unknown action {action!r}")
 
     session.add(user_booking_notification(booking, "Nova Cinema", message))
-    await session.commit()
+    await _commit_transition(session)
 
     return DecisionResult(
         booking_id=booking.id,
@@ -190,15 +215,17 @@ async def apply_status(session: AsyncSession, booking_id: int, status: str) -> D
     if booking is None:
         raise BookingNotFound(f"Booking #{booking_id} not found")
     await _refuse_if_the_hall_cannot_take_it(session, booking, status)
-    booking.status = status
-    if status == "watched" and booking.completed_at is None:
-        booking.completed_at = utcnow()
-
     user = await session.get(User, booking.user_id)
     movie = await session.get(Movie, booking.movie_id) if booking.movie_id is not None else None
+    booking.status = status
+    if status in ("cancelled", "watched") and booking.completed_at is None:
+        booking.completed_at = utcnow()
+    elif status not in ("cancelled", "watched"):
+        booking.completed_at = None
+        booking.viewer_hidden_at = None
     message = f"Заявка #{booking.id}: {status}"
     session.add(user_booking_notification(booking, "Статус бронирования изменён", message))
-    await session.commit()
+    await _commit_transition(session)
 
     return DecisionResult(
         booking_id=booking.id,
@@ -238,7 +265,11 @@ async def answer_proposal(
             Booking.id == booking_id, User.telegram_id == telegram_id
         )
     )
-    if booking is None or not booking.proposed_session:
+    if (
+        booking is None
+        or not booking.proposed_session
+        or booking.status not in ("pending", "contacting")
+    ):
         raise ProposalNotFound(f"Booking #{booking_id} has no proposal for this caller")
 
     user = await session.get(User, booking.user_id)
@@ -262,12 +293,13 @@ async def answer_proposal(
         viewer_message = f"Вы согласились на новое время заявки #{booking.id}: {booking.session}"
     else:
         booking.status = "cancelled"
+        booking.completed_at = utcnow()
         booking.admin_note = "Клиент отказался от предложенного времени"
         admin_message = f"Клиент отказался от нового времени заявки #{booking.id}"
         viewer_message = f"Вы отказались от предложенного времени. Заявка #{booking.id} отменена."
 
     session.add(AdminNotification(booking_id=booking.id, message=admin_message))
-    await session.commit()
+    await _commit_transition(session)
 
     return DecisionResult(
         booking_id=booking.id,

@@ -21,7 +21,11 @@ export const getDashboard = () =>
     bookings: number
     statuses: Record<string, number>
     recent_bookings: { id: number; name: string; phone: string; status: string; total: number }[]
+    notifications: { id: number; booking_id: number; message: string; is_read: boolean; created_at: string }[]
   }>('/admin/dashboard')
+
+export const clearAdminNotifications = () =>
+  call<{ cleared: number }>('/admin/notifications', { method: 'DELETE' })
 
 export const setBasePrice = (base_ticket_price: number) =>
   call<{ base_ticket_price: number }>('/admin/settings/base-price', {

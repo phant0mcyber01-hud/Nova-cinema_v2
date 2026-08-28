@@ -9,6 +9,9 @@ import {
   getProfileBookings,
   getProfileNotifications,
   answerBookingProposal,
+  cancelProfileBooking,
+  clearProfileBookingHistory,
+  clearProfileNotifications,
   isAdmin,
   readProfileNotification,
   removeFavorite,
@@ -172,6 +175,9 @@ function Bookings() {
   const [status, setStatus] = useState('')
   const [sort, setSort] = useState<'date' | 'movie' | 'status'>('date')
   const [error, setError] = useState('')
+  const [clearHistoryConfirm, setClearHistoryConfirm] = useState(false)
+  const [clearBusy, setClearBusy] = useState(false)
+  const [cleanupMessage, setCleanupMessage] = useState('')
 
   useEffect(() => {
     let active = true
@@ -198,6 +204,21 @@ function Bookings() {
   const activeRows = useMemo(() => rows.filter(item => activeStatuses.has(item.status)), [rows])
   const historyRows = useMemo(() => rows.filter(item => !activeStatuses.has(item.status)), [rows])
 
+  const clearHistory = async () => {
+    if (clearBusy) return
+    setClearBusy(true)
+    try {
+      await clearProfileBookingHistory()
+      setList(current => current.filter(item => activeStatuses.has(item.status)))
+      setClearHistoryConfirm(false)
+      setCleanupMessage(t('cleanupDone'))
+    } catch (reason) {
+      setError(resolveProfileError(reason))
+    } finally {
+      setClearBusy(false)
+    }
+  }
+
   return (
     <Box>
       <Link className="back" to="/profile">← {t('profile')}</Link>
@@ -214,6 +235,21 @@ function Bookings() {
           <option value="status">{t('sortByStatus')}</option>
         </select>
       </div>
+      {historyRows.length > 0 && (
+        <section className="cleanup-card">
+          <p>{t('cleanupRetentionHint')}</p>
+          {!clearHistoryConfirm ? (
+            <button className="admin-ghost danger" onClick={() => setClearHistoryConfirm(true)}>{t('clearHistory')}</button>
+          ) : (
+            <div>
+              <b>{t('clearAllConfirm')}</b>
+              <button className="admin-ghost danger" disabled={clearBusy} onClick={() => { void clearHistory() }}>{t('clearHistory')}</button>
+              <button className="admin-ghost" disabled={clearBusy} onClick={() => setClearHistoryConfirm(false)}>{t('cancel')}</button>
+            </div>
+          )}
+        </section>
+      )}
+      {cleanupMessage && <p className="toast">{cleanupMessage}</p>}
       {error && <p className="error">{error}</p>}
       <div className="admin-table tickets-list">
         <TicketSection title={t('activeTickets')} rows={activeRows} />
@@ -259,6 +295,8 @@ function BookingDetail() {
   const [booking, setBooking] = useState<ProfileBooking | null>(null)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [cancelConfirm, setCancelConfirm] = useState(false)
+  const [cancelBusy, setCancelBusy] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -282,6 +320,32 @@ function BookingDetail() {
       setMessage(action === 'accept' ? t('proposalAccepted') : t('proposalDeclined'))
     } catch (reason) {
       setError(resolveProfileError(reason))
+    }
+  }
+
+  const cancelBooking = async () => {
+    if (!booking || cancelBusy) return
+    setCancelBusy(true)
+    setError('')
+    try {
+      const cancelled = await cancelProfileBooking(booking.id)
+      setBooking(current => current ? {
+        ...current,
+        status: cancelled.status,
+        qr_valid: false,
+        proposed_session: '',
+      } : current)
+      setCancelConfirm(false)
+      setMessage(t('bookingCancelledByYou'))
+      try {
+        setBooking(await getProfileBooking(String(booking.id), language))
+      } catch {
+        // The PATCH is durable; a failed refresh must not report cancellation as failed.
+      }
+    } catch (reason) {
+      setError(apiMessage(reason, 'cancelBookingFailed'))
+    } finally {
+      setCancelBusy(false)
     }
   }
 
@@ -315,6 +379,22 @@ function BookingDetail() {
             <button className="admin-ghost danger" onClick={() => { void answerProposal('decline') }}>{t('declineProposal')}</button>
           </div>
         </div>
+      )}
+      {activeStatuses.has(booking.status) && (
+        <section className="booking-cancel-card">
+          {!cancelConfirm ? (
+            <button className="admin-ghost danger" onClick={() => setCancelConfirm(true)}>{t('cancelBooking')}</button>
+          ) : (
+            <>
+              <b>{t('cancelBooking')}</b>
+              <p>{t('cancelBookingConfirm')}</p>
+              <div>
+                <button className="admin-ghost danger" onClick={() => { void cancelBooking() }} disabled={cancelBusy}>{cancelBusy ? t('cancellingBooking') : t('cancelBooking')}</button>
+                <button className="admin-ghost" onClick={() => setCancelConfirm(false)} disabled={cancelBusy}>{t('keepBooking')}</button>
+              </div>
+            </>
+          )}
+        </section>
       )}
       {message && <p className="toast">{message}</p>}
       <div className={`qr ${booking.qr_valid ? 'valid' : 'invalid'}`}>
@@ -384,6 +464,8 @@ function Notifications() {
   const [list, setList] = useState<Awaited<ReturnType<typeof getProfileNotifications>>>([])
   const [filter, setFilter] = useState<'all' | 'unread'>('all')
   const [error, setError] = useState('')
+  const [clearConfirm, setClearConfirm] = useState(false)
+  const [clearBusy, setClearBusy] = useState(false)
 
   const load = useCallback(() => {
     void waitForAuth()
@@ -400,6 +482,20 @@ function Notifications() {
 
   const rows = useMemo(() => list.filter(item => filter === 'all' || !item.is_read), [filter, list])
 
+  const clearNotifications = async () => {
+    if (clearBusy) return
+    setClearBusy(true)
+    try {
+      await clearProfileNotifications()
+      setList([])
+      setClearConfirm(false)
+    } catch (reason) {
+      setError(resolveProfileError(reason))
+    } finally {
+      setClearBusy(false)
+    }
+  }
+
   return (
     <Box>
       <Link className="back" to="/profile">← {t('profile')}</Link>
@@ -408,6 +504,19 @@ function Notifications() {
         <button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>{t('all')}</button>
         <button className={filter === 'unread' ? 'active' : ''} onClick={() => setFilter('unread')}>{t('unread')}</button>
       </div>
+      {list.length > 0 && (
+        <section className="cleanup-card">
+          {!clearConfirm ? (
+            <button className="admin-ghost danger" onClick={() => setClearConfirm(true)}>{t('clearNotifications')}</button>
+          ) : (
+            <div>
+              <b>{t('clearAllConfirm')}</b>
+              <button className="admin-ghost danger" disabled={clearBusy} onClick={() => { void clearNotifications() }}>{t('clearNotifications')}</button>
+              <button className="admin-ghost" disabled={clearBusy} onClick={() => setClearConfirm(false)}>{t('cancel')}</button>
+            </div>
+          )}
+        </section>
+      )}
       {error && <p className="error">{error}</p>}
       <div className="admin-table">
         {rows.map(item => (

@@ -57,6 +57,7 @@ async def expire_stale_requests(session: AsyncSession) -> int:
     )
     for booking in stale:
         booking.status = "cancelled"
+        booking.completed_at = utcnow()
         # Only fill the note if the administrator has not written one: their
         # own words outrank this sentence.
         if not booking.admin_note:

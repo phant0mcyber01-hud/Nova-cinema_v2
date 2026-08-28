@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.deps import admin_required, get_db
@@ -14,6 +14,7 @@ from backend.schemas.booking import BookingDecisionIn, BookingStatusIn
 from backend.schemas.settings import BasePriceIn, SettingsIn
 from backend.services.booking_decisions import (
     BookingNotFound,
+    BookingTransitionConflict,
     HallIsFull,
     ProposedTimeRequired,
     SeatsAlreadyTaken,
@@ -23,6 +24,7 @@ from backend.services.booking_decisions import (
 from backend.services.capacity import booking_party_size
 from backend.services.media import save_image_upload
 from backend.services.settings import get_settings, serialize_settings_admin
+from backend.services.retention import prune_admin_records
 from backend.services.telegram import send_telegram_message, viewer_proposal_keyboard
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(admin_required)])
@@ -102,6 +104,8 @@ async def update_booking_status(
         raise HTTPException(409, "The hall is full at that time")
     except SeatsAlreadyTaken as error:
         raise HTTPException(409, str(error))
+    except BookingTransitionConflict:
+        raise HTTPException(409, "Booking changed; refresh and try again")
     return {"status": result.status}
 
 
@@ -127,6 +131,8 @@ async def decide_booking(
         raise HTTPException(409, str(error))
     except ProposedTimeRequired:
         raise HTTPException(422, "Proposed time is required")
+    except BookingTransitionConflict:
+        raise HTTPException(409, "Booking changed; refresh and try again")
 
     # A proposed time needs an answer, not just a notification: the viewer
     # gets Accept/Decline buttons right in the same message.
@@ -171,8 +177,16 @@ async def update_base_price(payload: BasePriceIn, session: AsyncSession = Depend
 
 @router.get("/notifications")
 async def admin_notifications(session: AsyncSession = Depends(get_db)) -> list[dict[str, object]]:
+    await prune_admin_records(session)
     rows = await session.scalars(select(AdminNotification).order_by(AdminNotification.id.desc()))
     return [_notification(item) for item in rows]
+
+
+@router.delete("/notifications")
+async def clear_admin_notifications(session: AsyncSession = Depends(get_db)) -> dict[str, int]:
+    result = await session.execute(delete(AdminNotification))
+    await session.commit()
+    return {"cleared": result.rowcount or 0}
 
 
 @router.patch("/notifications/{notification_id}/read")
@@ -187,6 +201,7 @@ async def read_notification(notification_id: int, session: AsyncSession = Depend
 
 @router.get("/dashboard")
 async def dashboard(session: AsyncSession = Depends(get_db)) -> dict[str, object]:
+    await prune_admin_records(session)
     movie_count = await session.scalar(select(func.count()).select_from(Movie)) or 0
     booking_count = await session.scalar(select(func.count()).select_from(Booking)) or 0
     status_rows = await session.execute(select(Booking.status, func.count()).group_by(Booking.status))

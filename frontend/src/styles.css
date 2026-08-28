@@ -369,6 +369,33 @@ body{
   box-shadow:0 18px 45px #0004;
 }
 
+.booking-cancel-card{
+  display:grid;
+  gap:10px;
+  margin:16px 0;
+  padding:14px;
+  border:1px solid #743140;
+  border-radius:16px;
+  background:linear-gradient(145deg,#28151a,#120e10);
+}
+.booking-cancel-card>p{margin:0;color:#c9b6bb;font-size:13px;line-height:1.5}
+.booking-cancel-card>div{display:flex;flex-wrap:wrap;gap:8px}
+.booking-cancel-card>div>*{flex:1 1 150px}
+
+.cleanup-card{
+  display:grid;
+  gap:10px;
+  margin:14px 0;
+  padding:14px;
+  border:1px solid #6b303b;
+  border-radius:16px;
+  background:linear-gradient(145deg,#241419,#110d0f);
+}
+.cleanup-card>p{margin:0;color:#c9b6bb;font-size:12px;line-height:1.5}
+.cleanup-card>div{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.cleanup-card>div>b{flex:1 0 100%}
+.cleanup-card button{min-height:42px}
+
 .manual-time-card label{
   display:grid;
   gap:8px;

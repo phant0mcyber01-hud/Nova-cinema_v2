@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 
 import {
+  clearAdminNotifications,
   getAdminBonuses,
   getAdminGallery,
   getAdminMovies,
@@ -162,7 +163,12 @@ export default function Admin() {
       {error && <p className="error">{error}</p>}
       {loading && <div className="hall-skeleton" />}
 
-      {!loading && tab === 'dashboard' && dashboard && <DashboardView data={dashboard} />}
+      {!loading && tab === 'dashboard' && dashboard && (
+        <DashboardView
+          data={dashboard}
+          onClearNotifications={() => guard(() => clearAdminNotifications(), t('cleanupDone'))}
+        />
+      )}
       {!loading && tab === 'movies' && <MoviesView movies={movies} onSaved={refresh} />}
       {!loading && tab === 'new' && <NewReleasesView movies={movies} onSaved={refresh} />}
       {!loading && tab === 'sessions' && <SlotsView slots={slots} onSaved={refresh} />}
@@ -185,8 +191,13 @@ export default function Admin() {
   )
 }
 
-function DashboardView({ data }: { data: DashboardData }) {
+function DashboardView({ data, onClearNotifications }: {
+  data: DashboardData
+  onClearNotifications: () => Promise<void>
+}) {
   const { language, t } = useI18n()
+  const [clearConfirm, setClearConfirm] = useState(false)
+  const [clearBusy, setClearBusy] = useState(false)
   const cards: [string, string | number][] = [
     [t('newRequests'), data.statuses.pending ?? 0],
     [t('statusPending'), data.statuses.pending ?? 0],
@@ -213,6 +224,31 @@ function DashboardView({ data }: { data: DashboardData }) {
           </article>
         ))}
         {!data.recent_bookings.length && <p className="empty">{t('noBookings')}</p>}
+      </div>
+      <h2>{t('latestNotifications')}</h2>
+      {data.notifications.length > 0 && (
+        <section className="cleanup-card">
+          {!clearConfirm ? (
+            <button className="admin-ghost danger" onClick={() => setClearConfirm(true)}>{t('clearNotifications')}</button>
+          ) : (
+            <div>
+              <b>{t('clearAllConfirm')}</b>
+              <button className="admin-ghost danger" disabled={clearBusy} onClick={() => {
+                setClearBusy(true)
+                void onClearNotifications().finally(() => { setClearBusy(false); setClearConfirm(false) })
+              }}>{t('clearNotifications')}</button>
+              <button className="admin-ghost" disabled={clearBusy} onClick={() => setClearConfirm(false)}>{t('cancel')}</button>
+            </div>
+          )}
+        </section>
+      )}
+      <div className="admin-table compact">
+        {data.notifications.map(item => (
+          <article className={item.is_read ? 'notice read' : 'notice'} key={item.id}>
+            <b>#{item.booking_id}</b><span>{item.message}</span>
+          </article>
+        ))}
+        {!data.notifications.length && <p className="empty">{t('notificationsNone')}</p>}
       </div>
     </section>
   )

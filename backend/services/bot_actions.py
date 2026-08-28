@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.services.booking_decisions import (
     BookingNotFound,
+    BookingTransitionConflict,
     DecisionResult,
     HallIsFull,
     ProposalNotFound,
@@ -111,6 +112,8 @@ async def handle_booking_callback(session: AsyncSession, data: str) -> CallbackO
             return CallbackOutcome(show_alert=True, alert="Заявка не найдена")
         except HallIsFull:
             return CallbackOutcome(show_alert=True, alert="Зал уже заполнен на это время")
+        except BookingTransitionConflict:
+            return CallbackOutcome(show_alert=True, alert="Заявка уже изменилась, обновите сообщение")
         text, keyboard = _card_and_keyboard(result)
         return CallbackOutcome(
             edit_text=text,
@@ -131,6 +134,8 @@ async def handle_booking_callback(session: AsyncSession, data: str) -> CallbackO
         return CallbackOutcome(show_alert=True, alert="Зал уже заполнен на это время")
     except SeatsAlreadyTaken as error:
         return CallbackOutcome(show_alert=True, alert=str(error))
+    except BookingTransitionConflict:
+        return CallbackOutcome(show_alert=True, alert="Заявка уже изменилась, обновите сообщение")
 
     text, keyboard = _card_and_keyboard(result)
     return CallbackOutcome(
@@ -167,6 +172,8 @@ async def handle_proposal_callback(session: AsyncSession, telegram_id: int, data
         return CallbackOutcome(show_alert=True, alert="Зал уже заполнен на это время")
     except SeatsAlreadyTaken as error:
         return CallbackOutcome(show_alert=True, alert=str(error))
+    except BookingTransitionConflict:
+        return CallbackOutcome(show_alert=True, alert="Заявка уже изменилась, обновите сообщение")
 
     # Same rule the panel's own endpoint follows: the admins get a live copy,
     # and a delivery failure never touches the answer already committed above.
