@@ -47,6 +47,8 @@ os.environ["ADMIN_TELEGRAM_IDS"] = str(ADMIN_ID)
 os.environ["AUTO_CREATE_SCHEMA"] = "false"
 os.environ["UPLOAD_DIR"] = str(TEST_ROOT / "uploads")
 os.environ["CORS_ORIGINS"] = "https://example.test/,https://second.test"
+os.environ["TMDB_API_KEY"] = ""
+os.environ["OMDB_API_KEY"] = ""
 
 import httpx  # noqa: E402
 
