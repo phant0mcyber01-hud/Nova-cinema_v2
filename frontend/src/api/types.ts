@@ -17,6 +17,8 @@ export type Movie = {
   new_until: string
   is_hit: boolean
   sort_order: number
+  /** Dubs the print actually has ("ru", "uz"), set by the admin per film. */
+  audio_languages: string[]
 }
 
 /** One day of the movie card schedule. */
@@ -62,6 +64,7 @@ export type MoviePayload = {
   new_until: string
   is_hit: boolean
   sort_order: number
+  audio_languages: string[]
 }
 
 export type Review = { user_name: string; rating: number; text: string; created_at: string }

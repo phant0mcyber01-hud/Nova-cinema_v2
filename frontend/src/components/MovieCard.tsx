@@ -13,6 +13,9 @@ export default function MovieCard({ movie }: { movie: Movie }) {
         <img src={movie.poster} alt={movie.title} loading="lazy" />
         <div className="movie-shade" />
         {movie.is_new && <span className="new-badge">{t('newBadge')}</span>}
+        {!!movie.audio_languages.length && (
+          <span className="audio-badge">{movie.audio_languages.map(code => code.toUpperCase()).join(' / ')}</span>
+        )}
         <div className="movie-body">
           <span className="rating-chip">IMDb {movie.imdb} · {t('kinopoiskShort')} {movie.kinopoisk}</span>
           <h2>{movie.title}</h2>

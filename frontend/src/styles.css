@@ -569,6 +569,10 @@ body{
 .new-card span { color: #8e8184; font-size: 11px; }
 .movie { position: relative; }
 .new-badge { position: absolute; top: 10px; left: 10px; z-index: 2; padding: 4px 9px; border-radius: 999px; color: #fff; background: #7d1e31; font-size: 10px; font-weight: 800; letter-spacing: .04em; }
+.audio-badge { position: absolute; top: 10px; right: 10px; z-index: 2; padding: 4px 9px; border-radius: 999px; color: #ffe4c2; background: #1c1315e0; border: 1px solid #ffffff1f; font-size: 10px; font-weight: 800; letter-spacing: .04em; backdrop-filter: blur(6px); }
+.audio-language-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.audio-language-options button { padding: 9px 16px; border: 1px solid #48282f; border-radius: 999px; color: #d9c7cb; background: #191315; font-size: 13px; font-weight: 700; transition: border-color .18s ease, background .18s ease, color .18s ease; }
+.audio-language-options button.active { color: #fff; border-color: #8f2339; background: #7d1e31; }
 
 /* --- stage 6: schedule inside the movie card ---------------------------- */
 .schedule-block { margin-top: 26px; }

@@ -23,6 +23,7 @@ export const toMoviePayload = (movie: MovieDetail): MoviePayload => ({
   new_until: movie.new_until,
   is_hit: movie.is_hit,
   sort_order: movie.sort_order,
+  audio_languages: movie.audio_languages,
 })
 
 export const emptyMoviePayload = (): MoviePayload => ({
@@ -47,4 +48,5 @@ export const emptyMoviePayload = (): MoviePayload => ({
   new_until: '',
   is_hit: false,
   sort_order: 0,
+  audio_languages: ['ru', 'uz'],
 })

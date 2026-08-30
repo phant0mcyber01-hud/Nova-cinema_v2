@@ -131,6 +131,7 @@ def serialize_movie(
         "new_until": movie.new_until,
         "is_hit": movie.is_hit,
         "sort_order": movie.sort_order,
+        "audio_languages": [item for item in movie.audio_languages.split(",") if item],
     }
 
 

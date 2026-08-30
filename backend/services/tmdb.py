@@ -241,4 +241,5 @@ async def lookup_movie_payload(title: str) -> dict[str, object]:
         "ticket_price": None,
         "is_published": True,
         "sort_order": 0,
+        "audio_languages": ["ru", "uz"],
     }

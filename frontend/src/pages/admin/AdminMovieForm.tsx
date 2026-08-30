@@ -145,6 +145,28 @@ export default function AdminMovieForm({ draft, editing, busy, error, onChange, 
               <Field label={t('castLabel')} hint={t('castHint')} wide>
                 <textarea value={toLines(draft.cast)} onChange={event => onChange({ ...draft, cast: fromLines(event.target.value) })} placeholder={t('castPlaceholder')} />
               </Field>
+              <Field label={t('audioLanguages')} hint={t('audioLanguagesHint')} wide>
+                <div className="audio-language-options">
+                  {(['ru', 'uz'] as const).map(code => {
+                    const active = draft.audio_languages.includes(code)
+                    return (
+                      <button
+                        type="button"
+                        key={code}
+                        className={active ? 'active' : ''}
+                        onClick={() => onChange({
+                          ...draft,
+                          audio_languages: active
+                            ? draft.audio_languages.filter(item => item !== code)
+                            : [...draft.audio_languages, code],
+                        })}
+                      >
+                        {code === 'ru' ? t('audioLanguageRu') : t('audioLanguageUz')}
+                      </button>
+                    )
+                  })}
+                </div>
+              </Field>
             </div>
           </section>
 

@@ -48,6 +48,10 @@ class Movie(Base):
     new_until: Mapped[str] = mapped_column(String(10), default="")
     #: Included in the independent "Hits" rail on the public catalog.
     is_hit: Mapped[bool] = mapped_column(default=False, index=True)
+    #: Audio dubs the print actually has, comma-separated ("ru,uz"). Set by the
+    #: administrator per film; the catalog uses it to show a language badge and
+    #: to let viewers filter for the dub they can understand.
+    audio_languages: Mapped[str] = mapped_column(String(32), default="ru,uz")
 
     reviews: Mapped[list["Review"]] = relationship(back_populates="movie", cascade="all, delete-orphan")
 

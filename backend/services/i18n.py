@@ -58,7 +58,8 @@ async def localize_movie_payload(payload) -> tuple[dict[str, object], bool]:
         translated_cast.append(value)
         warning = warning or failed
 
-    values = payload.model_dump(exclude={"cast", "gallery"})
+    values = payload.model_dump(exclude={"cast", "gallery", "audio_languages"})
+    values["audio_languages"] = ",".join(payload.audio_languages)
     values.update({"cast_json": json.dumps(payload.cast), "gallery_json": json.dumps(payload.gallery)})
     original_cast = json.dumps(payload.cast)
     other_cast = json.dumps(translated_cast)

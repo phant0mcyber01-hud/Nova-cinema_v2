@@ -36,6 +36,15 @@ class MovieIn(BaseModel):
     new_until: str = Field(default="", pattern=f"^$|{DATE_PATTERN[1:-1]}")
     is_hit: bool = False
     sort_order: int = 0
+    audio_languages: list[str] = Field(default_factory=lambda: ["ru", "uz"])
+
+    @field_validator("audio_languages")
+    @classmethod
+    def normalize_audio_languages(cls, value: list[str]) -> list[str]:
+        allowed = {"ru", "uz"}
+        cleaned = [item.strip().lower() for item in value if item and item.strip().lower() in allowed]
+        # Keep a stable order and de-duplicate without losing the admin's intent.
+        return [lang for lang in ("ru", "uz") if lang in cleaned]
 
     @field_validator("trailer_id")
     @classmethod

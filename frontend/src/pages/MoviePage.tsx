@@ -131,6 +131,9 @@ export default function MoviePage() {
             )}
             <span>{movie.age}+</span>
             <span>{movie.duration} {t('minutes')}</span>
+            {!!movie.audio_languages.length && (
+              <span>{movie.audio_languages.map(code => code.toUpperCase()).join(' / ')}</span>
+            )}
           </div>
           <button className="admin-ghost detail-favorite" onClick={() => { void saveFavorite() }}>{t('addToFavorites')}</button>
           <button className="admin-ghost detail-favorite" onClick={() => { void share() }}><Icon name="share" /> {t('share')}</button>
