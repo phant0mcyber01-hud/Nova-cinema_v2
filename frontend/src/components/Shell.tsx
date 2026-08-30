@@ -5,7 +5,7 @@ import BottomNav from './BottomNav'
 import LanguageSwitcher from './LanguageSwitcher'
 
 /** Common page frame with language switch and bottom tab bar. */
-export default function Shell({ children }: { children: ReactNode }) {
+export default function Shell({ children, headerExtra }: { children: ReactNode; headerExtra?: ReactNode }) {
   return (
     <main className="app">
       <header className="topbar">
@@ -14,6 +14,7 @@ export default function Shell({ children }: { children: ReactNode }) {
           <span>NOVA <i>CINEMA</i></span>
         </Link>
         <div className="header-actions">
+          {headerExtra}
           <LanguageSwitcher />
         </div>
       </header>

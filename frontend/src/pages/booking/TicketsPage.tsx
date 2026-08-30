@@ -45,8 +45,6 @@ const text = {
     perPerson: 'за одного человека',
     total: 'Итого',
     send: 'Отправить заявку',
-    pending:
-      'Это заявка, а не оплаченный билет. Администратор свяжется с вами, согласует фильм, отправит реквизиты, получит перевод и подтвердит бронь.',
     seatsNote: 'Места распределяются автоматически — выбирать ряд и кресло не нужно.',
     holdNote: 'Места удерживаются {n} мин, пока вы заполняете форму.',
     empty: 'Доступных дат пока нет',
@@ -71,8 +69,6 @@ const text = {
     perPerson: 'bir kishi uchun',
     total: 'Jami',
     send: 'Ariza yuborish',
-    pending:
-      "Bu to'langan chipta emas, ariza. Administrator siz bilan bog'lanadi, filmni kelishadi, rekvizitlarni yuboradi, o'tkazmani qabul qiladi va bronni tasdiqlaydi.",
     seatsNote: "Joylar avtomatik taqsimlanadi — qator va o'rindiqni tanlash shart emas.",
     holdNote: "Siz shaklni to'ldirguningizcha joylar {n} daqiqa saqlanadi.",
     empty: "Hozircha bo'sh sana yo'q",
@@ -272,7 +268,6 @@ export default function TicketsPage() {
     <Shell>
       <section className="tickets-flow">
         <h1>{copy.title}</h1>
-        <p className="ticket-honesty">{copy.pending}</p>
 
         <h2>{copy.date}</h2>
         {dates === null && <div className="hall-skeleton compact" />}

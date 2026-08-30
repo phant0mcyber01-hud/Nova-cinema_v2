@@ -5,10 +5,8 @@ import { haptic } from '../lib/haptic'
 import Icon from './Icon'
 
 /**
- * A fast lane into the ticket flow from the poster screen, floating just
- * above the bottom tab bar. The Tickets tab already gets there -- this is
- * for the viewer who lands on the poster and wants to book without hunting
- * for the right tab first.
+ * Compact shortcut into the ticket flow, docked in the header next to the
+ * language switch instead of floating over the catalog and bottom nav.
  */
 export default function TakeBookingCta() {
   const { t } = useI18n()

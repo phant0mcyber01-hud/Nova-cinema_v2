@@ -87,26 +87,24 @@ html,body,#root{min-height:100%;overflow-x:hidden}.app{width:100%;max-width:760p
 .hall-numbers,.hall-row{display:grid;grid-template-columns:var(--row-label-size) repeat(var(--seat-count),minmax(0,1fr));gap:var(--seat-gap);align-items:center;width:100%;max-width:none}
 .hall-numbers span{display:block}
 
-/* Nova Cinema: the floating "take a booking" shortcut on the poster screen */
+/* Nova Cinema: the compact "take a booking" shortcut, docked in the header
+   next to the language switch instead of floating over the catalog. */
 .take-booking-cta{
-  position:fixed;
-  left:50%;
-  bottom:calc(78px + env(safe-area-inset-bottom));
-  z-index:19;
-  transform:translateX(-50%);
   display:inline-flex;
   align-items:center;
-  gap:8px;
-  padding:12px 22px;
+  gap:6px;
+  height:36px;
+  padding:0 14px;
   border-radius:999px;
   background:linear-gradient(135deg,#a11e30,#6c1522);
   color:#fff;
-  font-weight:700;
+  font-size:12px;
+  font-weight:800;
   text-decoration:none;
-  box-shadow:0 14px 30px #000a;
   white-space:nowrap;
+  box-shadow:0 10px 24px #0006;
 }
-.take-booking-cta:active{transform:translateX(-50%) scale(.96)}
+.take-booking-cta:active{transform:scale(.96)}
 
 /* Nova Cinema: the designed day picker (calendar strip) */
 .date-strip{display:flex;gap:10px;margin-top:4px;padding-bottom:4px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
@@ -625,7 +623,7 @@ body{
 .about-facts small { display: block; color: #a08d91; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
 .about-facts b { display: block; margin-top: 3px; font-size: 15px; }
 .about-actions { display: grid; gap: 8px; }
-.about-actions .book { display: grid; place-items: center; text-decoration: none; }
+.about-actions .book { display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; }
 .about-bonuses { display: grid; gap: 10px; }
 .about-bonuses article { padding: 14px 15px; border: 1px solid #362126; border-radius: 15px; background: linear-gradient(135deg, #241a1d, #1b1618); }
 .about-bonuses b { font-size: 15px; letter-spacing: -.01em; }

@@ -106,7 +106,9 @@ test('the administrator contacts come from the admin panel, not the bundle', () 
   }
   assert.match(hook, /admin_phone/)
   assert.match(hook, /admin_telegram/)
-  // Tappable, not plain text: this is the number a viewer has to call.
-  assert.match(contacts, /href=\{`tel:/)
+  // Tappable, not plain text: the raw number is never rendered during
+  // checkout -- only a "get in touch" action, wired to tel: or t.me.
+  assert.match(contacts, /href=\{href\}/)
   assert.match(contacts, /t\.me\//)
+  assert.doesNotMatch(contacts, /\{phone\}/, 'checkout must not print the raw admin phone number')
 })

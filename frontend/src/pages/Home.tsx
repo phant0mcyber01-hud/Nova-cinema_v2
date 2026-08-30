@@ -98,7 +98,7 @@ export default function Home() {
   }
 
   return (
-    <Shell>
+    <Shell headerExtra={<TakeBookingCta />}>
       <section className="hero-home">
         <p>NOVA CINEMA</p>
         <h1>{t('homeTitleLine1')}<br />{t('homeTitleLine2')}</h1>
@@ -174,8 +174,6 @@ export default function Home() {
       )}
 
       {!filtered && genres.map(item => <section key={item} className="genre-section"><div className="strip-head"><h2>{item}</h2></div><div className="catalog">{movies.filter(movie => splitGenres(movie.genre).includes(item)).map(movie => <MovieCard movie={movie} key={movie.id} />)}</div></section>)}
-
-      <TakeBookingCta />
     </Shell>
   )
 }

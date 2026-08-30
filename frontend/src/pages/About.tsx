@@ -108,7 +108,7 @@ export default function About() {
         <div className="about-actions">
           {settings.phone && (
             <a className="book fit" href={`tel:${settings.phone.replace(/[^\d+]/g, '')}`} onClick={haptic.tap}>
-              <Icon name="phone" /> {settings.phone}
+              <Icon name="phone" /> {t('call')}
             </a>
           )}
           {map && (
