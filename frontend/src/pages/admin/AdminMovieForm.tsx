@@ -2,6 +2,7 @@ import { useState, type ChangeEvent, type ReactNode } from 'react'
 import { lookupAdminMovie, uploadAdminImage, type MoviePayload } from '../../api'
 import Icon from '../../components/Icon'
 import { useI18n } from '../../i18n'
+import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
 
 type MovieFormProps = {
   draft: MoviePayload
@@ -35,6 +36,7 @@ const toLines = (value: string[]) => value.join('\n')
 
 export default function AdminMovieForm({ draft, editing, busy, error, onChange, onClose, onSave }: MovieFormProps) {
   const { t } = useI18n()
+  useBodyScrollLock(true)
   const [posterMode, setPosterMode] = useState<'upload' | 'url'>(draft.poster && !draft.poster.startsWith('/uploads/') ? 'url' : 'upload')
   const [galleryUrl, setGalleryUrl] = useState('')
   const [uploading, setUploading] = useState(false)
